@@ -21,7 +21,10 @@ public sealed class RouteService
         foreach (var buy in data.Quotes)
         {
             if (buy.PriceBuy <= 0 || buy.StatusBuy == 1 || !terminals.TryGetValue(buy.IdTerminal, out var origin) ||
-                !origin.MatchesLocation(settings.CurrentLocation) || !sellQuotes.TryGetValue(buy.IdCommodity, out var destinations))
+                !origin.MatchesLocation(settings.CurrentLocation) ||
+                (!string.IsNullOrWhiteSpace(settings.CurrentSystem) &&
+                 !string.Equals(origin.StarSystemName, settings.CurrentSystem, StringComparison.OrdinalIgnoreCase)) ||
+                !sellQuotes.TryGetValue(buy.IdCommodity, out var destinations))
                 continue;
 
             var affordable = (int)Math.Min(int.MaxValue, Math.Floor((settings.Balance - settings.Reserve) / buy.PriceBuy));

@@ -35,6 +35,7 @@ public partial class App : Application
             var vm = _services.GetRequiredService<MainViewModel>();
             await vm.InitializeAsync();
             new MainWindow { DataContext = vm }.Show();
+            _ = vm.LoadLocationsAsync();
         }
         catch (Exception ex)
         {

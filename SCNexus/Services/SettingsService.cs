@@ -61,6 +61,7 @@ public sealed class SettingsService
                 current.Balance = snapshot.Balance;
                 current.CurrentShip = snapshot.CurrentShip;
                 current.CurrentLocation = snapshot.CurrentLocation;
+                current.CurrentSystem = snapshot.CurrentSystem;
                 current.CargoScu = snapshot.CargoScu;
                 current.Reserve = snapshot.Reserve;
                 current.AllowRisky = snapshot.AllowRisky;
@@ -84,6 +85,7 @@ public sealed class SettingsService
             if (!names.Contains("CargoScu")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN CargoScu INTEGER NOT NULL DEFAULT 0");
             if (!names.Contains("Reserve")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN Reserve TEXT NOT NULL DEFAULT '0'");
             if (!names.Contains("AllowRisky")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN AllowRisky INTEGER NOT NULL DEFAULT 0");
+            if (!names.Contains("CurrentSystem")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN CurrentSystem TEXT NOT NULL DEFAULT ''");
         }
         finally { await connection.CloseAsync(); }
     }

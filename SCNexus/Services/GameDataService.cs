@@ -33,6 +33,13 @@ public sealed class GameDataService
             prices.UsedOldCache || terminals.UsedOldCache);
     }
 
+    public async Task<IReadOnlyList<TradeTerminal>> GetTerminalsAsync(CancellationToken token = default)
+    {
+        Directory.CreateDirectory(_cacheDirectory);
+        var terminals = await LoadAsync<TradeTerminal>("terminals", "terminals?type=commodity", TimeSpan.FromHours(12), token);
+        return terminals.Data;
+    }
+
     private async Task<CachedData<T>> LoadAsync<T>(string key, string endpoint, TimeSpan ttl, CancellationToken token)
     {
         var path = Path.Combine(_cacheDirectory, key + ".json");
@@ -57,7 +64,7 @@ public sealed class GameDataService
             await using var stream = await response.Content.ReadAsStreamAsync(token);
             var payload = await JsonSerializer.DeserializeAsync<UexResponse<T>>(stream, Json, token);
             if (payload?.Status != "ok" || payload.Data.Count == 0)
-                throw new InvalidDataException($"UEX returned no {key} data");
+                throw new InvalidDataException("UEX не вернул торговые данные.");
             var result = new CachedData<T>(DateTimeOffset.UtcNow, payload.Data, false);
             var temporary = path + ".tmp";
             await using (var file = File.Create(temporary))

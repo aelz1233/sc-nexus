@@ -26,8 +26,10 @@ public class SettingsServiceTests
             Assert.Equal(5_000_000, settings.Balance);
             settings.CargoScu = 696;
             settings.Reserve = 1_000_000;
+            settings.CurrentSystem = "Stanton";
             await service.SaveAsync(settings);
             Assert.Equal(696, (await service.LoadAsync()).CargoScu);
+            Assert.Equal("Stanton", (await service.LoadAsync()).CurrentSystem);
         }
         finally
         {

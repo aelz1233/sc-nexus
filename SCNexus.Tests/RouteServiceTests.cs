@@ -46,4 +46,21 @@ public class RouteServiceTests
         settings.AllowRisky = true;
         Assert.True(Assert.Single(new RouteService().FindRoutes(data, settings)).Risky);
     }
+
+    [Fact]
+    public void UsesSelectedStarSystemWhenLocationsShareAName()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var data = new DataSnapshot(
+            [new CommodityQuote { IdCommodity = 1, IdTerminal = 10, PriceBuy = 100, ScuBuy = 10, DateModified = now.ToUnixTimeSeconds() },
+             new CommodityQuote { IdCommodity = 1, IdTerminal = 11, PriceBuy = 100, ScuBuy = 10, DateModified = now.ToUnixTimeSeconds() },
+             new CommodityQuote { IdCommodity = 1, IdTerminal = 20, PriceSell = 200, ScuSell = 10, DateModified = now.ToUnixTimeSeconds() }],
+            [new TradeTerminal { Id = 10, Name = "Terminal A", CityName = "Shared", StarSystemName = "Stanton", Type = "commodity", IsAvailableLive = 1 },
+             new TradeTerminal { Id = 11, Name = "Terminal B", CityName = "Shared", StarSystemName = "Pyro", Type = "commodity", IsAvailableLive = 1 },
+             new TradeTerminal { Id = 20, Name = "Destination", CityName = "Elsewhere", StarSystemName = "Stanton", Type = "commodity", IsAvailableLive = 1 }],
+            now, now, false);
+        var settings = new PersonalSettings { Balance = 5000, CargoScu = 10, CurrentLocation = "Shared", CurrentSystem = "Pyro" };
+
+        Assert.Equal("Terminal B", Assert.Single(new RouteService().FindRoutes(data, settings)).BuyAt);
+    }
 }

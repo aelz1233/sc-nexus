@@ -6,14 +6,18 @@ using SCNexus.Services;
 
 namespace SCNexus.ViewModels;
 
-public partial class MainViewModel(SettingsService settingsService, TradingService tradingService, FlightLogService flightLogService) : ObservableObject
+public partial class MainViewModel(SettingsService settingsService, TradingService tradingService,
+    FlightLogService flightLogService, GameDataService gameDataService) : ObservableObject
 {
     private bool _loaded;
+    private bool _selectingLocation;
+    private IReadOnlyList<LocationOption> _allLocations = [];
     private CancellationTokenSource? _pendingSave;
 
     [ObservableProperty] private decimal balance;
     [ObservableProperty] private string currentShip = "Не выбран";
     [ObservableProperty] private string currentLocation = "Не указана";
+    [ObservableProperty] private string currentSystem = "";
     [ObservableProperty] private int cargoScu;
     [ObservableProperty] private decimal reserve;
     [ObservableProperty] private bool allowRisky;
@@ -31,6 +35,11 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     [ObservableProperty] private string newShipRole = "Торговля";
     [ObservableProperty] private string newShipBuild = "";
     [ObservableProperty] private ShipSummary? selectedShip;
+    [ObservableProperty] private string shipSortMode = "По названию";
+    [ObservableProperty] private string selectedSystem = "Все системы";
+    [ObservableProperty] private string locationQuery = "";
+    [ObservableProperty] private string locationStatus = "Локации загружаются…";
+    [ObservableProperty] private bool showLocationSuggestions;
     [ObservableProperty] private string flightOrigin = "";
     [ObservableProperty] private string flightDestination = "";
     [ObservableProperty] private string flightCommodity = "";
@@ -41,8 +50,13 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     [ObservableProperty] private FlightRecord? activeFlight;
 
     public string BalanceDisplay => $"{Balance:N0} aUEC";
+    public string LocationDisplay => string.IsNullOrWhiteSpace(CurrentSystem) ? CurrentLocation : $"{CurrentSystem} · {CurrentLocation}";
     public ObservableCollection<TradeRoute> Routes { get; } = [];
     public ObservableCollection<ShipSummary> Ships { get; } = [];
+    public ObservableCollection<ShipSummary> SortedShips { get; } = [];
+    public string[] ShipSortOptions { get; } = ["По названию", "По вместимости"];
+    public ObservableCollection<string> Systems { get; } = ["Все системы"];
+    public ObservableCollection<LocationOption> FilteredLocations { get; } = [];
     public ObservableCollection<FlightRecord> Flights { get; } = [];
     public bool IsDashboardOpen => !IsSettingsOpen && !IsFleetOpen && !IsHistoryOpen;
     public bool HasActiveFlight => ActiveFlight is not null;
@@ -58,6 +72,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         }
     }
     public string TotalFlightProfitDisplay => $"{Flights.Where(x => x.EndedAtUtc != null).Sum(x => x.Profit):+#,##0;-#,##0;0} aUEC";
+    public string TodayProfitDisplay => $"{Flights.Where(x => x.EndedAtUtc?.ToLocalTime().Date == DateTime.Today).Sum(x => x.Profit):+#,##0;-#,##0;0} aUEC";
 
     public async Task InitializeAsync()
     {
@@ -65,19 +80,97 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         Balance = settings.Balance;
         CurrentShip = settings.CurrentShip;
         CurrentLocation = settings.CurrentLocation;
+        CurrentSystem = settings.CurrentSystem;
+        LocationQuery = settings.CurrentLocation == "Не указана" ? "" : settings.CurrentLocation;
         CargoScu = settings.CargoScu;
         Reserve = settings.Reserve;
         AllowRisky = settings.AllowRisky;
         await ReloadFlightLogAsync();
+        if (CurrentShip != "Не выбран" && Ships.All(x => !x.Name.Equals(CurrentShip, StringComparison.OrdinalIgnoreCase)))
+        {
+            await flightLogService.AddShipAsync(CurrentShip, CargoScu, "Торговля", "Импортирован из настроек");
+            await ReloadFlightLogAsync();
+        }
         _loaded = true;
+    }
+
+    public async Task LoadLocationsAsync()
+    {
+        try
+        {
+            var terminals = await gameDataService.GetTerminalsAsync();
+            _allLocations = LocationCatalog.Build(terminals);
+            Systems.Clear();
+            Systems.Add("Все системы");
+            foreach (var system in _allLocations.Select(x => x.System).Distinct(StringComparer.OrdinalIgnoreCase))
+                Systems.Add(system);
+            SelectedSystem = Systems.FirstOrDefault(x => x.Equals(CurrentSystem, StringComparison.OrdinalIgnoreCase)) ?? "Все системы";
+            LocationStatus = $"Найдено {_allLocations.Count} локаций. Введи минимум две буквы.";
+            RefreshLocationSuggestions();
+        }
+        catch (Exception ex)
+        {
+            LocationStatus = $"Не удалось загрузить локации: {ex.Message}";
+        }
     }
 
     partial void OnBalanceChanged(decimal value) { OnPropertyChanged(nameof(BalanceDisplay)); QueueSave(); }
     partial void OnCurrentShipChanged(string value) => QueueSave();
-    partial void OnCurrentLocationChanged(string value) => QueueSave();
+    partial void OnCurrentSystemChanged(string value) { OnPropertyChanged(nameof(LocationDisplay)); QueueSave(); }
+    partial void OnCurrentLocationChanged(string value) { OnPropertyChanged(nameof(LocationDisplay)); QueueSave(); }
     partial void OnCargoScuChanged(int value) => QueueSave();
     partial void OnReserveChanged(decimal value) => QueueSave();
     partial void OnAllowRiskyChanged(bool value) => QueueSave();
+    partial void OnSelectedShipChanged(ShipSummary? value)
+    {
+        if (!_loaded || value is null) return;
+        CurrentShip = value.Name;
+        CargoScu = value.Ship.CargoScu;
+    }
+    partial void OnShipSortModeChanged(string value) => RefreshSortedShips();
+    partial void OnSelectedSystemChanged(string value) => RefreshLocationSuggestions();
+    partial void OnLocationQueryChanged(string value)
+    {
+        if (!_selectingLocation) RefreshLocationSuggestions();
+    }
+
+    private void RefreshSortedShips()
+    {
+        var currentId = SelectedShip?.Ship.Id;
+        var sorted = ShipSortMode == "По вместимости"
+            ? Ships.OrderByDescending(x => x.Ship.CargoScu).ThenBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
+            : Ships.OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase);
+        SortedShips.Clear();
+        foreach (var ship in sorted) SortedShips.Add(ship);
+        if (currentId is not null)
+            SelectedShip = SortedShips.FirstOrDefault(x => x.Ship.Id == currentId);
+    }
+
+    private void RefreshLocationSuggestions()
+    {
+        FilteredLocations.Clear();
+        foreach (var location in LocationCatalog.Search(_allLocations, SelectedSystem, LocationQuery))
+            FilteredLocations.Add(location);
+        ShowLocationSuggestions = FilteredLocations.Count > 0;
+    }
+
+    [RelayCommand]
+    private void SelectLocation(LocationOption? location)
+    {
+        if (location is null) return;
+        _selectingLocation = true;
+        try
+        {
+            CurrentLocation = location.Name;
+            CurrentSystem = location.System;
+            LocationQuery = location.Name;
+            SelectedSystem = location.System;
+        }
+        finally { _selectingLocation = false; }
+        FilteredLocations.Clear();
+        ShowLocationSuggestions = false;
+        LocationStatus = $"Выбрано: {location.Display}";
+    }
     partial void OnIsSettingsOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
     partial void OnIsFleetOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
     partial void OnIsHistoryOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
@@ -117,6 +210,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             Balance = Balance,
             CurrentShip = string.IsNullOrWhiteSpace(CurrentShip) ? "Не выбран" : CurrentShip.Trim(),
             CurrentLocation = string.IsNullOrWhiteSpace(CurrentLocation) ? "Не указана" : CurrentLocation.Trim(),
+            CurrentSystem = CurrentSystem,
             CargoScu = Math.Max(0, CargoScu),
             Reserve = Math.Max(0, Reserve),
             AllowRisky = AllowRisky
@@ -133,6 +227,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         var selectedId = SelectedShip?.Ship.Id;
         Ships.Clear();
         foreach (var ship in ships) Ships.Add(ship);
+        RefreshSortedShips();
         SelectedShip = Ships.FirstOrDefault(x => x.Ship.Id == selectedId)
             ?? Ships.FirstOrDefault(x => x.Name.Equals(CurrentShip, StringComparison.OrdinalIgnoreCase))
             ?? Ships.FirstOrDefault();
@@ -151,6 +246,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         }
         OnPropertyChanged(nameof(PersonalProfitHourDisplay));
         OnPropertyChanged(nameof(TotalFlightProfitDisplay));
+        OnPropertyChanged(nameof(TodayProfitDisplay));
     }
 
     [RelayCommand]
@@ -259,8 +355,8 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             }
             var age = DateTimeOffset.UtcNow - data.PricesFetchedAt;
             var oldQuote = routes.Any(x => DateTimeOffset.UtcNow - x.QuoteUpdatedAt > TimeSpan.FromHours(24));
-            DataStatus = $"UEX • данные получены {data.PricesFetchedAt.LocalDateTime:dd.MM HH:mm}" +
-                (data.UsedOldCache || age > TimeSpan.FromHours(1) || oldQuote ? " • DATA OLD" : "");
+            DataStatus = $"UEX • обновлено {data.PricesFetchedAt.LocalDateTime:dd.MM HH:mm}" +
+                (data.UsedOldCache || age > TimeSpan.FromHours(1) || oldQuote ? " • ДАННЫЕ УСТАРЕЛИ" : "");
             RecommendationMessage = routes.Count == 0
                 ? "Маршрутов с подтверждённой ценой и указанным объёмом сейчас не найдено. Проверь локацию или попробуй обновить позже."
                 : "Расчёт по сообщениям игроков UEX. Наличие товара и спрос проверь в терминале перед закупкой.";

@@ -18,7 +18,7 @@ public sealed class FlightLogService(SettingsService settingsService)
     public async Task<PersonalShip> AddShipAsync(string name, int cargoScu, string role, string buildNotes)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Укажи название корабля.");
-        if (cargoScu < 0) throw new ArgumentException("Cargo SCU не может быть отрицательным.");
+        if (cargoScu < 0) throw new ArgumentException("Грузовой объём не может быть отрицательным.");
         await using var db = settingsService.CreateDbContext();
         var ship = new PersonalShip
         {
