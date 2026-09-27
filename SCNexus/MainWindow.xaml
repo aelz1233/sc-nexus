@@ -1,0 +1,99 @@
+<Window x:Class="SCNexus.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SC NEXUS" Width="1320" Height="820" MinWidth="1000" MinHeight="640"
+        Background="{StaticResource Bg}" WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource Panel}"/>
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="Padding" Value="22"/>
+        </Style>
+        <Style x:Key="Nav" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Margin" Value="0,3"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        <Style x:Key="Caption" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+    </Window.Resources>
+    <Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Border Background="#0D1923" BorderBrush="#29404E" BorderThickness="0,0,1,0">
+            <DockPanel Margin="20,28,20,20">
+                <TextBlock DockPanel.Dock="Bottom" Text="ЭТАП 1  •  OFFLINE" Foreground="{StaticResource Muted}" FontSize="11"/>
+                <StackPanel>
+                    <TextBlock Text="SC NEXUS" Foreground="{StaticResource Accent}" FontSize="23" FontWeight="Bold"/>
+                    <TextBlock Text="PERSONAL COMPANION" Foreground="{StaticResource Muted}" FontSize="10" Margin="2,2,0,36"/>
+                    <Button Style="{StaticResource Nav}" Content="DASHBOARD" Command="{Binding OpenDashboardCommand}" Foreground="{StaticResource Accent}"/>
+                    <Button Style="{StaticResource Nav}" Content="TRADING" IsEnabled="False"/>
+                    <Button Style="{StaticResource Nav}" Content="ROUTES" IsEnabled="False"/>
+                    <Button Style="{StaticResource Nav}" Content="FLEET" IsEnabled="False"/>
+                    <Button Style="{StaticResource Nav}" Content="LOADOUT" IsEnabled="False"/>
+                    <Button Style="{StaticResource Nav}" Content="SALVAGE" IsEnabled="False"/>
+                    <Button Style="{StaticResource Nav}" Content="MINING" IsEnabled="False"/>
+                    <Button Style="{StaticResource Nav}" Content="HISTORY" IsEnabled="False"/>
+                    <Button Style="{StaticResource Nav}" Content="SETTINGS" Command="{Binding OpenSettingsCommand}" Foreground="{StaticResource Accent}"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+            <Grid Margin="34,28,34,34">
+                <StackPanel>
+                    <TextBlock Text="COMMAND DECK  /  ЛИЧНЫЙ ОБЗОР" Foreground="{StaticResource Accent}" FontSize="12" FontWeight="Bold"/>
+                    <TextBlock Text="Твой следующий рейс начинается здесь." FontSize="29" FontWeight="SemiBold" Margin="0,8,0,22"/>
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <StackPanel><TextBlock Style="{StaticResource Caption}" Text="БАЛАНС"/><TextBlock Text="{Binding BalanceDisplay}" FontSize="30" FontWeight="Bold" Foreground="{StaticResource Accent}" Margin="0,8,0,0"/></StackPanel>
+                            <StackPanel Grid.Column="1"><TextBlock Style="{StaticResource Caption}" Text="КОРАБЛЬ"/><TextBlock Text="{Binding CurrentShip}" FontSize="20" FontWeight="SemiBold" Margin="0,13,0,0"/></StackPanel>
+                            <StackPanel Grid.Column="2"><TextBlock Style="{StaticResource Caption}" Text="ЛОКАЦИЯ"/><TextBlock Text="{Binding CurrentLocation}" FontSize="20" FontWeight="SemiBold" Margin="0,13,0,0"/></StackPanel>
+                        </Grid>
+                    </Border>
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                        <Border Style="{StaticResource Card}" Margin="0,0,8,0"><StackPanel><TextBlock Style="{StaticResource Caption}" Text="ЗА СЕССИЮ"/><TextBlock Text="Нет активной сессии" FontSize="19" Margin="0,8,0,0"/></StackPanel></Border>
+                        <Border Grid.Column="1" Style="{StaticResource Card}" Margin="8,0,0,0"><StackPanel><TextBlock Style="{StaticResource Caption}" Text="aUEC / ЧАС"/><TextBlock Text="Нет данных" FontSize="19" Margin="0,8,0,0"/></StackPanel></Border>
+                    </Grid>
+                    <Button Command="{Binding RecommendCommand}" Background="{StaticResource Accent}" Foreground="#07151A" FontSize="22" FontWeight="Bold" Padding="26,22" Content="ЧТО МНЕ ДЕЛАТЬ СЕЙЧАС?"/>
+                    <TextBlock Text="Маршруты ниже — только демонстрация интерфейса. Реальные цены и рекомендации появятся на следующем этапе." Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,12,0,20"/>
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,20" Visibility="{Binding ShowRecommendation, Converter={StaticResource BoolVisibility}}">
+                        <StackPanel><TextBlock Text="DEMO / РЕКОМЕНДАЦИЯ" Foreground="{StaticResource Accent}" FontWeight="Bold"/><TextBlock Text="Сейчас нет проверенных торговых данных. Укажи баланс, корабль и локацию в настройках. Расчёт реального маршрута появится на следующем этапе." TextWrapping="Wrap" Margin="0,8,0,0"/></StackPanel>
+                    </Border>
+                    <TextBlock Text="ПРИМЕРЫ МАРШРУТОВ" FontSize="16" FontWeight="Bold" Margin="0,0,0,12"/>
+                    <ItemsControl ItemsSource="{Binding DemoRoutes}">
+                        <ItemsControl.ItemTemplate><DataTemplate>
+                            <Border Style="{StaticResource Card}" Margin="0,0,0,10">
+                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="1.3*"/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                    <StackPanel><TextBlock Text="{Binding Label}" Foreground="{StaticResource Accent}" FontWeight="Bold"/><TextBlock Text="{Binding Commodity}" FontSize="17" Margin="0,6,0,0"/></StackPanel>
+                                    <StackPanel Grid.Column="1"><TextBlock Style="{StaticResource Caption}" Text="BUY"/><TextBlock Text="{Binding Buy}" Margin="0,7,0,0"/></StackPanel>
+                                    <StackPanel Grid.Column="2"><TextBlock Style="{StaticResource Caption}" Text="SELL"/><TextBlock Text="{Binding Sell}" Margin="0,7,0,0"/></StackPanel>
+                                    <StackPanel Grid.Column="3"><TextBlock Style="{StaticResource Caption}" Text="РИСК"/><TextBlock Text="{Binding Risk}" Margin="0,7,0,0"/></StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="DEMO DATA • БЕЗ ПОДКЛЮЧЕНИЯ К ТОРГОВОМУ API" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,5,0,0"/>
+                </StackPanel>
+                <Border Background="#F0091118" Visibility="{Binding IsSettingsOpen, Converter={StaticResource BoolVisibility}}">
+                    <StackPanel Width="500" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="МОИ НАСТРОЙКИ" FontSize="28" FontWeight="Bold" Margin="0,0,0,6"/>
+                        <TextBlock Text="Изменения сохраняются автоматически на этом компьютере." Foreground="{StaticResource Muted}" Margin="0,0,0,28"/>
+                        <TextBlock Style="{StaticResource Caption}" Text="БАЛАНС aUEC"/>
+                        <TextBox Text="{Binding Balance, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}" Margin="0,7,0,18"/>
+                        <TextBlock Style="{StaticResource Caption}" Text="ТЕКУЩИЙ КОРАБЛЬ"/>
+                        <TextBox Text="{Binding CurrentShip, UpdateSourceTrigger=PropertyChanged}" Margin="0,7,0,18"/>
+                        <TextBlock Style="{StaticResource Caption}" Text="ТЕКУЩАЯ ЛОКАЦИЯ"/>
+                        <TextBox Text="{Binding CurrentLocation, UpdateSourceTrigger=PropertyChanged}" Margin="0,7,0,18"/>
+                        <TextBlock Text="{Binding SaveStatus}" Foreground="{StaticResource Accent}" Margin="0,0,0,24"/>
+                        <Button Content="ГОТОВО" Command="{Binding OpenDashboardCommand}" Background="{StaticResource Accent}" Foreground="#07151A" FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</Window>

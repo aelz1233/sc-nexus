@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="SCNexus.Tests/SCNexus.Tests.csproj" />
+  <Project Path="SCNexus/SCNexus.csproj" />
+</Solution>
