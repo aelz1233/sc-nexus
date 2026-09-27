@@ -1,0 +1,49 @@
+using SCNexus.Models;
+using SCNexus.Services;
+
+namespace SCNexus.Tests;
+
+public class RouteServiceTests
+{
+    [Fact]
+    public void LimitsPurchaseByBudgetCargoStockAndDemand()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var data = new DataSnapshot(
+            [
+                new CommodityQuote { IdCommodity = 1, IdTerminal = 10, CommodityName = "Gold", PriceBuy = 100, ScuBuy = 50, DateModified = now.ToUnixTimeSeconds() },
+                new CommodityQuote { IdCommodity = 1, IdTerminal = 20, CommodityName = "Gold", PriceSell = 150, ScuSell = 30, StatusSell = 1, DateModified = now.ToUnixTimeSeconds() }
+            ],
+            [
+                new TradeTerminal { Id = 10, Name = "TDD New Babbage", CityName = "New Babbage", Type = "commodity", IsAvailableLive = 1 },
+                new TradeTerminal { Id = 20, Name = "TDD Area18", CityName = "Area18", Type = "commodity", IsAvailableLive = 1 }
+            ], now, now, false);
+        var settings = new PersonalSettings { Balance = 3000, Reserve = 1000, CargoScu = 40, CurrentLocation = "New Babbage" };
+
+        var route = Assert.Single(new RouteService().FindRoutes(data, settings));
+        Assert.Equal(20, route.Scu);
+        Assert.Equal(2000, route.Investment);
+        Assert.Equal(1000, route.Profit);
+
+        settings.Balance = 10_000;
+        route = Assert.Single(new RouteService().FindRoutes(data, settings));
+        Assert.Equal(30, route.Scu);
+    }
+
+    [Fact]
+    public void ExcludesNqaUnlessOptedIn()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var data = new DataSnapshot(
+            [new CommodityQuote { IdCommodity = 1, IdTerminal = 10, PriceBuy = 100, ScuBuy = 10, DateModified = now.ToUnixTimeSeconds() },
+             new CommodityQuote { IdCommodity = 1, IdTerminal = 20, PriceSell = 200, ScuSell = 10, DateModified = now.ToUnixTimeSeconds() }],
+            [new TradeTerminal { Id = 10, CityName = "New Babbage", Type = "commodity", IsAvailableLive = 1 },
+             new TradeTerminal { Id = 20, CityName = "Area18", Type = "commodity", IsAvailableLive = 1, IsNqa = 1 }],
+            now, now, false);
+        var settings = new PersonalSettings { Balance = 5000, CargoScu = 10, CurrentLocation = "New Babbage" };
+
+        Assert.Empty(new RouteService().FindRoutes(data, settings));
+        settings.AllowRisky = true;
+        Assert.True(Assert.Single(new RouteService().FindRoutes(data, settings)).Risky);
+    }
+}

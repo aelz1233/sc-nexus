@@ -7,6 +7,36 @@ namespace SCNexus.Tests;
 public class SettingsServiceTests
 {
     [Fact]
+    public async Task ExistingStageOneDatabaseGetsNewSettingsColumns()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, "legacy.db");
+        try
+        {
+            await using (var connection = new SqliteConnection($"Data Source={path}"))
+            {
+                await connection.OpenAsync();
+                await using var command = connection.CreateCommand();
+                command.CommandText = "CREATE TABLE PersonalSettings (Id INTEGER NOT NULL PRIMARY KEY, Balance TEXT NOT NULL, CurrentShip TEXT NOT NULL, CurrentLocation TEXT NOT NULL); INSERT INTO PersonalSettings VALUES (1, '5000000', 'C2', 'New Babbage');";
+                await command.ExecuteNonQueryAsync();
+            }
+            var service = new SettingsService(path);
+            var settings = await service.LoadAsync();
+            Assert.Equal(5_000_000, settings.Balance);
+            settings.CargoScu = 696;
+            settings.Reserve = 1_000_000;
+            await service.SaveAsync(settings);
+            Assert.Equal(696, (await service.LoadAsync()).CargoScu);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
     public async Task SettingsSurviveServiceRestart()
     {
         var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
@@ -21,7 +51,9 @@ public class SettingsServiceTests
             {
                 Balance = 10_430_000,
                 CurrentShip = "C2 Hercules",
-                CurrentLocation = "New Babbage"
+                CurrentLocation = "New Babbage",
+                CargoScu = 696,
+                Reserve = 1_000_000
             });
 
             var restarted = new SettingsService(path);
@@ -29,6 +61,8 @@ public class SettingsServiceTests
             Assert.Equal(10_430_000, saved.Balance);
             Assert.Equal("C2 Hercules", saved.CurrentShip);
             Assert.Equal("New Babbage", saved.CurrentLocation);
+            Assert.Equal(696, saved.CargoScu);
+            Assert.Equal(1_000_000, saved.Reserve);
 
             await restarted.SaveAsync(new PersonalSettings
             {

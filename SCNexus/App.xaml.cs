@@ -1,4 +1,6 @@
 using System.Windows;
+using System.Net.Http;
+using System.Net;
 using Microsoft.Extensions.DependencyInjection;
 using SCNexus.Services;
 using SCNexus.ViewModels;
@@ -16,6 +18,17 @@ public partial class App : Application
         {
             var collection = new ServiceCollection();
             collection.AddSingleton<SettingsService>();
+            collection.AddSingleton(new HttpClient(new HttpClientHandler
+            {
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli
+            })
+            {
+                BaseAddress = new Uri("https://api.uexcorp.space/2.0/"),
+                Timeout = TimeSpan.FromSeconds(90)
+            });
+            collection.AddSingleton<GameDataService>();
+            collection.AddSingleton<RouteService>();
+            collection.AddSingleton<TradingService>();
             collection.AddSingleton<MainViewModel>();
             _services = collection.BuildServiceProvider();
             var vm = _services.GetRequiredService<MainViewModel>();

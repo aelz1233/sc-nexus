@@ -22,6 +22,7 @@ public sealed class SettingsService
     {
         await using var db = new NexusDbContext(_options);
         await db.Database.EnsureCreatedAsync();
+        await AddMissingColumnsAsync(db);
         return await db.PersonalSettings.AsNoTracking().SingleOrDefaultAsync(x => x.Id == 1) ?? new();
     }
 
@@ -38,9 +39,30 @@ public sealed class SettingsService
                 current.Balance = snapshot.Balance;
                 current.CurrentShip = snapshot.CurrentShip;
                 current.CurrentLocation = snapshot.CurrentLocation;
+                current.CargoScu = snapshot.CargoScu;
+                current.Reserve = snapshot.Reserve;
+                current.AllowRisky = snapshot.AllowRisky;
             }
             await db.SaveChangesAsync();
         }
         finally { _gate.Release(); }
+    }
+
+    private static async Task AddMissingColumnsAsync(NexusDbContext db)
+    {
+        var connection = db.Database.GetDbConnection();
+        await connection.OpenAsync();
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA table_info('PersonalSettings')";
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            await using (var reader = await command.ExecuteReaderAsync())
+                while (await reader.ReadAsync()) names.Add(reader.GetString(1));
+            if (!names.Contains("CargoScu")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN CargoScu INTEGER NOT NULL DEFAULT 0");
+            if (!names.Contains("Reserve")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN Reserve TEXT NOT NULL DEFAULT '0'");
+            if (!names.Contains("AllowRisky")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN AllowRisky INTEGER NOT NULL DEFAULT 0");
+        }
+        finally { await connection.CloseAsync(); }
     }
 }

@@ -6,4 +6,7 @@ public sealed class PersonalSettings
     public decimal Balance { get; set; }
     public string CurrentShip { get; set; } = "Не выбран";
     public string CurrentLocation { get; set; } = "Не указана";
+    public int CargoScu { get; set; }
+    public decimal Reserve { get; set; }
+    public bool AllowRisky { get; set; }
 }

@@ -60,24 +60,32 @@
                         <Border Grid.Column="1" Style="{StaticResource Card}" Margin="8,0,0,0"><StackPanel><TextBlock Style="{StaticResource Caption}" Text="aUEC / ЧАС"/><TextBlock Text="Нет данных" FontSize="19" Margin="0,8,0,0"/></StackPanel></Border>
                     </Grid>
                     <Button Command="{Binding RecommendCommand}" Background="{StaticResource Accent}" Foreground="#07151A" FontSize="22" FontWeight="Bold" Padding="26,22" Content="ЧТО МНЕ ДЕЛАТЬ СЕЙЧАС?"/>
-                    <TextBlock Text="Маршруты ниже — только демонстрация интерфейса. Реальные цены и рекомендации появятся на следующем этапе." Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,12,0,20"/>
+                    <TextBlock Text="{Binding DataStatus}" Foreground="{StaticResource Accent}" Margin="0,12,0,20"/>
                     <Border Style="{StaticResource Card}" Margin="0,0,0,20" Visibility="{Binding ShowRecommendation, Converter={StaticResource BoolVisibility}}">
-                        <StackPanel><TextBlock Text="DEMO / РЕКОМЕНДАЦИЯ" Foreground="{StaticResource Accent}" FontWeight="Bold"/><TextBlock Text="Сейчас нет проверенных торговых данных. Укажи баланс, корабль и локацию в настройках. Расчёт реального маршрута появится на следующем этапе." TextWrapping="Wrap" Margin="0,8,0,0"/></StackPanel>
+                        <StackPanel><TextBlock Text="ТОРГОВЫЕ МАРШРУТЫ" Foreground="{StaticResource Accent}" FontWeight="Bold"/><TextBlock Text="{Binding RecommendationMessage}" TextWrapping="Wrap" Margin="0,8,0,0"/></StackPanel>
                     </Border>
-                    <TextBlock Text="ПРИМЕРЫ МАРШРУТОВ" FontSize="16" FontWeight="Bold" Margin="0,0,0,12"/>
-                    <ItemsControl ItemsSource="{Binding DemoRoutes}">
+                    <TextBlock Text="ТОП МАРШРУТОВ ОТ ТЕКУЩЕЙ ЛОКАЦИИ" FontSize="16" FontWeight="Bold" Margin="0,0,0,12"/>
+                    <ItemsControl ItemsSource="{Binding Routes}">
                         <ItemsControl.ItemTemplate><DataTemplate>
                             <Border Style="{StaticResource Card}" Margin="0,0,0,10">
-                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="1.3*"/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-                                    <StackPanel><TextBlock Text="{Binding Label}" Foreground="{StaticResource Accent}" FontWeight="Bold"/><TextBlock Text="{Binding Commodity}" FontSize="17" Margin="0,6,0,0"/></StackPanel>
-                                    <StackPanel Grid.Column="1"><TextBlock Style="{StaticResource Caption}" Text="BUY"/><TextBlock Text="{Binding Buy}" Margin="0,7,0,0"/></StackPanel>
-                                    <StackPanel Grid.Column="2"><TextBlock Style="{StaticResource Caption}" Text="SELL"/><TextBlock Text="{Binding Sell}" Margin="0,7,0,0"/></StackPanel>
-                                    <StackPanel Grid.Column="3"><TextBlock Style="{StaticResource Caption}" Text="РИСК"/><TextBlock Text="{Binding Risk}" Margin="0,7,0,0"/></StackPanel>
-                                </Grid>
+                                <StackPanel>
+                                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="1.3*"/><ColumnDefinition Width="2*"/><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <StackPanel><TextBlock Text="{Binding Commodity}" Foreground="{StaticResource Accent}" FontSize="18" FontWeight="Bold"/><TextBlock Text="{Binding ScuDisplay}" Foreground="{StaticResource Muted}" Margin="0,5,0,0"/></StackPanel>
+                                        <StackPanel Grid.Column="1"><TextBlock Style="{StaticResource Caption}" Text="BUY"/><TextBlock Text="{Binding BuyAt}" TextWrapping="Wrap" Margin="0,5,12,0"/></StackPanel>
+                                        <StackPanel Grid.Column="2"><TextBlock Style="{StaticResource Caption}" Text="SELL"/><TextBlock Text="{Binding SellAt}" TextWrapping="Wrap" Margin="0,5,12,0"/></StackPanel>
+                                        <StackPanel Grid.Column="3"><TextBlock Style="{StaticResource Caption}" Text="ЧИСТЫМИ"/><TextBlock Text="{Binding ProfitDisplay}" Foreground="{StaticResource Accent}" FontWeight="Bold" Margin="0,5,0,0"/></StackPanel>
+                                    </Grid>
+                                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                                        <TextBlock Text="Закупка: " Foreground="{StaticResource Muted}"/><TextBlock Text="{Binding InvestmentDisplay}"/>
+                                        <TextBlock Text="    ROI: " Foreground="{StaticResource Muted}"/><TextBlock Text="{Binding RoiDisplay}"/>
+                                        <TextBlock Text="    " Foreground="{StaticResource Muted}"/><TextBlock Text="{Binding FreshnessDisplay}"/>
+                                        <TextBlock Text="    " Foreground="{StaticResource Muted}"/><TextBlock Text="{Binding RiskDisplay}"/>
+                                    </StackPanel>
+                                </StackPanel>
                             </Border>
                         </DataTemplate></ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <TextBlock Text="DEMO DATA • БЕЗ ПОДКЛЮЧЕНИЯ К ТОРГОВОМУ API" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,5,0,0"/>
+                    <TextBlock Text="Данные UEX поддерживаются игроками. Объёмы — последние сообщения/прогноз спроса; наличие и время рейса не гарантированы." Foreground="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11" Margin="0,5,0,0"/>
                 </StackPanel>
                 <Border Background="#F0091118" Visibility="{Binding IsSettingsOpen, Converter={StaticResource BoolVisibility}}">
                     <StackPanel Width="500" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -89,6 +97,11 @@
                         <TextBox Text="{Binding CurrentShip, UpdateSourceTrigger=PropertyChanged}" Margin="0,7,0,18"/>
                         <TextBlock Style="{StaticResource Caption}" Text="ТЕКУЩАЯ ЛОКАЦИЯ"/>
                         <TextBox Text="{Binding CurrentLocation, UpdateSourceTrigger=PropertyChanged}" Margin="0,7,0,18"/>
+                        <TextBlock Style="{StaticResource Caption}" Text="ВМЕСТИМОСТЬ КОРАБЛЯ, SCU"/>
+                        <TextBox Text="{Binding CargoScu, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}" Margin="0,7,0,18"/>
+                        <TextBlock Style="{StaticResource Caption}" Text="НЕ ТРАТИТЬ ПОСЛЕДНИЕ, aUEC"/>
+                        <TextBox Text="{Binding Reserve, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}" Margin="0,7,0,18"/>
+                        <CheckBox Content="Показывать NQA / рискованные терминалы" IsChecked="{Binding AllowRisky}" Foreground="White" Margin="0,0,0,18"/>
                         <TextBlock Text="{Binding SaveStatus}" Foreground="{StaticResource Accent}" Margin="0,0,0,24"/>
                         <Button Content="ГОТОВО" Command="{Binding OpenDashboardCommand}" Background="{StaticResource Accent}" Foreground="#07151A" FontWeight="Bold"/>
                     </StackPanel>
