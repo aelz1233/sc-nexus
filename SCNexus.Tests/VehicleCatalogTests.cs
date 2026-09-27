@@ -21,4 +21,15 @@ public class VehicleCatalogTests
             VehicleCatalog.Search(ships, "her", "По вместимости").Select(x => x.Name));
         Assert.Equal(3, VehicleCatalog.Search(ships, "", "По названию").Count);
     }
+
+    [Theory]
+    [InlineData("C2 Hercules Starlifter", "Грузоперевозки")]
+    [InlineData("A2 Hercules Starlifter", "Бомбардировщик")]
+    [InlineData("MOLE", "Добыча ресурсов")]
+    [InlineData("Apollo Medivac", "Медицинский")]
+    [InlineData("Unknown Ship", "Универсальный")]
+    public void InfersRoleFromModel(string name, string expected)
+    {
+        Assert.Equal(expected, VehicleCatalog.InferRole(new VehicleCatalogItem { Name = name }));
+    }
 }

@@ -16,6 +16,8 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     private IReadOnlyList<LocationOption> _allLocations = [];
     private IReadOnlyList<VehicleCatalogItem> _allVehicles = [];
     private DataSnapshot? _haulingData;
+    private IReadOnlyList<TradeRoute> _recommendedRoutes = [];
+    private int _visibleRouteCount;
     private CancellationTokenSource? _pendingSave;
 
     [ObservableProperty] private decimal balance;
@@ -53,7 +55,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     [ObservableProperty] private string haulingCategory = "Все маршруты";
     [ObservableProperty] private bool haulingSameSystemOnly;
     [ObservableProperty] private HaulingRoute? haulingBestRoute;
-    [ObservableProperty] private string newShipRole = "Торговля";
+    [ObservableProperty] private string newShipRole = "";
     [ObservableProperty] private string newShipBuild = "";
     [ObservableProperty] private ShipSummary? selectedShip;
     [ObservableProperty] private string shipSortMode = "По названию";
@@ -90,6 +92,9 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     public bool IsDashboardOpen => !IsSettingsOpen && !IsFleetOpen && !IsHistoryOpen && !IsToolsOpen && !IsHaulingOpen;
     public bool HasActiveFlight => ActiveFlight is not null;
     public bool HasHaulingBestRoute => HaulingBestRoute is not null;
+    public bool HasMoreRoutes => _visibleRouteCount < _recommendedRoutes.Count;
+    public string RecommendedCountDisplay => _recommendedRoutes.Count == 0 ? "" :
+        $"Показано {_visibleRouteCount} из {_recommendedRoutes.Count} маршрутов";
     public string ActiveFlightDisplay => ActiveFlight is null ? "Нет активного рейса" :
         $"{ActiveFlight.Commodity} • {ActiveFlight.Origin} → {ActiveFlight.Destination}";
     public string PersonalProfitHourDisplay
@@ -231,9 +236,10 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     partial void OnSelectedCatalogVehicleChanged(VehicleCatalogItem? value)
     {
         OnPropertyChanged(nameof(HasSelectedCatalogVehicle));
-        if (value is null) { NewShipName = ""; NewShipCargoScu = 0; return; }
+        if (value is null) { NewShipName = ""; NewShipCargoScu = 0; NewShipRole = ""; return; }
         NewShipName = value.Name;
         NewShipCargoScu = (int)Math.Floor(value.Scu);
+        NewShipRole = VehicleCatalog.InferRole(value);
         _selectingVehicle = true;
         ShipSearchQuery = value.Name;
         _selectingVehicle = false;
@@ -305,6 +311,23 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         FilteredLocations.Clear();
         ShowLocationSuggestions = false;
         LocationStatus = $"Выбрано: {location.Display}";
+    }
+
+    [RelayCommand]
+    private void ClearLocation()
+    {
+        _selectingLocation = true;
+        try
+        {
+            CurrentLocation = "Не указана";
+            CurrentSystem = "";
+            LocationQuery = "";
+            SelectedSystem = "Все системы";
+        }
+        finally { _selectingLocation = false; }
+        FilteredLocations.Clear();
+        ShowLocationSuggestions = false;
+        LocationStatus = "Старт не выбран: поиск покажет маршруты из всех локаций.";
     }
     partial void OnIsSettingsOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
     partial void OnIsFleetOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
@@ -457,7 +480,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         {
             if (SelectedCatalogVehicle is null) throw new ArgumentException("Сначала выбери корабль из каталога.");
             var ship = await flightLogService.AddShipAsync(NewShipName, NewShipCargoScu, NewShipRole, NewShipBuild);
-            NewShipName = ""; NewShipCargoScu = 0; NewShipBuild = "";
+            NewShipName = ""; NewShipCargoScu = 0; NewShipRole = ""; NewShipBuild = "";
             SelectedCatalogVehicle = null; ShipSearchQuery = "";
             await ReloadFlightLogAsync();
             SelectedShip = Ships.First(x => x.Ship.Id == ship.Id);
@@ -537,9 +560,13 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     {
         ShowRecommendation = true;
         Routes.Clear();
-        if (Balance <= Reserve || CargoScu <= 0 || CurrentLocation == "Не указана")
+        _recommendedRoutes = [];
+        _visibleRouteCount = 0;
+        OnPropertyChanged(nameof(HasMoreRoutes));
+        OnPropertyChanged(nameof(RecommendedCountDisplay));
+        if (Balance <= Reserve || CargoScu <= 0)
         {
-            RecommendationMessage = "Укажи баланс, резерв, объём груза и текущую локацию в настройках.";
+            RecommendationMessage = "Укажи баланс и выбери корабль с грузовым отсеком в настройках.";
             return;
         }
         IsLoading = true;
@@ -547,21 +574,22 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         try
         {
             var (data, routes) = await tradingService.RecommendAsync(SettingsSnapshot());
-            foreach (var route in routes)
+            _recommendedRoutes = routes.Select(route =>
             {
                 var similar = Flights.Where(x => x.EndedAtUtc != null &&
                     x.Commodity.Equals(route.Commodity, StringComparison.OrdinalIgnoreCase) &&
                     x.Origin.Equals(route.BuyAt, StringComparison.OrdinalIgnoreCase) &&
                     x.Destination.Equals(route.SellAt, StringComparison.OrdinalIgnoreCase)).ToList();
                 var averageMinutes = similar.Count == 0 ? (double?)null : similar.Average(x => x.DurationHours * 60);
-                Routes.Add(route with { PersonalDurationMinutes = averageMinutes });
-            }
+                return route with { PersonalDurationMinutes = averageMinutes };
+            }).ToArray();
+            ShowMoreRoutes();
             var age = DateTimeOffset.UtcNow - data.PricesFetchedAt;
             var oldQuote = routes.Any(x => DateTimeOffset.UtcNow - x.QuoteUpdatedAt > TimeSpan.FromHours(24));
             DataStatus = $"UEX • обновлено {data.PricesFetchedAt.LocalDateTime:dd.MM HH:mm}" +
                 (data.UsedOldCache || age > TimeSpan.FromHours(1) || oldQuote ? " • ДАННЫЕ УСТАРЕЛИ" : "");
             RecommendationMessage = routes.Count == 0
-                ? "Маршрутов с подтверждённой ценой и указанным объёмом сейчас не найдено. Проверь локацию или попробуй обновить позже."
+                ? "Маршрутов с подходящей ценой и объёмом сейчас не найдено. Проверь фильтры или обнови данные позже."
                 : "Расчёт по сообщениям игроков UEX. Наличие товара и спрос проверь в терминале перед закупкой.";
         }
         catch (Exception ex)
@@ -570,5 +598,15 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             RecommendationMessage = ex.Message;
         }
         finally { IsLoading = false; }
+    }
+
+    [RelayCommand]
+    private void ShowMoreRoutes()
+    {
+        var next = Math.Min(_recommendedRoutes.Count, _visibleRouteCount + 30);
+        for (var i = _visibleRouteCount; i < next; i++) Routes.Add(_recommendedRoutes[i]);
+        _visibleRouteCount = next;
+        OnPropertyChanged(nameof(HasMoreRoutes));
+        OnPropertyChanged(nameof(RecommendedCountDisplay));
     }
 }

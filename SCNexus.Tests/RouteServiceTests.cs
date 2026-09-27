@@ -63,4 +63,23 @@ public class RouteServiceTests
 
         Assert.Equal("Terminal B", Assert.Single(new RouteService().FindRoutes(data, settings)).BuyAt);
     }
+
+    [Fact]
+    public void WithoutStartingLocationFindsRoutesFromAllOrigins()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var data = new DataSnapshot(
+            [new CommodityQuote { IdCommodity = 1, IdTerminal = 10, CommodityName = "Gold", PriceBuy = 100, ScuBuy = 10, DateModified = now.ToUnixTimeSeconds() },
+             new CommodityQuote { IdCommodity = 1, IdTerminal = 11, CommodityName = "Gold", PriceBuy = 100, ScuBuy = 10, DateModified = now.ToUnixTimeSeconds() },
+             new CommodityQuote { IdCommodity = 1, IdTerminal = 20, CommodityName = "Gold", PriceSell = 200, ScuSell = 10, DateModified = now.ToUnixTimeSeconds() }],
+            [new TradeTerminal { Id = 10, Name = "Stanton Origin", CityName = "Area18", StarSystemName = "Stanton", Type = "commodity", IsAvailableLive = 1 },
+             new TradeTerminal { Id = 11, Name = "Pyro Origin", CityName = "Ruin", StarSystemName = "Pyro", Type = "commodity", IsAvailableLive = 1 },
+             new TradeTerminal { Id = 20, Name = "Destination", CityName = "Lorville", StarSystemName = "Stanton", Type = "commodity", IsAvailableLive = 1 }], now, now, false);
+        var settings = new PersonalSettings { Balance = 5000, CargoScu = 10, CurrentLocation = "Не указана", CurrentSystem = "Stanton" };
+
+        var routes = new RouteService().FindRoutes(data, settings);
+        Assert.Equal(2, routes.Count);
+        Assert.Contains(routes, x => x.BuyAt == "Stanton Origin");
+        Assert.Contains(routes, x => x.BuyAt == "Pyro Origin");
+    }
 }

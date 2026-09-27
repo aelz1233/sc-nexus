@@ -102,6 +102,12 @@
                             </Border>
                         </DataTemplate></ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    <StackPanel Margin="0,7,0,12">
+                        <TextBlock Text="{Binding RecommendedCountDisplay}" Foreground="{StaticResource Muted}"/>
+                        <Button Content="Показать ещё 30 маршрутов" Command="{Binding ShowMoreRoutesCommand}"
+                                Visibility="{Binding HasMoreRoutes, Converter={StaticResource BoolVisibility}}"
+                                HorizontalAlignment="Left" Margin="0,9,0,0"/>
+                    </StackPanel>
                     <TextBlock Text="Данные UEX поддерживаются игроками. Объёмы — последние сообщения/прогноз спроса; наличие и время рейса не гарантированы." Foreground="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11" Margin="0,5,0,0"/>
                 </StackPanel>
                 <StackPanel Visibility="{Binding IsHaulingOpen, Converter={StaticResource BoolVisibility}}">
@@ -172,7 +178,7 @@
                                 <StackPanel Margin="0,0,12,0"><TextBlock Style="{StaticResource Caption}" Text="ВЫБРАННЫЙ КОРАБЛЬ"/><TextBlock Text="{Binding NewShipName}" FontSize="18" Foreground="{StaticResource Accent}" Margin="0,7,0,0"/></StackPanel>
                                 <StackPanel Grid.Column="1"><TextBlock Style="{StaticResource Caption}" Text="ВМЕСТИМОСТЬ"/><TextBlock Text="{Binding NewShipCargoScu, StringFormat={}{0} SCU}" FontSize="18" Margin="0,7,0,0"/></StackPanel>
                             </Grid>
-                            <TextBlock Style="{StaticResource Caption}" Text="РОЛЬ" Margin="0,16,0,0"/>
+                            <TextBlock Style="{StaticResource Caption}" Text="РОЛЬ · ОПРЕДЕЛЯЕТСЯ АВТОМАТИЧЕСКИ, МОЖНО ИЗМЕНИТЬ" Margin="0,16,0,0"/>
                             <TextBox Text="{Binding NewShipRole, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0"/>
                             <TextBlock Style="{StaticResource Caption}" Text="СБОРКА И ЗАМЕТКИ" Margin="0,16,0,0"/>
                             <TextBox Text="{Binding NewShipBuild, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,14"/>
@@ -311,7 +317,8 @@
                                 </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
                             </ScrollViewer>
                         </Border>
-                        <TextBlock Text="{Binding LocationStatus}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11" Margin="0,6,0,19"/>
+                        <TextBlock Text="{Binding LocationStatus}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11" Margin="0,6,0,8"/>
+                        <Button Content="Искать из всех локаций" Command="{Binding ClearLocationCommand}" HorizontalAlignment="Left" Margin="0,0,0,19"/>
                         <TextBlock Style="{StaticResource Caption}" Text="НЕ ТРАТИТЬ ПОСЛЕДНИЕ, aUEC"/>
                         <TextBox Text="{Binding Reserve, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}" Margin="0,7,0,18"/>
                         <CheckBox Content="Учитывать рискованные терминалы NQA" IsChecked="{Binding AllowRisky}" Foreground="White" Margin="0,0,0,18"/>

@@ -6,9 +6,11 @@ public sealed class RouteService
 {
     public IReadOnlyList<TradeRoute> FindRoutes(DataSnapshot data, PersonalSettings settings)
     {
-        if (settings.CargoScu <= 0 || settings.Balance <= settings.Reserve ||
-            string.IsNullOrWhiteSpace(settings.CurrentLocation) || settings.CurrentLocation == "Не указана")
+        if (settings.CargoScu <= 0 || settings.Balance <= settings.Reserve)
             return [];
+
+        var hasStart = !string.IsNullOrWhiteSpace(settings.CurrentLocation) &&
+            settings.CurrentLocation != "Не указана";
 
         var terminals = data.Terminals
             .Where(x => x.Type == "commodity" && x.IsAvailableLive == 1)
@@ -21,8 +23,8 @@ public sealed class RouteService
         foreach (var buy in data.Quotes)
         {
             if (buy.PriceBuy <= 0 || buy.StatusBuy == 1 || !terminals.TryGetValue(buy.IdTerminal, out var origin) ||
-                !origin.MatchesLocation(settings.CurrentLocation) ||
-                (!string.IsNullOrWhiteSpace(settings.CurrentSystem) &&
+                (hasStart && !origin.MatchesLocation(settings.CurrentLocation)) ||
+                (hasStart && !string.IsNullOrWhiteSpace(settings.CurrentSystem) &&
                  !string.Equals(origin.StarSystemName, settings.CurrentSystem, StringComparison.OrdinalIgnoreCase)) ||
                 !sellQuotes.TryGetValue(buy.IdCommodity, out var destinations))
                 continue;
@@ -46,6 +48,6 @@ public sealed class RouteService
                     quoteTime, true, origin.IsNqa == 1 || destination.IsNqa == 1));
             }
         }
-        return routes.OrderByDescending(x => x.Profit).ThenByDescending(x => x.RoiPercent).Take(5).ToArray();
+        return routes.OrderByDescending(x => x.Profit).ThenByDescending(x => x.RoiPercent).ToArray();
     }
 }
