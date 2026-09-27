@@ -152,7 +152,13 @@
                     <TextBlock Text="{Binding ActiveFlightDisplay}" Foreground="{StaticResource Accent}" FontSize="17" Margin="0,0,0,18"/>
                     <Border Style="{StaticResource Card}" Margin="0,0,0,16"><StackPanel>
                         <TextBlock Text="МАРШРУТ И ФАКТИЧЕСКИЕ СУММЫ" Foreground="{StaticResource Accent}" FontWeight="Bold" Margin="0,0,0,14"/>
-                        <TextBlock Text="Корабль берётся из моего флота. При завершении прибыль добавится к балансу." Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,14"/>
+                        <TextBlock Text="Выбери корабль из своего флота для этого рейса. При завершении прибыль добавится к балансу." Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,14"/>
+                        <TextBlock Style="{StaticResource Caption}" Text="КОРАБЛЬ ДЛЯ РЕЙСА"/>
+                        <Grid Margin="0,7,0,7"><Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="190"/></Grid.ColumnDefinitions>
+                            <ComboBox ItemsSource="{Binding SortedShips}" SelectedItem="{Binding SelectedShip, Mode=TwoWay}" DisplayMemberPath="Name" Margin="0,0,10,0"/>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding ShipSortOptions}" SelectedItem="{Binding ShipSortMode, Mode=TwoWay}"/>
+                        </Grid>
+                        <TextBlock Text="{Binding CargoScu, StringFormat=Вместимость выбранного корабля: {0} SCU}" Foreground="{StaticResource Muted}" Margin="0,0,0,17"/>
                         <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
                             <StackPanel Margin="0,0,10,0"><TextBlock Style="{StaticResource Caption}" Text="ОТКУДА"/><TextBox Text="{Binding FlightOrigin, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0"/></StackPanel>
                             <StackPanel Grid.Column="1" Margin="0,0,10,0"><TextBlock Style="{StaticResource Caption}" Text="КУДА"/><TextBox Text="{Binding FlightDestination, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0"/></StackPanel>
