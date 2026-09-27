@@ -22,6 +22,13 @@ public class GameCompanionServicesTests
             var health = GameHealthService.Scan(directory);
             Assert.Contains(health, x => x.Title == "Личный конфиг" && x.Detail.Contains("найден"));
             Assert.Contains(health, x => x.Title == "Файлы локализации" && x.Detail.Contains("russian"));
+            var backupDirectory = Path.Combine(directory, "logbackups");
+            Directory.CreateDirectory(backupDirectory);
+            await File.WriteAllTextAsync(Path.Combine(backupDirectory, "previous.log"), "Joined pub_use1a_123");
+            var sessions = await GameSessionService.LoadAsync(directory);
+            Assert.Equal(2, sessions.Count);
+            Assert.Contains(sessions, x => x.Shard == "pub_euw1b_456");
+            Assert.Contains(sessions, x => x.Shard == "pub_use1a_123");
         }
         finally { Directory.Delete(directory, true); }
     }

@@ -43,6 +43,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     [ObservableProperty] private string gameRegion = "Регион не определён";
     [ObservableProperty] private string gameShard = "Не определён";
     [ObservableProperty] private string gameLogUpdated = "Нет данных";
+    [ObservableProperty] private string sessionStatus = "История сессий загружается…";
     [ObservableProperty] private string newShipRole = "Торговля";
     [ObservableProperty] private string newShipBuild = "";
     [ObservableProperty] private ShipSummary? selectedShip;
@@ -68,6 +69,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     public ObservableCollection<VehicleCatalogItem> ShipMatches { get; } = [];
     public ObservableCollection<GameTradeCandidate> GameTrades { get; } = [];
     public ObservableCollection<GameHealthFinding> GameHealthFindings { get; } = [];
+    public ObservableCollection<GameSessionSummary> GameSessions { get; } = [];
     public string[] ShipSortOptions { get; } = ["По названию", "По вместимости"];
     public ObservableCollection<string> Systems { get; } = ["Все системы"];
     public ObservableCollection<LocationOption> FilteredLocations { get; } = [];
@@ -326,7 +328,19 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     [RelayCommand] private void OpenSettings() { IsFleetOpen = false; IsHistoryOpen = false; IsToolsOpen = false; IsSettingsOpen = true; }
     [RelayCommand] private void OpenFleet() { IsSettingsOpen = false; IsHistoryOpen = false; IsToolsOpen = false; IsFleetOpen = true; }
     [RelayCommand] private void OpenHistory() { IsSettingsOpen = false; IsFleetOpen = false; IsToolsOpen = false; IsHistoryOpen = true; }
-    [RelayCommand] private void OpenTools() { IsSettingsOpen = false; IsFleetOpen = false; IsHistoryOpen = false; IsToolsOpen = true; }
+    [RelayCommand]
+    private async Task OpenToolsAsync()
+    {
+        IsSettingsOpen = false; IsFleetOpen = false; IsHistoryOpen = false; IsToolsOpen = true;
+        try
+        {
+            var sessions = await GameSessionService.LoadAsync(GameLogService.FindGameDirectory());
+            GameSessions.Clear();
+            foreach (var session in sessions) GameSessions.Add(session);
+            SessionStatus = sessions.Count == 0 ? "Игровые сессии пока не найдены" : $"Найдено {sessions.Count} последних журналов";
+        }
+        catch (Exception ex) { SessionStatus = $"Не удалось прочитать историю: {ex.Message}"; }
+    }
 
     private async Task ReloadFlightLogAsync()
     {

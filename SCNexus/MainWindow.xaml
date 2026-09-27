@@ -231,6 +231,14 @@
                             <TextBlock Text="{Binding Detail}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0"/>
                         </StackPanel></Border>
                     </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                    <TextBlock Text="ДНЕВНИК СЕССИЙ" FontSize="17" FontWeight="SemiBold" Margin="0,15,0,8"/>
+                    <TextBlock Text="{Binding SessionStatus}" Foreground="{StaticResource Muted}" Margin="0,0,0,12"/>
+                    <ItemsControl ItemsSource="{Binding GameSessions}"><ItemsControl.ItemTemplate><DataTemplate>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,9"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="180"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding DateDisplay}" Foreground="{StaticResource Accent}" FontWeight="SemiBold"/>
+                            <StackPanel Grid.Column="1"><TextBlock Text="{Binding ServerDisplay}" FontWeight="SemiBold"/><TextBlock Text="{Binding FileName}" Foreground="{StaticResource Muted}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,5,0,0"/></StackPanel>
+                        </Grid></Border>
+                    </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
                     <TextBlock Text="Проверка только читает файлы. Игровые настройки и локализация не изменяются." Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,7,0,0"/>
                 </StackPanel>
                 <Border Background="Transparent" Visibility="{Binding IsSettingsOpen, Converter={StaticResource BoolVisibility}}">

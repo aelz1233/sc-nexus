@@ -15,6 +15,13 @@ public static partial class GameMonitorService
         var log = Path.Combine(gameDirectory, "Game.log");
         if (!File.Exists(log)) return new Snapshot(running, "Не найден", "Не определён", null);
         var updated = File.GetLastWriteTime(log);
+        var shard = ReadLastShard(log);
+        var region = RegionFor(shard);
+        return new Snapshot(running, shard, region, updated);
+    }
+
+    public static string ReadLastShard(string log)
+    {
         string shard = "Не определён";
         try
         {
@@ -30,14 +37,16 @@ public static partial class GameMonitorService
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
-        var region = shard.StartsWith("pub_euw", StringComparison.OrdinalIgnoreCase) ? "Европа · запад" :
+        return shard;
+    }
+
+    public static string RegionFor(string shard) =>
+        shard.StartsWith("pub_euw", StringComparison.OrdinalIgnoreCase) ? "Европа · запад" :
             shard.StartsWith("pub_euc", StringComparison.OrdinalIgnoreCase) ? "Европа · центр" :
             shard.StartsWith("pub_use", StringComparison.OrdinalIgnoreCase) ? "США · восток" :
             shard.StartsWith("pub_usw", StringComparison.OrdinalIgnoreCase) ? "США · запад" :
             shard.StartsWith("pub_apse", StringComparison.OrdinalIgnoreCase) ? "Азиатско-Тихоокеанский регион" :
             "Регион не определён";
-        return new Snapshot(running, shard, region, updated);
-    }
 
     [GeneratedRegex(@"pub_[a-z0-9_]+", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex ShardPattern();
