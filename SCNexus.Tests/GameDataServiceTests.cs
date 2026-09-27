@@ -20,6 +20,8 @@ public class GameDataServiceTests
             Assert.Equal(120, first.Quotes[0].PriceBuy);
             Assert.Equal("New Babbage", first.Terminals[0].CityName);
             Assert.Equal(2, handler.CallCount);
+            var vehicles = await new GameDataService(client, directory).GetVehiclesAsync();
+            Assert.Equal(696, Assert.Single(vehicles).Scu);
 
             using var offlineClient = new HttpClient(new StubHandler(true)) { BaseAddress = client.BaseAddress };
             var freshCache = await new GameDataService(offlineClient, directory).GetSnapshotAsync();
@@ -55,7 +57,11 @@ public class GameDataServiceTests
             const string terminals = """
                 {"status":"ok","data":[{"id":10,"name":"TDD New Babbage","city_name":"New Babbage","type":"commodity","is_available_live":1}]}
                 """;
-            var body = request.RequestUri!.AbsolutePath.EndsWith("terminals", StringComparison.Ordinal) ? terminals : prices;
+            const string vehicles = """
+                {"status":"ok","data":[{"id":35,"name":"C2 Hercules Starlifter","company_name":"Crusader Industries","scu":696,"is_spaceship":1}]}
+                """;
+            var body = request.RequestUri!.AbsolutePath.EndsWith("vehicles", StringComparison.Ordinal) ? vehicles :
+                request.RequestUri.AbsolutePath.EndsWith("terminals", StringComparison.Ordinal) ? terminals : prices;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body) });
         }
     }

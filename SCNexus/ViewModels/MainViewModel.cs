@@ -7,11 +7,12 @@ using SCNexus.Services;
 namespace SCNexus.ViewModels;
 
 public partial class MainViewModel(SettingsService settingsService, TradingService tradingService,
-    FlightLogService flightLogService, GameDataService gameDataService) : ObservableObject
+    FlightLogService flightLogService, GameDataService gameDataService, GameLogService gameLogService) : ObservableObject
 {
     private bool _loaded;
     private bool _selectingLocation;
     private IReadOnlyList<LocationOption> _allLocations = [];
+    private IReadOnlyList<VehicleCatalogItem> _allVehicles = [];
     private CancellationTokenSource? _pendingSave;
 
     [ObservableProperty] private decimal balance;
@@ -32,6 +33,11 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     [ObservableProperty] private string flightStatus = "";
     [ObservableProperty] private string newShipName = "";
     [ObservableProperty] private int newShipCargoScu;
+    [ObservableProperty] private string shipSearchQuery = "";
+    [ObservableProperty] private VehicleCatalogItem? selectedCatalogVehicle;
+    [ObservableProperty] private string vehicleStatus = "Каталог кораблей загружается…";
+    [ObservableProperty] private bool showShipMatches;
+    [ObservableProperty] private string gameLogStatus = "Ищу журнал Star Citizen на компьютере…";
     [ObservableProperty] private string newShipRole = "Торговля";
     [ObservableProperty] private string newShipBuild = "";
     [ObservableProperty] private ShipSummary? selectedShip;
@@ -54,6 +60,8 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     public ObservableCollection<TradeRoute> Routes { get; } = [];
     public ObservableCollection<ShipSummary> Ships { get; } = [];
     public ObservableCollection<ShipSummary> SortedShips { get; } = [];
+    public ObservableCollection<VehicleCatalogItem> ShipMatches { get; } = [];
+    public ObservableCollection<GameTradeCandidate> GameTrades { get; } = [];
     public string[] ShipSortOptions { get; } = ["По названию", "По вместимости"];
     public ObservableCollection<string> Systems { get; } = ["Все системы"];
     public ObservableCollection<LocationOption> FilteredLocations { get; } = [];
@@ -114,6 +122,57 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         }
     }
 
+    public async Task LoadVehiclesAsync()
+    {
+        try
+        {
+            _allVehicles = await gameDataService.GetVehiclesAsync();
+            VehicleStatus = $"Каталог UEX: {_allVehicles.Count(x => x.IsSpaceship == 1)} кораблей. Введи минимум две буквы.";
+            RefreshShipMatches();
+        }
+        catch (Exception ex)
+        {
+            VehicleStatus = $"Каталог кораблей недоступен: {ex.Message}";
+        }
+    }
+
+    public async Task WatchGameLogAsync(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            try
+            {
+                var snapshot = await gameLogService.ReadRecentAsync(token);
+                GameLogStatus = snapshot.GameDirectory is null
+                    ? "Журнал игры пока не найден. SC NEXUS проверит снова автоматически."
+                    : $"Найден Game.log: {snapshot.GameDirectory} · запросов: {snapshot.Candidates.Count}";
+                if (!GameTrades.SequenceEqual(snapshot.Candidates))
+                {
+                    GameTrades.Clear();
+                    foreach (var candidate in snapshot.Candidates) GameTrades.Add(candidate);
+                }
+                await Task.Delay(TimeSpan.FromSeconds(15), token);
+            }
+            catch (OperationCanceledException) { break; }
+            catch (Exception ex)
+            {
+                GameLogStatus = $"Не удалось прочитать журнал: {ex.Message}";
+                try { await Task.Delay(TimeSpan.FromSeconds(15), token); }
+                catch (OperationCanceledException) { break; }
+            }
+        }
+    }
+
+    [RelayCommand]
+    private void UseGameTrade(GameTradeCandidate? candidate)
+    {
+        if (candidate is null) return;
+        if (candidate.IsPurchase) FlightInvestment = candidate.Amount;
+        else FlightRevenue = candidate.Amount;
+        OpenHistory();
+        FlightStatus = $"Подставлена сумма {candidate.AmountDisplay} из журнала. Проверь, что сделка завершилась в игре.";
+    }
+
     partial void OnBalanceChanged(decimal value) { OnPropertyChanged(nameof(BalanceDisplay)); QueueSave(); }
     partial void OnCurrentShipChanged(string value) => QueueSave();
     partial void OnCurrentSystemChanged(string value) { OnPropertyChanged(nameof(LocationDisplay)); QueueSave(); }
@@ -127,7 +186,36 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         CurrentShip = value.Name;
         CargoScu = value.Ship.CargoScu;
     }
-    partial void OnShipSortModeChanged(string value) => RefreshSortedShips();
+    partial void OnShipSortModeChanged(string value) { RefreshSortedShips(); RefreshShipMatches(); }
+    partial void OnShipSearchQueryChanged(string value)
+    {
+        if (SelectedCatalogVehicle is { } chosen && !value.Equals(chosen.Name, StringComparison.OrdinalIgnoreCase))
+            SelectedCatalogVehicle = null;
+        RefreshShipMatches();
+    }
+    partial void OnSelectedCatalogVehicleChanged(VehicleCatalogItem? value) => OnPropertyChanged(nameof(HasSelectedCatalogVehicle));
+    public bool HasSelectedCatalogVehicle => SelectedCatalogVehicle is not null;
+
+    private void RefreshShipMatches()
+    {
+        ShipMatches.Clear();
+        foreach (var vehicle in VehicleCatalog.Search(_allVehicles, ShipSearchQuery, ShipSortMode))
+            ShipMatches.Add(vehicle);
+        ShowShipMatches = ShipMatches.Count > 0 && SelectedCatalogVehicle is null;
+    }
+
+    [RelayCommand]
+    private void ChooseCatalogShip(VehicleCatalogItem? vehicle)
+    {
+        if (vehicle is null) return;
+        SelectedCatalogVehicle = vehicle;
+        NewShipName = vehicle.Name;
+        NewShipCargoScu = (int)Math.Floor(vehicle.Scu);
+        ShipSearchQuery = vehicle.Name;
+        ShipMatches.Clear();
+        ShowShipMatches = false;
+        VehicleStatus = $"Выбрано: {vehicle.Name} · {vehicle.Scu:N0} SCU";
+    }
     partial void OnSelectedSystemChanged(string value) => RefreshLocationSuggestions();
     partial void OnLocationQueryChanged(string value)
     {
@@ -254,8 +342,10 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     {
         try
         {
+            if (SelectedCatalogVehicle is null) throw new ArgumentException("Сначала выбери корабль из каталога.");
             var ship = await flightLogService.AddShipAsync(NewShipName, NewShipCargoScu, NewShipRole, NewShipBuild);
             NewShipName = ""; NewShipCargoScu = 0; NewShipBuild = "";
+            SelectedCatalogVehicle = null; ShipSearchQuery = "";
             await ReloadFlightLogAsync();
             SelectedShip = Ships.First(x => x.Ship.Id == ship.Id);
             FlightStatus = "Корабль добавлен.";

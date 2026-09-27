@@ -4,6 +4,14 @@
         <SolidColorBrush x:Key="Panel" Color="#151F2A"/>
         <SolidColorBrush x:Key="Accent" Color="#57D8D0"/>
         <SolidColorBrush x:Key="Muted" Color="#99ADBB"/>
+        <LinearGradientBrush x:Key="HeroBrush" StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Color="#278EE5" Offset="0"/>
+            <GradientStop Color="#6757D8" Offset="1"/>
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="BalanceBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#153B50" Offset="0"/>
+            <GradientStop Color="#252044" Offset="1"/>
+        </LinearGradientBrush>
         <BooleanToVisibilityConverter x:Key="BoolVisibility"/>
         <Style TargetType="TextBlock"><Setter Property="Foreground" Value="#F1F8FA"/><Setter Property="FontFamily" Value="Segoe UI"/></Style>
         <Style TargetType="Button">
@@ -25,6 +33,21 @@
             </Setter>
         </Style>
         <Style TargetType="TextBox"><Setter Property="FontSize" Value="16"/><Setter Property="Padding" Value="11,8"/><Setter Property="Foreground" Value="White"/><Setter Property="Background" Value="#0E1923"/><Setter Property="BorderBrush" Value="#385465"/><Setter Property="CaretBrush" Value="{StaticResource Accent}"/></Style>
-        <Style TargetType="ComboBox"><Setter Property="FontSize" Value="16"/><Setter Property="Padding" Value="9,7"/><Setter Property="Foreground" Value="#0B1118"/><Setter Property="Background" Value="#DCE8ED"/><Setter Property="BorderBrush" Value="#385465"/></Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Padding" Value="9,7"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#1B2B3A"/>
+            <Setter Property="BorderBrush" Value="#385465"/>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ComboBoxItem">
+                        <Setter Property="Foreground" Value="White"/>
+                        <Setter Property="Background" Value="#1B2B3A"/>
+                        <Setter Property="Padding" Value="8,6"/>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Application.Resources>
 </Application>

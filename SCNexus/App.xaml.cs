@@ -10,6 +10,7 @@ namespace SCNexus;
 public partial class App : Application
 {
     private ServiceProvider? _services;
+    private readonly CancellationTokenSource _gameLogCancellation = new();
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -30,12 +31,15 @@ public partial class App : Application
             collection.AddSingleton<RouteService>();
             collection.AddSingleton<TradingService>();
             collection.AddSingleton<FlightLogService>();
+            collection.AddSingleton<GameLogService>();
             collection.AddSingleton<MainViewModel>();
             _services = collection.BuildServiceProvider();
             var vm = _services.GetRequiredService<MainViewModel>();
             await vm.InitializeAsync();
             new MainWindow { DataContext = vm }.Show();
             _ = vm.LoadLocationsAsync();
+            _ = vm.LoadVehiclesAsync();
+            _ = vm.WatchGameLogAsync(_gameLogCancellation.Token);
         }
         catch (Exception ex)
         {
@@ -46,6 +50,8 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _gameLogCancellation.Cancel();
+        _gameLogCancellation.Dispose();
         _services?.Dispose();
         base.OnExit(e);
     }

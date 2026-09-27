@@ -25,8 +25,8 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
         <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Background" Value="{StaticResource Accent}"/>
-            <Setter Property="Foreground" Value="#07141B"/>
+            <Setter Property="Background" Value="{StaticResource HeroBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Padding" Value="19,13"/>
         </Style>
@@ -54,7 +54,7 @@
                     <TextBlock Text="Твой баланс, корабль и лучшие торговые возможности в одном месте." Foreground="{StaticResource Muted}" Margin="0,0,0,24"/>
                     <Grid Margin="0,0,0,13">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <Border Style="{StaticResource Card}" Margin="0,0,10,0" Background="#14343D" BorderBrush="#23616A"><StackPanel><TextBlock Style="{StaticResource Caption}" Text="БАЛАНС"/><TextBlock Text="{Binding BalanceDisplay}" FontSize="30" FontWeight="Bold" Foreground="{StaticResource Accent}" Margin="0,8,0,0"/></StackPanel></Border>
+                        <Border Style="{StaticResource Card}" Margin="0,0,10,0" Background="{StaticResource BalanceBrush}" BorderBrush="#435687"><StackPanel><TextBlock Style="{StaticResource Caption}" Text="БАЛАНС"/><TextBlock Text="{Binding BalanceDisplay}" FontSize="30" FontWeight="Bold" Foreground="White" Margin="0,8,0,0"/></StackPanel></Border>
                         <Border Grid.Column="1" Style="{StaticResource Card}" Margin="0,0,10,0"><StackPanel><TextBlock Style="{StaticResource Caption}" Text="КОРАБЛЬ"/><TextBlock Text="{Binding CurrentShip}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,9,0,0"/><Button Content="Сменить" Command="{Binding OpenSettingsCommand}" HorizontalAlignment="Left" Margin="0,8,0,0" Padding="0" Background="Transparent" Foreground="{StaticResource Accent}"/></StackPanel></Border>
                         <Border Grid.Column="2" Style="{StaticResource Card}"><StackPanel><TextBlock Style="{StaticResource Caption}" Text="ЛОКАЦИЯ"/><TextBlock Text="{Binding LocationDisplay}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,9,0,0"/><Button Content="Сменить" Command="{Binding OpenSettingsCommand}" HorizontalAlignment="Left" Margin="0,8,0,0" Padding="0" Background="Transparent" Foreground="{StaticResource Accent}"/></StackPanel></Border>
                     </Grid>
@@ -65,7 +65,7 @@
                         <Border Grid.Column="2" Style="{StaticResource Card}"><StackPanel><TextBlock Style="{StaticResource Caption}" Text="ЛИЧНАЯ ПРИБЫЛЬ В ЧАС"/><TextBlock Text="{Binding PersonalProfitHourDisplay}" FontSize="19" FontWeight="SemiBold" Margin="0,8,0,0"/></StackPanel></Border>
                     </Grid>
                     <Button Style="{StaticResource PrimaryButton}" Command="{Binding RecommendCommand}" FontSize="21" Padding="24,20" HorizontalContentAlignment="Center" Content="ПОДОБРАТЬ ЛУЧШИЙ РЕЙС →"/>
-                    <TextBlock Text="{Binding DataStatus}" Foreground="{StaticResource Muted}" Margin="0,12,0,24"/>
+                    <Border Background="#17223E" BorderBrush="#334A85" BorderThickness="1" CornerRadius="13" Padding="12,6" HorizontalAlignment="Left" Margin="0,12,0,24"><TextBlock Text="{Binding DataStatus}" Foreground="#B9CEED" FontSize="11"/></Border>
                     <Border Style="{StaticResource Card}" Margin="0,0,0,20" Visibility="{Binding ShowRecommendation, Converter={StaticResource BoolVisibility}}">
                         <StackPanel><TextBlock Text="РЕЗУЛЬТАТ ПОИСКА" Foreground="{StaticResource Accent}" FontWeight="Bold"/><TextBlock Text="{Binding RecommendationMessage}" TextWrapping="Wrap" Margin="0,8,0,0"/></StackPanel>
                     </Border>
@@ -97,18 +97,32 @@
                 <StackPanel Visibility="{Binding IsFleetOpen, Converter={StaticResource BoolVisibility}}">
                     <TextBlock Text="ЛИЧНЫЕ ДАННЫЕ" Foreground="{StaticResource Accent}" FontSize="11" FontWeight="Bold"/>
                     <TextBlock Text="Мой флот" FontSize="30" FontWeight="SemiBold" Margin="0,7,0,5"/>
-                    <TextBlock Text="Добавь корабли один раз. Приложение запомнит их объём, роль и заработок." Foreground="{StaticResource Muted}" Margin="0,0,0,24"/>
+                    <TextBlock Text="Найди модель в каталоге, выбери её и добавь в свой флот. Вместимость подставится сама." Foreground="{StaticResource Muted}" Margin="0,0,0,24"/>
                     <Border Style="{StaticResource Card}" Margin="0,0,0,18">
                         <StackPanel>
-                            <TextBlock Text="НОВЫЙ КОРАБЛЬ" Foreground="{StaticResource Accent}" FontWeight="Bold" Margin="0,0,0,17"/>
-                            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="2*"/></Grid.ColumnDefinitions>
-                                <StackPanel Margin="0,0,12,0"><TextBlock Style="{StaticResource Caption}" Text="НАЗВАНИЕ"/><TextBox Text="{Binding NewShipName, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0"/></StackPanel>
-                                <StackPanel Grid.Column="1" Margin="0,0,12,0"><TextBlock Style="{StaticResource Caption}" Text="ОБЪЁМ ГРУЗА, SCU"/><TextBox Text="{Binding NewShipCargoScu, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}" Margin="0,6,0,0"/></StackPanel>
-                                <StackPanel Grid.Column="2"><TextBlock Style="{StaticResource Caption}" Text="РОЛЬ"/><TextBox Text="{Binding NewShipRole, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0"/></StackPanel>
+                            <Grid Margin="0,0,0,17"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="190"/></Grid.ColumnDefinitions>
+                                <TextBlock Text="ВЫБРАТЬ КОРАБЛЬ ИЗ КАТАЛОГА" Foreground="{StaticResource Accent}" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding ShipSortOptions}" SelectedItem="{Binding ShipSortMode, Mode=TwoWay}"/>
                             </Grid>
+                            <TextBlock Style="{StaticResource Caption}" Text="НАЗВАНИЕ МОДЕЛИ"/>
+                            <TextBox Text="{Binding ShipSearchQuery, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,6"/>
+                            <Border Background="#0E1923" BorderBrush="#385465" BorderThickness="1" CornerRadius="6" Visibility="{Binding ShowShipMatches, Converter={StaticResource BoolVisibility}}">
+                                <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl ItemsSource="{Binding ShipMatches}"><ItemsControl.ItemTemplate><DataTemplate>
+                                        <Button Content="{Binding Display}" Command="{Binding DataContext.ChooseCatalogShipCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" HorizontalContentAlignment="Left" Background="Transparent"/>
+                                    </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                                </ScrollViewer>
+                            </Border>
+                            <TextBlock Text="{Binding VehicleStatus}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11" Margin="0,6,0,17"/>
+                            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,12,0"><TextBlock Style="{StaticResource Caption}" Text="ВЫБРАННЫЙ КОРАБЛЬ"/><TextBlock Text="{Binding NewShipName}" FontSize="18" Foreground="{StaticResource Accent}" Margin="0,7,0,0"/></StackPanel>
+                                <StackPanel Grid.Column="1"><TextBlock Style="{StaticResource Caption}" Text="ВМЕСТИМОСТЬ"/><TextBlock Text="{Binding NewShipCargoScu, StringFormat={}{0} SCU}" FontSize="18" Margin="0,7,0,0"/></StackPanel>
+                            </Grid>
+                            <TextBlock Style="{StaticResource Caption}" Text="РОЛЬ" Margin="0,16,0,0"/>
+                            <TextBox Text="{Binding NewShipRole, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0"/>
                             <TextBlock Style="{StaticResource Caption}" Text="СБОРКА И ЗАМЕТКИ" Margin="0,16,0,0"/>
                             <TextBox Text="{Binding NewShipBuild, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,14"/>
-                            <Button Style="{StaticResource PrimaryButton}" Content="Добавить корабль" Command="{Binding AddShipCommand}" HorizontalAlignment="Left"/>
+                            <Button Style="{StaticResource PrimaryButton}" Content="Добавить корабль" Command="{Binding AddShipCommand}" IsEnabled="{Binding HasSelectedCatalogVehicle}" HorizontalAlignment="Left"/>
                         </StackPanel>
                     </Border>
                     <Grid Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="190"/></Grid.ColumnDefinitions>
@@ -152,6 +166,19 @@
                         </Grid>
                         <StackPanel Orientation="Horizontal" Margin="0,18,0,0"><Button Style="{StaticResource PrimaryButton}" Content="Начать рейс" Command="{Binding StartFlightCommand}" Margin="0,0,10,0"/><Button Content="Завершить рейс" Command="{Binding FinishFlightCommand}" IsEnabled="{Binding HasActiveFlight}"/></StackPanel>
                         <TextBlock Text="{Binding FlightStatus}" Foreground="{StaticResource Accent}" TextWrapping="Wrap" Margin="0,12,0,0"/>
+                    </StackPanel></Border>
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,18"><StackPanel>
+                        <TextBlock Text="НАЙДЕНО В ЖУРНАЛЕ ИГРЫ" Foreground="{StaticResource Accent}" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding GameLogStatus}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,5"/>
+                        <TextBlock Text="Журнал показывает запросы к терминалу. Подставь сумму в рейс только после проверки сделки в игре." Foreground="{StaticResource Muted}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                        <ItemsControl ItemsSource="{Binding GameTrades}"><ItemsControl.ItemTemplate><DataTemplate>
+                            <Grid Margin="0,0,0,9"><Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="120"/><ColumnDefinition Width="*"/><ColumnDefinition Width="110"/></Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding TimeDisplay}" Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding KindDisplay}" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="2"><TextBlock Text="{Binding AmountDisplay}" Foreground="{StaticResource Accent}" FontWeight="Bold"/><TextBlock Text="{Binding DetailsDisplay}" Foreground="{StaticResource Muted}" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel>
+                                <Button Grid.Column="3" Content="Подставить" Command="{Binding DataContext.UseGameTradeCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Padding="10,7"/>
+                            </Grid>
+                        </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
                     </StackPanel></Border>
                     <TextBlock Text="ИСТОРИЯ" FontSize="16" FontWeight="Bold" Margin="0,0,0,12"/>
                     <ItemsControl ItemsSource="{Binding Flights}"><ItemsControl.ItemTemplate><DataTemplate>

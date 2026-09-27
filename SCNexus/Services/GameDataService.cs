@@ -40,6 +40,13 @@ public sealed class GameDataService
         return terminals.Data;
     }
 
+    public async Task<IReadOnlyList<VehicleCatalogItem>> GetVehiclesAsync(CancellationToken token = default)
+    {
+        Directory.CreateDirectory(_cacheDirectory);
+        var vehicles = await LoadAsync<VehicleCatalogItem>("vehicles", "vehicles", TimeSpan.FromHours(12), token);
+        return vehicles.Data;
+    }
+
     private async Task<CachedData<T>> LoadAsync<T>(string key, string endpoint, TimeSpan ttl, CancellationToken token)
     {
         var path = Path.Combine(_cacheDirectory, key + ".json");
