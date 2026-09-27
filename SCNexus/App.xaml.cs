@@ -29,6 +29,7 @@ public partial class App : Application
             collection.AddSingleton<GameDataService>();
             collection.AddSingleton<RouteService>();
             collection.AddSingleton<TradingService>();
+            collection.AddSingleton<FlightLogService>();
             collection.AddSingleton<MainViewModel>();
             _services = collection.BuildServiceProvider();
             var vm = _services.GetRequiredService<MainViewModel>();

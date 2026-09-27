@@ -23,7 +23,29 @@ public sealed class SettingsService
         await using var db = new NexusDbContext(_options);
         await db.Database.EnsureCreatedAsync();
         await AddMissingColumnsAsync(db);
+        await EnsureFlightTablesAsync(db);
         return await db.PersonalSettings.AsNoTracking().SingleOrDefaultAsync(x => x.Id == 1) ?? new();
+    }
+
+    public NexusDbContext CreateDbContext() => new(_options);
+
+    private static async Task EnsureFlightTablesAsync(NexusDbContext db)
+    {
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS PersonalShips (
+                Id INTEGER NOT NULL CONSTRAINT PK_PersonalShips PRIMARY KEY AUTOINCREMENT,
+                Name TEXT NOT NULL, CargoScu INTEGER NOT NULL, Role TEXT NOT NULL, BuildNotes TEXT NOT NULL
+            )
+            """);
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS FlightRecords (
+                Id INTEGER NOT NULL CONSTRAINT PK_FlightRecords PRIMARY KEY AUTOINCREMENT,
+                ShipId INTEGER NULL, ShipName TEXT NOT NULL, Origin TEXT NOT NULL,
+                Destination TEXT NOT NULL, Commodity TEXT NOT NULL, StartedAtUtc TEXT NOT NULL,
+                EndedAtUtc TEXT NULL, Investment TEXT NOT NULL, Revenue TEXT NOT NULL,
+                Expenses TEXT NOT NULL, Losses TEXT NOT NULL
+            )
+            """);
     }
 
     public async Task SaveAsync(PersonalSettings snapshot)

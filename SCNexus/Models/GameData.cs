@@ -60,6 +60,9 @@ public sealed record TradeRoute(
     decimal Investment, decimal Revenue, decimal Profit, decimal RoiPercent,
     DateTimeOffset QuoteUpdatedAt, bool DemandEstimate, bool Risky)
 {
+    public double? PersonalDurationMinutes { get; init; }
+    public string PersonalDurationDisplay => PersonalDurationMinutes is { } minutes
+        ? $"Обычно у тебя: {minutes:N0} мин" : "Твоего времени пока нет";
     public string ProfitDisplay => $"+{Profit:N0} aUEC";
     public string InvestmentDisplay => $"{Investment:N0} aUEC";
     public string RoiDisplay => $"{RoiPercent:N1}%";
