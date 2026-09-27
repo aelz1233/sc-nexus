@@ -29,6 +29,7 @@ public partial class App : Application
             });
             collection.AddSingleton<GameDataService>();
             collection.AddSingleton<RouteService>();
+            collection.AddSingleton<HaulingService>();
             collection.AddSingleton<TradingService>();
             collection.AddSingleton<FlightLogService>();
             collection.AddSingleton<GameLogService>();

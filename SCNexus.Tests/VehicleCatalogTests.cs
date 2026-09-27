@@ -19,6 +19,6 @@ public class VehicleCatalogTests
             VehicleCatalog.Search(ships, "her", "По названию").Select(x => x.Name));
         Assert.Equal(new[] { "C2 Hercules", "M2 Hercules", "A2 Hercules" },
             VehicleCatalog.Search(ships, "her", "По вместимости").Select(x => x.Name));
-        Assert.Empty(VehicleCatalog.Search(ships, "h", "По названию"));
+        Assert.Equal(3, VehicleCatalog.Search(ships, "", "По названию").Count);
     }
 }

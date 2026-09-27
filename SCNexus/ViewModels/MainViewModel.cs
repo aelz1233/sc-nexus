@@ -7,12 +7,15 @@ using SCNexus.Services;
 namespace SCNexus.ViewModels;
 
 public partial class MainViewModel(SettingsService settingsService, TradingService tradingService,
-    FlightLogService flightLogService, GameDataService gameDataService, GameLogService gameLogService) : ObservableObject
+    FlightLogService flightLogService, GameDataService gameDataService, GameLogService gameLogService,
+    HaulingService haulingService) : ObservableObject
 {
     private bool _loaded;
     private bool _selectingLocation;
+    private bool _selectingVehicle;
     private IReadOnlyList<LocationOption> _allLocations = [];
     private IReadOnlyList<VehicleCatalogItem> _allVehicles = [];
+    private DataSnapshot? _haulingData;
     private CancellationTokenSource? _pendingSave;
 
     [ObservableProperty] private decimal balance;
@@ -26,6 +29,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     [ObservableProperty] private bool isFleetOpen;
     [ObservableProperty] private bool isHistoryOpen;
     [ObservableProperty] private bool isToolsOpen;
+    [ObservableProperty] private bool isHaulingOpen;
     [ObservableProperty] private bool showRecommendation;
     [ObservableProperty] private string recommendationMessage = "";
     [ObservableProperty] private string dataStatus = "UEX • ещё не загружено";
@@ -44,6 +48,11 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     [ObservableProperty] private string gameShard = "Не определён";
     [ObservableProperty] private string gameLogUpdated = "Нет данных";
     [ObservableProperty] private string sessionStatus = "История сессий загружается…";
+    [ObservableProperty] private string haulingStatus = "Открой планировщик, чтобы загрузить котировки UEX.";
+    [ObservableProperty] private string haulingSortMode = "За рейс";
+    [ObservableProperty] private string haulingCategory = "Все маршруты";
+    [ObservableProperty] private bool haulingSameSystemOnly;
+    [ObservableProperty] private HaulingRoute? haulingBestRoute;
     [ObservableProperty] private string newShipRole = "Торговля";
     [ObservableProperty] private string newShipBuild = "";
     [ObservableProperty] private ShipSummary? selectedShip;
@@ -62,6 +71,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     [ObservableProperty] private FlightRecord? activeFlight;
 
     public string BalanceDisplay => $"{Balance:N0} aUEC";
+    public string HaulingBudgetDisplay => $"{Math.Max(0, Balance - Reserve):N0} aUEC";
     public string LocationDisplay => string.IsNullOrWhiteSpace(CurrentSystem) ? CurrentLocation : $"{CurrentSystem} · {CurrentLocation}";
     public ObservableCollection<TradeRoute> Routes { get; } = [];
     public ObservableCollection<ShipSummary> Ships { get; } = [];
@@ -70,12 +80,16 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     public ObservableCollection<GameTradeCandidate> GameTrades { get; } = [];
     public ObservableCollection<GameHealthFinding> GameHealthFindings { get; } = [];
     public ObservableCollection<GameSessionSummary> GameSessions { get; } = [];
+    public ObservableCollection<HaulingRoute> HaulingRoutes { get; } = [];
+    public string[] HaulingSortOptions { get; } = HaulingService.SortOptions;
+    public string[] HaulingCategories { get; } = HaulingService.Categories;
     public string[] ShipSortOptions { get; } = ["По названию", "По вместимости"];
     public ObservableCollection<string> Systems { get; } = ["Все системы"];
     public ObservableCollection<LocationOption> FilteredLocations { get; } = [];
     public ObservableCollection<FlightRecord> Flights { get; } = [];
-    public bool IsDashboardOpen => !IsSettingsOpen && !IsFleetOpen && !IsHistoryOpen && !IsToolsOpen;
+    public bool IsDashboardOpen => !IsSettingsOpen && !IsFleetOpen && !IsHistoryOpen && !IsToolsOpen && !IsHaulingOpen;
     public bool HasActiveFlight => ActiveFlight is not null;
+    public bool HasHaulingBestRoute => HaulingBestRoute is not null;
     public string ActiveFlightDisplay => ActiveFlight is null ? "Нет активного рейса" :
         $"{ActiveFlight.Commodity} • {ActiveFlight.Origin} → {ActiveFlight.Destination}";
     public string PersonalProfitHourDisplay
@@ -135,7 +149,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         try
         {
             _allVehicles = await gameDataService.GetVehiclesAsync();
-            VehicleStatus = $"Каталог UEX: {_allVehicles.Count(x => x.IsSpaceship == 1)} кораблей. Введи минимум две буквы.";
+            VehicleStatus = $"Каталог UEX: {_allVehicles.Count(x => x.IsSpaceship == 1)} кораблей. Открой список или введи две буквы.";
             RefreshShipMatches();
         }
         catch (Exception ex)
@@ -192,35 +206,49 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         FlightStatus = $"Подставлена сумма {candidate.AmountDisplay} из журнала. Проверь, что сделка завершилась в игре.";
     }
 
-    partial void OnBalanceChanged(decimal value) { OnPropertyChanged(nameof(BalanceDisplay)); QueueSave(); }
+    partial void OnBalanceChanged(decimal value) { OnPropertyChanged(nameof(BalanceDisplay)); OnPropertyChanged(nameof(HaulingBudgetDisplay)); QueueSave(); RecalculateHauling(); }
     partial void OnCurrentShipChanged(string value) => QueueSave();
     partial void OnCurrentSystemChanged(string value) { OnPropertyChanged(nameof(LocationDisplay)); QueueSave(); }
     partial void OnCurrentLocationChanged(string value) { OnPropertyChanged(nameof(LocationDisplay)); QueueSave(); }
     partial void OnCargoScuChanged(int value) => QueueSave();
-    partial void OnReserveChanged(decimal value) => QueueSave();
-    partial void OnAllowRiskyChanged(bool value) => QueueSave();
+    partial void OnReserveChanged(decimal value) { OnPropertyChanged(nameof(HaulingBudgetDisplay)); QueueSave(); RecalculateHauling(); }
+    partial void OnAllowRiskyChanged(bool value) { QueueSave(); RecalculateHauling(); }
     partial void OnSelectedShipChanged(ShipSummary? value)
     {
         if (!_loaded || value is null) return;
         CurrentShip = value.Name;
         CargoScu = value.Ship.CargoScu;
+        RecalculateHauling();
     }
     partial void OnShipSortModeChanged(string value) { RefreshSortedShips(); RefreshShipMatches(); }
     partial void OnShipSearchQueryChanged(string value)
     {
+        if (_selectingVehicle) return;
         if (SelectedCatalogVehicle is { } chosen && !value.Equals(chosen.Name, StringComparison.OrdinalIgnoreCase))
             SelectedCatalogVehicle = null;
         RefreshShipMatches();
     }
-    partial void OnSelectedCatalogVehicleChanged(VehicleCatalogItem? value) => OnPropertyChanged(nameof(HasSelectedCatalogVehicle));
+    partial void OnSelectedCatalogVehicleChanged(VehicleCatalogItem? value)
+    {
+        OnPropertyChanged(nameof(HasSelectedCatalogVehicle));
+        if (value is null) { NewShipName = ""; NewShipCargoScu = 0; return; }
+        NewShipName = value.Name;
+        NewShipCargoScu = (int)Math.Floor(value.Scu);
+        _selectingVehicle = true;
+        ShipSearchQuery = value.Name;
+        _selectingVehicle = false;
+        VehicleStatus = $"Выбрано: {value.Name} · {value.Scu:N0} SCU";
+        ShowShipMatches = false;
+    }
     public bool HasSelectedCatalogVehicle => SelectedCatalogVehicle is not null;
 
     private void RefreshShipMatches()
     {
+        if (SelectedCatalogVehicle is not null && ShipSearchQuery.Equals(SelectedCatalogVehicle.Name, StringComparison.OrdinalIgnoreCase)) return;
         ShipMatches.Clear();
         foreach (var vehicle in VehicleCatalog.Search(_allVehicles, ShipSearchQuery, ShipSortMode))
             ShipMatches.Add(vehicle);
-        ShowShipMatches = ShipMatches.Count > 0 && SelectedCatalogVehicle is null;
+        ShowShipMatches = ShipSearchQuery.Trim().Length >= 2 && ShipMatches.Count > 0 && SelectedCatalogVehicle is null;
     }
 
     [RelayCommand]
@@ -282,6 +310,11 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     partial void OnIsFleetOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
     partial void OnIsHistoryOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
     partial void OnIsToolsOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
+    partial void OnIsHaulingOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
+    partial void OnHaulingSortModeChanged(string value) => RecalculateHauling();
+    partial void OnHaulingCategoryChanged(string value) => RecalculateHauling();
+    partial void OnHaulingSameSystemOnlyChanged(bool value) => RecalculateHauling();
+    partial void OnHaulingBestRouteChanged(HaulingRoute? value) => OnPropertyChanged(nameof(HasHaulingBestRoute));
     partial void OnActiveFlightChanged(FlightRecord? value)
     {
         OnPropertyChanged(nameof(HasActiveFlight));
@@ -324,14 +357,14 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             AllowRisky = AllowRisky
         };
 
-    [RelayCommand] private void OpenDashboard() { IsSettingsOpen = false; IsFleetOpen = false; IsHistoryOpen = false; IsToolsOpen = false; }
-    [RelayCommand] private void OpenSettings() { IsFleetOpen = false; IsHistoryOpen = false; IsToolsOpen = false; IsSettingsOpen = true; }
-    [RelayCommand] private void OpenFleet() { IsSettingsOpen = false; IsHistoryOpen = false; IsToolsOpen = false; IsFleetOpen = true; }
-    [RelayCommand] private void OpenHistory() { IsSettingsOpen = false; IsFleetOpen = false; IsToolsOpen = false; IsHistoryOpen = true; }
+    [RelayCommand] private void OpenDashboard() { IsSettingsOpen = false; IsFleetOpen = false; IsHistoryOpen = false; IsToolsOpen = false; IsHaulingOpen = false; }
+    [RelayCommand] private void OpenSettings() { IsFleetOpen = false; IsHistoryOpen = false; IsToolsOpen = false; IsHaulingOpen = false; IsSettingsOpen = true; }
+    [RelayCommand] private void OpenFleet() { IsSettingsOpen = false; IsHistoryOpen = false; IsToolsOpen = false; IsHaulingOpen = false; IsFleetOpen = true; }
+    [RelayCommand] private void OpenHistory() { IsSettingsOpen = false; IsFleetOpen = false; IsToolsOpen = false; IsHaulingOpen = false; IsHistoryOpen = true; }
     [RelayCommand]
     private async Task OpenToolsAsync()
     {
-        IsSettingsOpen = false; IsFleetOpen = false; IsHistoryOpen = false; IsToolsOpen = true;
+        IsSettingsOpen = false; IsFleetOpen = false; IsHistoryOpen = false; IsHaulingOpen = false; IsToolsOpen = true;
         try
         {
             var sessions = await GameSessionService.LoadAsync(GameLogService.FindGameDirectory());
@@ -340,6 +373,53 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             SessionStatus = sessions.Count == 0 ? "Игровые сессии пока не найдены" : $"Найдено {sessions.Count} последних журналов";
         }
         catch (Exception ex) { SessionStatus = $"Не удалось прочитать историю: {ex.Message}"; }
+    }
+
+    [RelayCommand]
+    private async Task OpenHaulingAsync()
+    {
+        IsSettingsOpen = false; IsFleetOpen = false; IsHistoryOpen = false; IsToolsOpen = false; IsHaulingOpen = true;
+        HaulingStatus = "Загружаю цены и доступные объёмы UEX…";
+        try
+        {
+            _haulingData = await gameDataService.GetSnapshotAsync();
+            RecalculateHauling();
+        }
+        catch (Exception ex) { HaulingStatus = $"Не удалось загрузить данные: {ex.Message}"; }
+    }
+
+    private void RecalculateHauling()
+    {
+        if (_haulingData is null) return;
+        HaulingRoutes.Clear();
+        HaulingBestRoute = null;
+        if (SelectedShip is null)
+        {
+            HaulingStatus = "Добавь корабль во флот и выбери его для расчёта.";
+            return;
+        }
+        var budget = Math.Max(0, Balance - Reserve);
+        foreach (var route in haulingService.Calculate(_haulingData, SelectedShip.Ship.CargoScu,
+                     budget, AllowRisky, HaulingSameSystemOnly, HaulingSortMode, HaulingCategory)) HaulingRoutes.Add(route);
+        HaulingBestRoute = HaulingRoutes.FirstOrDefault();
+        var oldQuote = HaulingRoutes.Any(x => DateTimeOffset.UtcNow - x.UpdatedAt > TimeSpan.FromHours(24));
+        HaulingStatus = HaulingRoutes.Count == 0
+            ? "Подходящих рейсов нет. Проверь бюджет, вместимость и фильтры."
+            : $"Найдено {HaulingRoutes.Count} маршрутов · данные загружены {_haulingData.PricesFetchedAt.LocalDateTime:dd.MM HH:mm}" +
+              (_haulingData.UsedOldCache || oldQuote ? " · есть устаревшие котировки" : "");
+    }
+
+    [RelayCommand]
+    private void PrepareHaulingFlight(HaulingRoute? route)
+    {
+        if (route is null) return;
+        FlightOrigin = route.BuyAt;
+        FlightDestination = route.SellAt;
+        FlightCommodity = route.Commodity;
+        FlightInvestment = route.Investment;
+        FlightRevenue = 0; FlightExpenses = 0; FlightLosses = 0;
+        OpenHistory();
+        FlightStatus = "Грузовой маршрут перенесён в рейс. Проверь цены и наличие в игре.";
     }
 
     private async Task ReloadFlightLogAsync()

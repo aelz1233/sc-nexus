@@ -10,4 +10,5 @@ public sealed class VehicleCatalogItem
     public int IsSpaceship { get; set; }
     public int IsGroundVehicle { get; set; }
     public string Display => $"{Name}  ·  {Scu:N0} SCU  ·  {CompanyName}";
+    public override string ToString() => Name;
 }
