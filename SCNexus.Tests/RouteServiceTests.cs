@@ -22,6 +22,11 @@ public class RouteServiceTests
 
         var route = Assert.Single(new RouteService().FindRoutes(data, settings));
         Assert.Equal(20, route.Scu);
+        Assert.Equal(50, route.FillPercent);
+        Assert.Equal(50, route.OriginStockScu);
+        Assert.Equal(30, route.DestinationDemandScu);
+        Assert.Equal(100, route.BuyPricePerScu);
+        Assert.Equal(150, route.SellPricePerScu);
         Assert.Equal(2000, route.Investment);
         Assert.Equal(1000, route.Profit);
 
@@ -80,6 +85,11 @@ public class RouteServiceTests
         var routes = new RouteService().FindRoutes(data, settings);
         Assert.Equal(2, routes.Count);
         Assert.Contains(routes, x => x.BuyAt == "Stanton Origin");
-        Assert.Contains(routes, x => x.BuyAt == "Pyro Origin");
+        var pyro = Assert.Single(routes, x => x.BuyAt == "Pyro Origin");
+        Assert.Equal("Pyro", pyro.BuySystem);
+        Assert.Equal("Stanton", pyro.SellSystem);
+        Assert.True(pyro.IsPyroRoute);
+        Assert.True(pyro.Risky);
+        Assert.Contains("ОПАСНО: Pyro", pyro.RiskDisplay);
     }
 }

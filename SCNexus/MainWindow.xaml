@@ -85,16 +85,21 @@
                             <Border Style="{StaticResource Card}" Margin="0,0,0,10">
                                 <StackPanel>
                                     <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="2*"/><ColumnDefinition Width="2*"/><ColumnDefinition Width="1.2*"/></Grid.ColumnDefinitions>
-                                        <StackPanel><TextBlock Text="{Binding Commodity}" Foreground="{StaticResource Accent}" FontSize="19" FontWeight="Bold" TextWrapping="Wrap"/><TextBlock Text="{Binding ScuDisplay}" Foreground="{StaticResource Muted}" Margin="0,6,0,0"/></StackPanel>
-                                        <StackPanel Grid.Column="1" Margin="8,0,10,0"><TextBlock Style="{StaticResource Caption}" Text="КУПИТЬ"/><TextBlock Text="{Binding BuyAt}" TextWrapping="Wrap" Margin="0,6,0,0"/></StackPanel>
-                                        <StackPanel Grid.Column="2" Margin="8,0,10,0"><TextBlock Style="{StaticResource Caption}" Text="ПРОДАТЬ"/><TextBlock Text="{Binding SellAt}" TextWrapping="Wrap" Margin="0,6,0,0"/></StackPanel>
+                                        <StackPanel><TextBlock Text="{Binding Commodity}" Foreground="{StaticResource Accent}" FontSize="19" FontWeight="Bold" TextWrapping="Wrap"/><TextBlock Text="{Binding CargoDisplay}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0"/></StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="8,0,10,0"><TextBlock Style="{StaticResource Caption}" Text="КУПИТЬ · ОТПРАВЛЕНИЕ"/><TextBlock Text="{Binding BuyAt}" TextWrapping="Wrap" Margin="0,6,0,0"/><TextBlock Text="{Binding BuySystemDisplay}" Foreground="#9DBBFF" Margin="0,5,0,0"/></StackPanel>
+                                        <StackPanel Grid.Column="2" Margin="8,0,10,0"><TextBlock Style="{StaticResource Caption}" Text="ПРОДАТЬ · НАЗНАЧЕНИЕ"/><TextBlock Text="{Binding SellAt}" TextWrapping="Wrap" Margin="0,6,0,0"/><TextBlock Text="{Binding SellSystemDisplay}" Foreground="#9DBBFF" Margin="0,5,0,0"/></StackPanel>
                                         <StackPanel Grid.Column="3"><TextBlock Style="{StaticResource Caption}" Text="ОЖИДАЕМАЯ ПРИБЫЛЬ"/><TextBlock Text="{Binding ProfitDisplay}" Foreground="{StaticResource Accent}" FontWeight="Bold" Margin="0,6,0,0"/></StackPanel>
                                     </Grid>
+                                    <WrapPanel Margin="0,15,0,0">
+                                        <TextBlock Text="{Binding StockDemandDisplay}" Margin="0,0,20,0"/>
+                                        <TextBlock Text="{Binding PricesDisplay}" Margin="0,0,20,0"/>
+                                    </WrapPanel>
                                     <WrapPanel Margin="0,16,0,0">
                                         <TextBlock Text="Закупка: " Foreground="{StaticResource Muted}"/><TextBlock Text="{Binding InvestmentDisplay}" Margin="0,0,14,0"/>
+                                        <TextBlock Text="Выручка: " Foreground="{StaticResource Muted}"/><TextBlock Text="{Binding RevenueDisplay}" Margin="0,0,14,0"/>
                                         <TextBlock Text="Доходность: " Foreground="{StaticResource Muted}"/><TextBlock Text="{Binding RoiDisplay}" Margin="0,0,14,0"/>
                                         <TextBlock Text="{Binding FreshnessDisplay}" Foreground="{StaticResource Muted}" Margin="0,0,14,0"/>
-                                        <TextBlock Text="{Binding RiskDisplay}" Foreground="{StaticResource Muted}" Margin="0,0,14,0"/>
+                                        <TextBlock Text="{Binding RiskDisplay}" Foreground="{Binding RiskColor}" FontWeight="SemiBold" Margin="0,0,14,0"/>
                                         <TextBlock Text="{Binding PersonalDurationDisplay}" Foreground="{StaticResource Muted}"/>
                                     </WrapPanel>
                                     <Button Content="Записать этот рейс" Command="{Binding DataContext.PrepareFlightCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" HorizontalAlignment="Left" Margin="0,15,0,0"/>
@@ -140,6 +145,7 @@
                             <TextBlock Text="{Binding HaulingBestRoute.RouteDisplay}" TextWrapping="Wrap" Margin="0,8,0,0"/>
                             <TextBlock Text="{Binding HaulingBestRoute.CargoDisplay}" Foreground="{StaticResource Muted}" Margin="0,7,0,0"/>
                             <TextBlock Text="{Binding HaulingBestRoute.InvestmentDisplay, StringFormat=Нужно на закупку: {0}}" Foreground="{StaticResource Muted}" Margin="0,4,0,0"/>
+                            <TextBlock Text="{Binding HaulingBestRoute.RiskDisplay}" Foreground="{Binding HaulingBestRoute.RiskColor}" FontWeight="SemiBold" Margin="0,6,0,0"/>
                         </StackPanel>
                     </Border>
                     <TextBlock Text="МАРШРУТЫ ПО ЖИВЫМ КОТИРОВКАМ" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,12"/>
@@ -149,7 +155,7 @@
                                 <StackPanel><TextBlock Text="{Binding Commodity}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource Accent}"/><TextBlock Text="{Binding RouteDisplay}" TextWrapping="Wrap" Margin="0,6,0,0"/></StackPanel>
                                 <StackPanel Grid.Column="1" Margin="20,0,0,0"><TextBlock Text="{Binding ProfitDisplay}" FontSize="19" FontWeight="Bold" HorizontalAlignment="Right"/><TextBlock Text="{Binding ProfitPerScuDisplay}" Foreground="{StaticResource Muted}" HorizontalAlignment="Right" Margin="0,5,0,0"/></StackPanel>
                             </Grid>
-                            <WrapPanel Margin="0,13,0,0"><TextBlock Text="{Binding CategoryDisplay}" Foreground="#9DBBFF" Margin="0,0,16,0"/><TextBlock Text="{Binding CargoDisplay}" Margin="0,0,16,0"/><TextBlock Text="{Binding RoiDisplay}" Margin="0,0,16,0"/><TextBlock Text="{Binding RiskDisplay}" Foreground="{StaticResource Muted}"/></WrapPanel>
+                            <WrapPanel Margin="0,13,0,0"><TextBlock Text="{Binding CategoryDisplay}" Foreground="#9DBBFF" Margin="0,0,16,0"/><TextBlock Text="{Binding CargoDisplay}" Margin="0,0,16,0"/><TextBlock Text="{Binding RoiDisplay}" Margin="0,0,16,0"/><TextBlock Text="{Binding RiskDisplay}" Foreground="{Binding RiskColor}" FontWeight="SemiBold"/></WrapPanel>
                             <WrapPanel Margin="0,7,0,0"><TextBlock Text="{Binding InvestmentDisplay, StringFormat=Закупка: {0}}" Foreground="{StaticResource Muted}" Margin="0,0,16,0"/><TextBlock Text="{Binding AvailabilityDisplay}" Foreground="{StaticResource Muted}" Margin="0,0,16,0"/><TextBlock Text="{Binding UpdatedDisplay}" Foreground="{StaticResource Muted}"/></WrapPanel>
                             <Button Content="Записать этот рейс" Command="{Binding DataContext.PrepareHaulingFlightCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" HorizontalAlignment="Left" Margin="0,13,0,0"/>
                         </StackPanel></Border>

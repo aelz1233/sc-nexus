@@ -60,6 +60,17 @@ public sealed record TradeRoute(
     decimal Investment, decimal Revenue, decimal Profit, decimal RoiPercent,
     DateTimeOffset QuoteUpdatedAt, bool DemandEstimate, bool Risky)
 {
+    public string BuySystem { get; init; } = "Неизвестно";
+    public string SellSystem { get; init; } = "Неизвестно";
+    public int CargoCapacityScu { get; init; }
+    public int OriginStockScu { get; init; }
+    public int DestinationDemandScu { get; init; }
+    public decimal BuyPricePerScu { get; init; }
+    public decimal SellPricePerScu { get; init; }
+    public bool UsesNqaTerminal { get; init; }
+    public bool IsPyroRoute => BuySystem.Equals("Pyro", StringComparison.OrdinalIgnoreCase) ||
+        SellSystem.Equals("Pyro", StringComparison.OrdinalIgnoreCase);
+    public decimal FillPercent => CargoCapacityScu <= 0 ? 0 : (decimal)Scu / CargoCapacityScu * 100;
     public double? PersonalDurationMinutes { get; init; }
     public string PersonalDurationDisplay => PersonalDurationMinutes is { } minutes
         ? $"Обычно у тебя: {minutes:N0} мин" : "Твоего времени пока нет";
@@ -67,6 +78,15 @@ public sealed record TradeRoute(
     public string InvestmentDisplay => $"{Investment:N0} aUEC";
     public string RoiDisplay => $"{RoiPercent:N1}%";
     public string ScuDisplay => $"{Scu} SCU";
+    public string CargoDisplay => $"{Scu:N0} / {CargoCapacityScu:N0} SCU · заполнено {FillPercent:N0}%";
+    public string StockDemandDisplay => $"Запас: {OriginStockScu:N0} SCU · спрос: {DestinationDemandScu:N0} SCU";
+    public string PricesDisplay => $"Покупка: {BuyPricePerScu:N0} / SCU · продажа: {SellPricePerScu:N0} / SCU";
+    public string RevenueDisplay => $"{Revenue:N0} aUEC";
+    public string BuySystemDisplay => $"Система: {BuySystem}";
+    public string SellSystemDisplay => $"Система: {SellSystem}";
     public string FreshnessDisplay => $"Котировка: {QuoteUpdatedAt.LocalDateTime:dd.MM HH:mm}";
-    public string RiskDisplay => Risky ? "NQA / риск" : "Риск не оценён";
+    public string RiskDisplay => IsPyroRoute
+        ? UsesNqaTerminal ? "⚠ ОПАСНО: Pyro · NQA" : "⚠ ОПАСНО: Pyro"
+        : UsesNqaTerminal ? "⚠ Терминал NQA" : "Риск не оценён";
+    public string RiskColor => IsPyroRoute || UsesNqaTerminal ? "#FF9A8F" : "#8D9AB5";
 }

@@ -27,6 +27,9 @@ public class HaulingServiceTests
         Assert.Equal(5, all[0].Scu);
         Assert.Equal(50, all[0].FillPercent);
         Assert.Equal("Межзвёздный", all[0].Category);
+        Assert.True(all[0].IsPyroRoute);
+        Assert.True(all[0].IsDangerous);
+        Assert.Contains("ОПАСНО: Pyro", all[0].RiskDisplay);
         Assert.Single(service.Calculate(data, 10, 500, true, true, "За рейс"));
         var stellar = service.Calculate(data, 10, 500, true, false, "За рейс", "Звёздный");
         Assert.Single(stellar);

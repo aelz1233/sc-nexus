@@ -43,9 +43,22 @@ public sealed class RouteService
                 var investment = scu * buy.PriceBuy;
                 var revenue = scu * sell.PriceSell;
                 var quoteTime = DateTimeOffset.FromUnixTimeSeconds(Math.Min(buy.DateModified, sell.DateModified));
+                var usesNqa = origin.IsNqa == 1 || destination.IsNqa == 1;
+                var isPyro = string.Equals(origin.StarSystemName, "Pyro", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(destination.StarSystemName, "Pyro", StringComparison.OrdinalIgnoreCase);
                 routes.Add(new TradeRoute(buy.CommodityName, origin.Name, destination.Name, scu,
                     investment, revenue, revenue - investment, (revenue - investment) / investment * 100,
-                    quoteTime, true, origin.IsNqa == 1 || destination.IsNqa == 1));
+                    quoteTime, true, usesNqa || isPyro)
+                {
+                    BuySystem = string.IsNullOrWhiteSpace(origin.StarSystemName) ? "Неизвестно" : origin.StarSystemName,
+                    SellSystem = string.IsNullOrWhiteSpace(destination.StarSystemName) ? "Неизвестно" : destination.StarSystemName,
+                    CargoCapacityScu = settings.CargoScu,
+                    OriginStockScu = originStock,
+                    DestinationDemandScu = demand,
+                    BuyPricePerScu = buy.PriceBuy,
+                    SellPricePerScu = sell.PriceSell,
+                    UsesNqaTerminal = usesNqa
+                });
             }
         }
         return routes.OrderByDescending(x => x.Profit).ThenByDescending(x => x.RoiPercent).ToArray();
