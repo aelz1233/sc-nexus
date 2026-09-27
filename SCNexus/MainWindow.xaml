@@ -20,23 +20,28 @@
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
+        <Style x:Key="NavPlaceholder" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Margin" Value="14,14,0,14"/>
+        </Style>
     </Window.Resources>
     <Grid>
         <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
         <Border Background="#0D1923" BorderBrush="#29404E" BorderThickness="0,0,1,0">
             <DockPanel Margin="20,28,20,20">
-                <TextBlock DockPanel.Dock="Bottom" Text="ЭТАП 1  •  OFFLINE" Foreground="{StaticResource Muted}" FontSize="11"/>
+                <TextBlock DockPanel.Dock="Bottom" Text="UEX LIVE  •  LOCAL CACHE" Foreground="{StaticResource Muted}" FontSize="11"/>
                 <StackPanel>
                     <TextBlock Text="SC NEXUS" Foreground="{StaticResource Accent}" FontSize="23" FontWeight="Bold"/>
                     <TextBlock Text="PERSONAL COMPANION" Foreground="{StaticResource Muted}" FontSize="10" Margin="2,2,0,36"/>
                     <Button Style="{StaticResource Nav}" Content="DASHBOARD" Command="{Binding OpenDashboardCommand}" Foreground="{StaticResource Accent}"/>
-                    <Button Style="{StaticResource Nav}" Content="TRADING" IsEnabled="False"/>
-                    <Button Style="{StaticResource Nav}" Content="ROUTES" IsEnabled="False"/>
-                    <Button Style="{StaticResource Nav}" Content="FLEET" IsEnabled="False"/>
-                    <Button Style="{StaticResource Nav}" Content="LOADOUT" IsEnabled="False"/>
-                    <Button Style="{StaticResource Nav}" Content="SALVAGE" IsEnabled="False"/>
-                    <Button Style="{StaticResource Nav}" Content="MINING" IsEnabled="False"/>
-                    <Button Style="{StaticResource Nav}" Content="HISTORY" IsEnabled="False"/>
+                    <TextBlock Style="{StaticResource NavPlaceholder}" Text="TRADING"/>
+                    <TextBlock Style="{StaticResource NavPlaceholder}" Text="ROUTES"/>
+                    <TextBlock Style="{StaticResource NavPlaceholder}" Text="FLEET"/>
+                    <TextBlock Style="{StaticResource NavPlaceholder}" Text="LOADOUT"/>
+                    <TextBlock Style="{StaticResource NavPlaceholder}" Text="SALVAGE"/>
+                    <TextBlock Style="{StaticResource NavPlaceholder}" Text="MINING"/>
+                    <TextBlock Style="{StaticResource NavPlaceholder}" Text="HISTORY"/>
                     <Button Style="{StaticResource Nav}" Content="SETTINGS" Command="{Binding OpenSettingsCommand}" Foreground="{StaticResource Accent}"/>
                 </StackPanel>
             </DockPanel>
