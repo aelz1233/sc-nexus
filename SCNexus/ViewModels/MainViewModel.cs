@@ -25,6 +25,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     [ObservableProperty] private bool isSettingsOpen;
     [ObservableProperty] private bool isFleetOpen;
     [ObservableProperty] private bool isHistoryOpen;
+    [ObservableProperty] private bool isToolsOpen;
     [ObservableProperty] private bool showRecommendation;
     [ObservableProperty] private string recommendationMessage = "";
     [ObservableProperty] private string dataStatus = "UEX • ещё не загружено";
@@ -38,6 +39,10 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     [ObservableProperty] private string vehicleStatus = "Каталог кораблей загружается…";
     [ObservableProperty] private bool showShipMatches;
     [ObservableProperty] private string gameLogStatus = "Ищу журнал Star Citizen на компьютере…";
+    [ObservableProperty] private string gameProcessStatus = "Проверяю игру…";
+    [ObservableProperty] private string gameRegion = "Регион не определён";
+    [ObservableProperty] private string gameShard = "Не определён";
+    [ObservableProperty] private string gameLogUpdated = "Нет данных";
     [ObservableProperty] private string newShipRole = "Торговля";
     [ObservableProperty] private string newShipBuild = "";
     [ObservableProperty] private ShipSummary? selectedShip;
@@ -62,11 +67,12 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     public ObservableCollection<ShipSummary> SortedShips { get; } = [];
     public ObservableCollection<VehicleCatalogItem> ShipMatches { get; } = [];
     public ObservableCollection<GameTradeCandidate> GameTrades { get; } = [];
+    public ObservableCollection<GameHealthFinding> GameHealthFindings { get; } = [];
     public string[] ShipSortOptions { get; } = ["По названию", "По вместимости"];
     public ObservableCollection<string> Systems { get; } = ["Все системы"];
     public ObservableCollection<LocationOption> FilteredLocations { get; } = [];
     public ObservableCollection<FlightRecord> Flights { get; } = [];
-    public bool IsDashboardOpen => !IsSettingsOpen && !IsFleetOpen && !IsHistoryOpen;
+    public bool IsDashboardOpen => !IsSettingsOpen && !IsFleetOpen && !IsHistoryOpen && !IsToolsOpen;
     public bool HasActiveFlight => ActiveFlight is not null;
     public string ActiveFlightDisplay => ActiveFlight is null ? "Нет активного рейса" :
         $"{ActiveFlight.Commodity} • {ActiveFlight.Origin} → {ActiveFlight.Destination}";
@@ -143,6 +149,8 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             try
             {
                 var snapshot = await gameLogService.ReadRecentAsync(token);
+                var monitor = await Task.Run(() => GameMonitorService.Inspect(snapshot.GameDirectory), token);
+                var health = await Task.Run(() => GameHealthService.Scan(snapshot.GameDirectory), token);
                 GameLogStatus = snapshot.GameDirectory is null
                     ? "Журнал игры пока не найден. SC NEXUS проверит снова автоматически."
                     : $"Найден Game.log: {snapshot.GameDirectory} · запросов: {snapshot.Candidates.Count}";
@@ -150,6 +158,15 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
                 {
                     GameTrades.Clear();
                     foreach (var candidate in snapshot.Candidates) GameTrades.Add(candidate);
+                }
+                GameProcessStatus = monitor.IsRunning ? "Игра запущена" : "Игра не запущена";
+                GameRegion = monitor.Region;
+                GameShard = monitor.Shard;
+                GameLogUpdated = monitor.LogUpdatedAt?.ToString("dd.MM.yyyy HH:mm:ss") ?? "Нет данных";
+                if (!GameHealthFindings.SequenceEqual(health))
+                {
+                    GameHealthFindings.Clear();
+                    foreach (var finding in health) GameHealthFindings.Add(finding);
                 }
                 await Task.Delay(TimeSpan.FromSeconds(15), token);
             }
@@ -262,6 +279,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     partial void OnIsSettingsOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
     partial void OnIsFleetOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
     partial void OnIsHistoryOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
+    partial void OnIsToolsOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
     partial void OnActiveFlightChanged(FlightRecord? value)
     {
         OnPropertyChanged(nameof(HasActiveFlight));
@@ -304,10 +322,11 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             AllowRisky = AllowRisky
         };
 
-    [RelayCommand] private void OpenDashboard() { IsSettingsOpen = false; IsFleetOpen = false; IsHistoryOpen = false; }
-    [RelayCommand] private void OpenSettings() { IsFleetOpen = false; IsHistoryOpen = false; IsSettingsOpen = true; }
-    [RelayCommand] private void OpenFleet() { IsSettingsOpen = false; IsHistoryOpen = false; IsFleetOpen = true; }
-    [RelayCommand] private void OpenHistory() { IsSettingsOpen = false; IsFleetOpen = false; IsHistoryOpen = true; }
+    [RelayCommand] private void OpenDashboard() { IsSettingsOpen = false; IsFleetOpen = false; IsHistoryOpen = false; IsToolsOpen = false; }
+    [RelayCommand] private void OpenSettings() { IsFleetOpen = false; IsHistoryOpen = false; IsToolsOpen = false; IsSettingsOpen = true; }
+    [RelayCommand] private void OpenFleet() { IsSettingsOpen = false; IsHistoryOpen = false; IsToolsOpen = false; IsFleetOpen = true; }
+    [RelayCommand] private void OpenHistory() { IsSettingsOpen = false; IsFleetOpen = false; IsToolsOpen = false; IsHistoryOpen = true; }
+    [RelayCommand] private void OpenTools() { IsSettingsOpen = false; IsFleetOpen = false; IsHistoryOpen = false; IsToolsOpen = true; }
 
     private async Task ReloadFlightLogAsync()
     {

@@ -85,7 +85,7 @@ public sealed class GameLogService(string? gameDirectory = null)
         }
     }
 
-    private static string? FindGameDirectory()
+    public static string? FindGameDirectory()
     {
         foreach (var drive in DriveInfo.GetDrives().Where(x => x.IsReady && x.DriveType == DriveType.Fixed))
         {

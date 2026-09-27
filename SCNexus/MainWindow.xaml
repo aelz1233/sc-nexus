@@ -6,18 +6,18 @@
     <Window.Resources>
         <Style x:Key="Card" TargetType="Border">
             <Setter Property="Background" Value="{StaticResource Panel}"/>
-            <Setter Property="BorderBrush" Value="#2A3844"/>
+            <Setter Property="BorderBrush" Value="#252E4C"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="CornerRadius" Value="14"/>
             <Setter Property="Padding" Value="22"/>
         </Style>
         <Style x:Key="Nav" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-            <Setter Property="Padding" Value="16,13"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,5,0"/>
+            <Setter Property="Padding" Value="15,9"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#CCD9E2"/>
-            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="Foreground" Value="#AAB7D1"/>
+            <Setter Property="FontSize" Value="14"/>
         </Style>
         <Style x:Key="Caption" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
             <Setter Property="Foreground" Value="{StaticResource Muted}"/>
@@ -32,26 +32,36 @@
         </Style>
     </Window.Resources>
     <Grid>
-        <Grid.ColumnDefinitions><ColumnDefinition Width="210"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-        <Border Background="#0C131B" BorderBrush="#263442" BorderThickness="0,0,1,0">
-            <DockPanel Margin="16,27,16,22">
-                <TextBlock DockPanel.Dock="Bottom" Text="Личные данные на этом компьютере" Foreground="{StaticResource Muted}" FontSize="11" TextWrapping="Wrap"/>
-                <StackPanel>
-                    <TextBlock Text="SC NEXUS" Foreground="{StaticResource Accent}" FontSize="23" FontWeight="Bold" Margin="8,0,0,3"/>
-                    <TextBlock Text="ЛИЧНЫЙ КОМПАНЬОН" Foreground="{StaticResource Muted}" FontSize="10" Margin="9,0,0,35"/>
-                    <Button Style="{StaticResource Nav}" Content="Главная" Command="{Binding OpenDashboardCommand}"/>
-                    <Button Style="{StaticResource Nav}" Content="Мой флот" Command="{Binding OpenFleetCommand}"/>
-                    <Button Style="{StaticResource Nav}" Content="Рейсы и история" Command="{Binding OpenHistoryCommand}"/>
-                    <Button Style="{StaticResource Nav}" Content="Настройки" Command="{Binding OpenSettingsCommand}"/>
+        <Grid.RowDefinitions><RowDefinition Height="64"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Border Background="#090E1D" BorderBrush="#222C48" BorderThickness="0,0,0,1">
+            <Grid Margin="30,0"><Grid.ColumnDefinitions><ColumnDefinition Width="230"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="34" Height="34" CornerRadius="9" Background="{StaticResource HeroBrush}" Margin="0,0,11,0"><TextBlock Text="✦" FontSize="19" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/></Border>
+                    <StackPanel VerticalAlignment="Center"><TextBlock Text="SC NEXUS" FontSize="18" FontWeight="Bold" Foreground="White"/><TextBlock Text="ЛИЧНЫЙ КОМПАНЬОН" FontSize="9" Foreground="{StaticResource Muted}"/></StackPanel>
                 </StackPanel>
-            </DockPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource Nav}" Content="⌂  Главная" Command="{Binding OpenDashboardCommand}"/>
+                    <Button Style="{StaticResource Nav}" Content="✦  Корабли" Command="{Binding OpenFleetCommand}"/>
+                    <Button Style="{StaticResource Nav}" Content="↗  Рейсы и история" Command="{Binding OpenHistoryCommand}"/>
+                    <Button Style="{StaticResource Nav}" Content="▦  Инструменты" Command="{Binding OpenToolsCommand}"/>
+                    <Button Style="{StaticResource Nav}" Content="⚙  Настройки" Command="{Binding OpenSettingsCommand}"/>
+                </StackPanel>
+                <Border Grid.Column="2" Background="#14223B" BorderBrush="#2B3D61" BorderThickness="1" CornerRadius="14" Padding="12,6" VerticalAlignment="Center"><TextBlock Text="●  ЛОКАЛЬНЫЕ ДАННЫЕ" Foreground="#8FB5FF" FontSize="10" FontWeight="SemiBold"/></Border>
+            </Grid>
         </Border>
-        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
-            <Grid Margin="34,28,34,40">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <Grid Margin="38,28,38,42">
                 <StackPanel Visibility="{Binding IsDashboardOpen, Converter={StaticResource BoolVisibility}}">
-                    <TextBlock Text="ЛИЧНЫЙ ОБЗОР" Foreground="{StaticResource Accent}" FontSize="11" FontWeight="Bold"/>
-                    <TextBlock Text="Что делать сейчас?" FontSize="30" FontWeight="SemiBold" Margin="0,7,0,5"/>
-                    <TextBlock Text="Твой баланс, корабль и лучшие торговые возможности в одном месте." Foreground="{StaticResource Muted}" Margin="0,0,0,24"/>
+                    <Border Background="{StaticResource HeroSurfaceBrush}" BorderBrush="#2B3460" BorderThickness="1" CornerRadius="20" Padding="32,26" Margin="0,0,0,22">
+                        <StackPanel HorizontalAlignment="Center">
+                            <Border Background="#1B2848" BorderBrush="#344879" BorderThickness="1" CornerRadius="14" Padding="13,6" HorizontalAlignment="Center"><TextBlock Text="●  STAR CITIZEN  ·  ЛИЧНЫЙ ЦЕНТР" Foreground="#A7C1FF" FontSize="11"/></Border>
+                            <TextBlock Text="SC NEXUS" FontSize="48" FontWeight="Bold" Foreground="{StaticResource HeroTitleBrush}" HorizontalAlignment="Center" Margin="0,13,0,0"/>
+                            <TextBlock Text="Корабли, рейсы и торговые маршруты в одном месте" FontSize="17" Foreground="#B5C1DC" HorizontalAlignment="Center" Margin="0,5,0,20"/>
+                            <Button Style="{StaticResource PrimaryButton}" Command="{Binding RecommendCommand}" Content="Найти торговый маршрут  →" FontSize="16" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Text="ЛИЧНЫЙ ОБЗОР" Foreground="{StaticResource Accent}" FontSize="11" FontWeight="Bold" Margin="0,0,0,6"/>
+                    <TextBlock Text="Мои данные" FontSize="25" FontWeight="SemiBold" Margin="0,0,0,19"/>
                     <Grid Margin="0,0,0,13">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                         <Border Style="{StaticResource Card}" Margin="0,0,10,0" Background="{StaticResource BalanceBrush}" BorderBrush="#435687"><StackPanel><TextBlock Style="{StaticResource Caption}" Text="БАЛАНС"/><TextBlock Text="{Binding BalanceDisplay}" FontSize="30" FontWeight="Bold" Foreground="White" Margin="0,8,0,0"/></StackPanel></Border>
@@ -64,8 +74,7 @@
                         <Border Grid.Column="1" Style="{StaticResource Card}" Margin="0,0,10,0"><StackPanel><TextBlock Style="{StaticResource Caption}" Text="ЗА ВСЕ РЕЙСЫ"/><TextBlock Text="{Binding TotalFlightProfitDisplay}" FontSize="19" FontWeight="SemiBold" Margin="0,8,0,0"/></StackPanel></Border>
                         <Border Grid.Column="2" Style="{StaticResource Card}"><StackPanel><TextBlock Style="{StaticResource Caption}" Text="ЛИЧНАЯ ПРИБЫЛЬ В ЧАС"/><TextBlock Text="{Binding PersonalProfitHourDisplay}" FontSize="19" FontWeight="SemiBold" Margin="0,8,0,0"/></StackPanel></Border>
                     </Grid>
-                    <Button Style="{StaticResource PrimaryButton}" Command="{Binding RecommendCommand}" FontSize="21" Padding="24,20" HorizontalContentAlignment="Center" Content="ПОДОБРАТЬ ЛУЧШИЙ РЕЙС →"/>
-                    <Border Background="#17223E" BorderBrush="#334A85" BorderThickness="1" CornerRadius="13" Padding="12,6" HorizontalAlignment="Left" Margin="0,12,0,24"><TextBlock Text="{Binding DataStatus}" Foreground="#B9CEED" FontSize="11"/></Border>
+                    <Border Background="#17223E" BorderBrush="#334A85" BorderThickness="1" CornerRadius="13" Padding="12,6" HorizontalAlignment="Left" Margin="0,0,0,24"><TextBlock Text="{Binding DataStatus}" Foreground="#B9CEED" FontSize="11"/></Border>
                     <Border Style="{StaticResource Card}" Margin="0,0,0,20" Visibility="{Binding ShowRecommendation, Converter={StaticResource BoolVisibility}}">
                         <StackPanel><TextBlock Text="РЕЗУЛЬТАТ ПОИСКА" Foreground="{StaticResource Accent}" FontWeight="Bold"/><TextBlock Text="{Binding RecommendationMessage}" TextWrapping="Wrap" Margin="0,8,0,0"/></StackPanel>
                     </Border>
@@ -197,6 +206,32 @@
                             <StackPanel Orientation="Horizontal" Margin="0,12,0,0"><TextBlock Text="Вложено: " Foreground="{StaticResource Muted}"/><TextBlock Text="{Binding Investment, StringFormat={}{0:N0} aUEC}"/><TextBlock Text="    Получено: " Foreground="{StaticResource Muted}"/><TextBlock Text="{Binding Revenue, StringFormat={}{0:N0} aUEC}"/><TextBlock Text="    Расходы и потери: " Foreground="{StaticResource Muted}"/><TextBlock Text="{Binding Expenses, StringFormat={}{0:N0}}"/><TextBlock Text=" + "/><TextBlock Text="{Binding Losses, StringFormat={}{0:N0} aUEC}"/></StackPanel>
                         </StackPanel></Border>
                     </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                </StackPanel>
+                <StackPanel Visibility="{Binding IsToolsOpen, Converter={StaticResource BoolVisibility}}">
+                    <TextBlock Text="STAR CITIZEN  ·  ФУНКЦИИ В SC NEXUS" Foreground="{StaticResource Accent}" FontSize="11" FontWeight="Bold"/>
+                    <TextBlock Text="Инструменты" FontSize="30" FontWeight="SemiBold" Margin="0,7,0,5"/>
+                    <TextBlock Text="Мониторинг игры и проверка установки работают прямо здесь. Данные берутся с этого компьютера." Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,18"/>
+                    <Border Style="{StaticResource Card}" Background="{StaticResource BalanceBrush}" BorderBrush="#394C7E" Margin="0,0,0,18">
+                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,20,0">
+                                <TextBlock Text="МОНИТОР ИГРЫ" Foreground="#9DBBFF" FontSize="11" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding GameProcessStatus}" FontSize="21" FontWeight="SemiBold" Margin="0,7,0,5"/>
+                                <TextBlock Text="{Binding GameRegion}" Foreground="{StaticResource Accent}" FontSize="17" Margin="0,0,0,5"/>
+                                <TextBlock Text="{Binding GameShard, StringFormat=Сервер: {0}}" Foreground="{StaticResource Muted}" Margin="0,0,0,5"/>
+                                <TextBlock Text="{Binding GameLogUpdated, StringFormat=Журнал обновлён: {0}}" Foreground="{StaticResource Muted}" Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding GameLogStatus}" Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="Открыть журнал" Command="{Binding OpenHistoryCommand}" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                    <TextBlock Text="ПРОВЕРКА УСТАНОВКИ" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,13"/>
+                    <ItemsControl ItemsSource="{Binding GameHealthFindings}"><ItemsControl.ItemTemplate><DataTemplate>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,9"><StackPanel>
+                            <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding Detail}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                        </StackPanel></Border>
+                    </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                    <TextBlock Text="Проверка только читает файлы. Игровые настройки и локализация не изменяются." Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,7,0,0"/>
                 </StackPanel>
                 <Border Background="Transparent" Visibility="{Binding IsSettingsOpen, Converter={StaticResource BoolVisibility}}">
                     <StackPanel Width="600" HorizontalAlignment="Left" VerticalAlignment="Top">
