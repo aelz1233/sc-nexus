@@ -60,6 +60,7 @@ public partial class MainWindow : Window
             try
             {
                 var startInfo = new ProcessStartInfo(installer) { UseShellExecute = true };
+                startInfo.ArgumentList.Add("/SP-");
                 startInfo.ArgumentList.Add("/VERYSILENT");
                 startInfo.ArgumentList.Add("/SUPPRESSMSGBOXES");
                 startInfo.ArgumentList.Add("/NORESTART");
