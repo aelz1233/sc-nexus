@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.2.11"
+  #define AppVersion "0.2.12"
 #endif
 #ifndef PublishDir
   #define PublishDir "..\publish"
@@ -46,17 +46,7 @@ Name: "{autodesktop}\SC NEXUS"; Filename: "{app}\SCNexus.exe"; Tasks: desktopico
 
 [Run]
 Filename: "{app}\SCNexus.exe"; Description: "Запустить SC NEXUS"; Flags: nowait postinstall skipifsilent
-
-[Code]
-procedure CurStepChanged(CurStep: TSetupStep);
-var
-  ResultCode: Integer;
-begin
-  if (CurStep = ssPostInstall) and WizardSilent and WizardIsTaskSelected('restartafterupdate') then
-  begin
-    Exec(ExpandConstant('{app}\SCNexus.exe'), '', '', SW_SHOWNORMAL, ewNoWait, ResultCode);
-  end;
-end;
+Filename: "{app}\SCNexus.exe"; Flags: nowait skipifdoesntexist; Tasks: restartafterupdate
 
 ; User data lives in %LOCALAPPDATA%\SCNexus, outside {app}.
 ; Never delete that directory during upgrade or uninstall.
