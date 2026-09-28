@@ -60,7 +60,7 @@ public partial class MainViewModel
             var progress = new Progress<int>(percent => UpdateStatus = $"Скачиваю установщик: {percent}%");
             var installer = await updateService.DownloadInstallerAsync(release, progress);
             PendingInstallerPath = installer;
-            UpdateStatus = "Установщик проверен. Закрываю приложение и запускаю обновление…";
+            UpdateStatus = "Обновление готово. Закрываю приложение: установка пройдёт в фоне, затем SC NEXUS откроется снова…";
             Application.Current.MainWindow.Close();
         }
         catch (Exception ex) { UpdateStatus = $"Не удалось обновить программу: {ex.Message}"; }

@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.2.6"
+  #define AppVersion "0.2.7"
 #endif
 #ifndef PublishDir
   #define PublishDir "..\publish"
@@ -44,7 +44,7 @@ Name: "{group}\SC NEXUS"; Filename: "{app}\SCNexus.exe"
 Name: "{autodesktop}\SC NEXUS"; Filename: "{app}\SCNexus.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\SCNexus.exe"; Description: "Запустить SC NEXUS"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\SCNexus.exe"; Description: "Запустить SC NEXUS"; Flags: nowait postinstall
 
 ; User data lives in %LOCALAPPDATA%\SCNexus, outside {app}.
 ; Never delete that directory during upgrade or uninstall.

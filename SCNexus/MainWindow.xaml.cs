@@ -57,7 +57,15 @@ public partial class MainWindow : Window
     {
         if (DataContext is MainViewModel { PendingInstallerPath: { } installer })
         {
-            try { Process.Start(new ProcessStartInfo(installer) { UseShellExecute = true }); }
+            try
+            {
+                var startInfo = new ProcessStartInfo(installer) { UseShellExecute = true };
+                startInfo.ArgumentList.Add("/VERYSILENT");
+                startInfo.ArgumentList.Add("/SUPPRESSMSGBOXES");
+                startInfo.ArgumentList.Add("/NORESTART");
+                startInfo.ArgumentList.Add("/CLOSEAPPLICATIONS");
+                Process.Start(startInfo);
+            }
             catch (Exception ex) { MessageBox.Show($"Не удалось запустить установщик:\n{ex.Message}\n\nФайл: {installer}", "SC NEXUS", MessageBoxButton.OK, MessageBoxImage.Error); }
         }
         base.OnClosed(e);
