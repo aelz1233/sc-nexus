@@ -334,7 +334,7 @@
                                                 <ProgressBar Value="{Binding FillPercent, Mode=OneWay}" Maximum="100" Margin="0,12,0,10" />
                                                 <TextBlock Text="{Binding RiskDisplay}" Foreground="#FFBD8F" />
                                                 <TextBlock Text="{Binding QuoteDisplay}" Style="{StaticResource Hint}" Margin="0,6,0,10" />
-                                                <Expander Header="Остановки и груз" IsExpanded="True">
+                                                <Expander Header="Остановки и груз" IsExpanded="False">
                                                     <ItemsControl ItemsSource="{Binding Stops}">
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate>

@@ -56,6 +56,11 @@ public class WindowRegressionTests
                     voyageCard.Arrange(new Rect(new Point(), voyageCard.DesiredSize));
                     voyageCard.UpdateLayout();
                     Assert.Equal(75d, VisualDescendants(voyageCard).OfType<ProgressBar>().Single().Value);
+                    var stopsExpander = VisualDescendants(voyageCard).OfType<Expander>().Single();
+                    Assert.False(stopsExpander.IsExpanded);
+                    Assert.Equal("Остановки и груз", stopsExpander.Header);
+                    stopsExpander.IsExpanded = true;
+                    voyageCard.UpdateLayout();
                     Assert.Contains(VisualDescendants(voyageCard).OfType<TextBlock>(), x => x.Text.Contains("ОПАСНО: Pyro"));
 
                     var closed = new TaskCompletionSource();
