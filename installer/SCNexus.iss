@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.2.2"
+  #define AppVersion "0.2.3"
 #endif
 #ifndef PublishDir
   #define PublishDir "..\publish"
@@ -12,6 +12,7 @@ AppVersion={#AppVersion}
 AppPublisher=SC NEXUS
 AppPublisherURL=https://github.com/aelz1233/sc-nexus
 DefaultDirName={localappdata}\Programs\SC NEXUS
+DisableDirPage=no
 DefaultGroupName=SC NEXUS
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
