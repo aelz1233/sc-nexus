@@ -3,6 +3,8 @@ using System.ComponentModel;
 using SCNexus.ViewModels;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
 
 namespace SCNexus;
 
@@ -13,11 +15,28 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        SourceInitialized += (_, _) => ApplyDarkTitleBar();
         DataContextChanged += (_, e) =>
         {
             if (e.OldValue is MainViewModel previous) previous.PropertyChanged -= OnViewModelChanged;
             if (e.NewValue is MainViewModel current) current.PropertyChanged += OnViewModelChanged;
         };
+    }
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+
+    private void ApplyDarkTitleBar()
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        var enabled = 1;
+        // Windows 10 20H1+ uses attribute 20; older Windows 10 builds use 19.
+        if (DwmSetWindowAttribute(handle, 20, ref enabled, sizeof(int)) != 0)
+            DwmSetWindowAttribute(handle, 19, ref enabled, sizeof(int));
+        var background = 0x0019100B; // COLORREF: #0B1019
+        var foreground = 0x00F6F0EA; // COLORREF: #EAF0F6
+        DwmSetWindowAttribute(handle, 35, ref background, sizeof(int));
+        DwmSetWindowAttribute(handle, 36, ref foreground, sizeof(int));
     }
 
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)

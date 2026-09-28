@@ -475,6 +475,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
 
     private void RecalculateHauling()
     {
+        InvalidateVoyages();
         if (_haulingData is null) return;
         HaulingRoutes.Clear();
         _allHaulingRoutes = [];

@@ -47,6 +47,17 @@ public class WindowRegressionTests
                     Assert.Equal(75d, progress.Value);
                     Assert.Equal(BindingMode.OneWay, BindingOperations.GetBinding(progress, ProgressBar.ValueProperty)!.Mode);
 
+                    var voyages = LogicalDescendants(window).OfType<ItemsControl>().Single(x =>
+                        BindingOperations.GetBinding(x, ItemsControl.ItemsSourceProperty)?.Path.Path == "VoyagePlans");
+                    var voyageCard = (FrameworkElement)voyages.ItemTemplate.LoadContent();
+                    voyageCard.DataContext = new VoyagePlan("Сбор груза", [route],
+                        [new VoyageStop(1, "A", "Pyro", "Купить", 75, 100, 250)], 1000, 100);
+                    voyageCard.Measure(new Size(900, double.PositiveInfinity));
+                    voyageCard.Arrange(new Rect(new Point(), voyageCard.DesiredSize));
+                    voyageCard.UpdateLayout();
+                    Assert.Equal(75d, VisualDescendants(voyageCard).OfType<ProgressBar>().Single().Value);
+                    Assert.Contains(VisualDescendants(voyageCard).OfType<TextBlock>(), x => x.Text.Contains("ОПАСНО: Pyro"));
+
                     var closed = new TaskCompletionSource();
                     window.Closed += (_, _) => closed.TrySetResult();
                     // Uninitialized VM's save finishes synchronously: this previously re-entered Closing.

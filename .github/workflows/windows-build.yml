@@ -5,6 +5,13 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-release
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: windows-latest
@@ -19,9 +26,42 @@ jobs:
         run: dotnet test SCNexus.slnx -c Release -p:UseAppHost=false
       - name: Publish Windows application
         run: dotnet publish SCNexus/SCNexus.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+      - name: Build installer and portable archive
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          $compiler = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $compiler)) { throw 'Inno Setup is missing on the runner.' }
+          & $compiler "/DAppVersion=$version" installer/SCNexus.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Installer build failed.' }
+          Compress-Archive -Path publish/SCNexus.exe -DestinationPath "dist/SCNexus-$version-win-x64.zip"
+          Get-ChildItem dist -File | Where-Object Extension -in '.exe','.zip' | Get-FileHash -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  $([IO.Path]::GetFileName($_.Path))" } | Set-Content dist/SHA256SUMS.txt
+      - name: Test installation, upgrade and removal
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          ./scripts/Test-Installer.ps1 -Installer "dist/SCNexus-Setup-$version-win-x64.exe"
       - name: Upload executable
         uses: actions/upload-artifact@v4
         with:
           name: SCNexus-win-x64
-          path: publish/SCNexus.exe
+          path: |
+            publish/SCNexus.exe
+            dist/*.exe
+            dist/*.zip
+            dist/SHA256SUMS.txt
           if-no-files-found: error
+      - name: Publish versioned GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          $tag = "v$version"
+          $releases = gh api "repos/$env:GITHUB_REPOSITORY/releases?per_page=100" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect existing releases.' }
+          if ($releases | Where-Object tag_name -eq $tag) { Write-Output "$tag already exists; keeping published assets."; exit 0 }
+          gh release create $tag "dist/SCNexus-Setup-$version-win-x64.exe" "dist/SCNexus-$version-win-x64.zip" dist/SHA256SUMS.txt --draft --target $env:GITHUB_SHA --title "SC NEXUS $version" --notes-file "docs/release-$version.md"
+          if ($LASTEXITCODE -ne 0) { throw 'Release upload failed.' }
+          gh release edit $tag --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed.' }

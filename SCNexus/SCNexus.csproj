@@ -6,7 +6,16 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <Version>0.2.0</Version>
+    <Product>SC NEXUS</Product>
+    <Description>Личный компаньон Star Citizen</Description>
+    <ApplicationIcon>Assets\sc-nexus.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\sc-nexus.ico" />
+    <Resource Include="Assets\sc-nexus.png" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />

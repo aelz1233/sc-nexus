@@ -18,7 +18,7 @@ public sealed class HaulingService
         if (cargoScu <= 0 || budget <= 0) return [];
         var terminals = data.Terminals.Where(x => x.Type == "commodity" && x.IsAvailableLive == 1)
             .ToDictionary(x => x.Id);
-        var sellers = data.Quotes.Where(x => x.PriceSell > 0 && x.ScuSell > 0 && terminals.ContainsKey(x.IdTerminal))
+        var sellers = data.Quotes.Where(x => x.PriceSell > 0 && x.ScuSell > 0 && x.StatusSell != 1 && terminals.ContainsKey(x.IdTerminal))
             .GroupBy(x => x.IdCommodity).ToDictionary(x => x.Key, x => x.ToArray());
         var routes = new List<HaulingRoute>();
         foreach (var buy in data.Quotes)
@@ -61,7 +61,8 @@ public sealed class HaulingService
                 routes.Add(new HaulingRoute(buy.CommodityName, origin.Name, destination.Name,
                     originSystem, destinationSystem, scu, cargoScu, buy.PriceBuy, sell.PriceSell,
                     buy.ScuBuy, sell.ScuSell, scu * buy.PriceBuy, scu * sell.PriceSell,
-                    origin.IsNqa == 1 || destination.IsNqa == 1, routeCategory, updated));
+                    origin.IsNqa == 1 || destination.IsNqa == 1, routeCategory, updated)
+                    { BuyTerminalId = origin.Id, SellTerminalId = destination.Id, CommodityId = buy.IdCommodity });
             }
         }
         IOrderedEnumerable<HaulingRoute> sorted = sortMode switch

@@ -95,6 +95,7 @@ public partial class MainViewModel
         try
         {
             _haulingData = await gameDataService.GetSnapshotAsync(forceRefresh: forceRefresh);
+            RefreshVoyageDestinations();
             DataStatus = $"UEX · {_haulingData.PricesFetchedAt.LocalDateTime:dd.MM HH:mm}" + (_haulingData.UsedOldCache ? " · сохранённые данные" : "");
             RecalculateHauling();
         }
