@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.2.8"
+  #define AppVersion "0.2.9"
 #endif
 #ifndef PublishDir
   #define PublishDir "..\publish"
@@ -52,7 +52,7 @@ procedure CurStepChanged(CurStep: TSetupStep);
 var
   ResultCode: Integer;
 begin
-  if (CurStep = ssPostInstall) and IsSilent and WizardIsTaskSelected('restartafterupdate') then
+  if (CurStep = ssPostInstall) and WizardSilent() and WizardIsTaskSelected('restartafterupdate') then
     Exec(ExpandConstant('{app}\SCNexus.exe'), '', '', SW_SHOWNORMAL, ewNoWait, ResultCode);
 end;
 
