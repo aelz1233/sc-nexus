@@ -183,6 +183,20 @@
             <Style.Triggers><DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True"><Setter Property="Background" Value="#1A3438"/><Setter Property="Foreground" Value="#88E4D4"/><Setter Property="FontWeight" Value="SemiBold"/></DataTrigger></Style.Triggers>
         </Style>
         <Style TargetType="CheckBox"><Setter Property="Foreground" Value="#DBE5F0"/><Setter Property="FontSize" Value="13"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="Margin" Value="0,7"/></Style>
+        <Style x:Key="SystemFilterToggle" TargetType="ToggleButton">
+            <Setter Property="Cursor" Value="Hand"/><Setter Property="Margin" Value="0,0,8,8"/><Setter Property="Padding" Value="11,7"/>
+            <Setter Property="Foreground" Value="#AEBCCD"/><Setter Property="Background" Value="#101B29"/><Setter Property="BorderBrush" Value="#344656"/><Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ToggleButton">
+                <Border x:Name="Chip" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                    <ContentPresenter VerticalAlignment="Center" />
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsChecked" Value="True"><Setter TargetName="Chip" Property="Background" Value="#1A4141"/><Setter TargetName="Chip" Property="BorderBrush" Value="#69CFC0"/><Setter Property="Foreground" Value="#EAFBF7"/></Trigger>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chip" Property="BorderBrush" Value="#69CFC0"/></Trigger>
+                    <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.5"/></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
         <Style TargetType="Expander"><Setter Property="Foreground" Value="#D6E4EF"/><Setter Property="FontSize" Value="14"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/></Style>
         <Style TargetType="ProgressBar"><Setter Property="Height" Value="5"/><Setter Property="Foreground" Value="{StaticResource Accent}"/><Setter Property="Background" Value="#273B47"/><Setter Property="BorderThickness" Value="0"/></Style>
     </Application.Resources>

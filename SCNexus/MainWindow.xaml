@@ -288,7 +288,7 @@
                                 <ItemsControl ItemsSource="{Binding RouteSystems}" Margin="0,4,0,8">
                                     <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate><DataTemplate>
-                                        <CheckBox Content="{Binding Display}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Foreground="#EAF0F6" Margin="0,0,22,6" Padding="4,2" />
+                                        <ToggleButton Content="{Binding Display}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Style="{StaticResource SystemFilterToggle}" />
                                     </DataTemplate></ItemsControl.ItemTemplate>
                                 </ItemsControl>
                                 <TextBlock Text="{Binding RouteSystemsSummary}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,0,0,14" />
@@ -587,6 +587,16 @@
                                         </TextBox>
                                     </StackPanel>
                                 </Grid>
+                                <Border Background="#0C1520" CornerRadius="8" Padding="14" Margin="0,16,0,0">
+                                    <StackPanel>
+                                        <DockPanel>
+                                            <CheckBox DockPanel.Dock="Left" Content="Автозаполнение из Game.log" IsChecked="{Binding AutoFillFlightData}" Foreground="White" Margin="0" />
+                                            <Button DockPanel.Dock="Right" Content="Обновить из Game.log" Command="{Binding RefreshFlightFromGameLogCommand}" Padding="10,6" />
+                                        </DockPanel>
+                                        <TextBlock Text="{Binding AutoFillStatus}" Style="{StaticResource Hint}" Margin="0,7,0,0" />
+                                        <TextBlock Text="Суммы из журнала подставляются автоматически при включённом мониторинге. Маршрут и все поля остаются редактируемыми до завершения рейса." Style="{StaticResource Hint}" Margin="0,4,0,0" />
+                                    </StackPanel>
+                                </Border>
                                 <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
                                     <Button Style="{StaticResource PrimaryButton}" Content="Начать рейс" Command="{Binding StartFlightCommand}" IsEnabled="{Binding CanStartFlight}" Margin="0,0,10,0" />
                                     <Button Content="Завершить рейс" Command="{Binding FinishFlightCommand}" IsEnabled="{Binding HasActiveFlight}" />
@@ -623,11 +633,25 @@
                                 </StackPanel>
                             </Expander>
                         </Border>
+                        <Border Style="{StaticResource Card}" Padding="16" Margin="0,0,0,14">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="180"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,14,0">
+                                    <TextBlock Text="Период статистики" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox ItemsSource="{Binding FlightStatisticsPeriods}" SelectedItem="{Binding FlightStatisticsPeriod}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="Статистика по завершённым рейсам" Style="{StaticResource FieldLabel}" />
+                                    <TextBlock Text="{Binding FlightStatisticsDisplay}" FontSize="16" FontWeight="SemiBold" />
+                                    <TextBlock Text="История ниже отфильтрована по времени завершения. Активный рейс всегда виден." Style="{StaticResource Hint}" Margin="0,5,0,0" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
                         <DockPanel Margin="0,0,0,14">
                             <Button DockPanel.Dock="Right" Content="Экспорт CSV" Command="{Binding ExportFlightsCommand}" />
                             <TextBlock Text="История рейсов" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
                         </DockPanel>
-                        <ItemsControl ItemsSource="{Binding Flights}">
+                        <ItemsControl ItemsSource="{Binding FilteredFlights}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border Style="{StaticResource Card}" Margin="0,0,0,10">
@@ -653,6 +677,7 @@
                                                 <StackPanel Grid.Column="2">
                                                     <TextBlock Text="{Binding ResultDisplay}" FontWeight="Bold" />
                                                     <TextBlock Text="{Binding DurationDisplay}" Foreground="{StaticResource Muted}" Margin="0,6,0,0" />
+                                                    <Button Content="Удалить из статистики" Command="{Binding DataContext.DeleteFlightFromStatisticsCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding CanDeleteFromStatistics}" Padding="8,5" Margin="0,10,0,0" HorizontalAlignment="Left" Background="#542D35" />
                                                 </StackPanel>
                                             </Grid>
                                             <WrapPanel Margin="0,12,0,0">

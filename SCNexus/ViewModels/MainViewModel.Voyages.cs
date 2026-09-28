@@ -22,6 +22,7 @@ public partial class MainViewModel
     public ObservableCollection<TerminalOption> VoyageDestinations { get; } = [];
     public ObservableCollection<VoyagePlan> VoyagePlans { get; } = [];
     public ObservableCollection<RouteSystemChoice> RouteSystems { get; } = [];
+    private bool _updatingRouteSystems;
     public bool IsDirectVoyage => VoyageMode == "Прямой рейс";
     public bool IsMultiVoyage => !IsDirectVoyage;
     public string VoyageHelp => VoyageMode switch
@@ -46,16 +47,37 @@ public partial class MainViewModel
                 var choice = new RouteSystemChoice(name, previous.GetValueOrDefault(name, true));
                 choice.PropertyChanged += (_, _) =>
                 {
-                    OnPropertyChanged(nameof(RouteSystemsSummary));
-                    RefreshVoyageDestinations();
-                    RecalculateHauling();
+                    if (!_updatingRouteSystems)
+                        ApplyRouteSystemSelection();
                 };
                 RouteSystems.Add(choice);
             }
         OnPropertyChanged(nameof(RouteSystemsSummary));
     }
-    [RelayCommand] private void SelectAllRouteSystems() { foreach (var system in RouteSystems) system.IsSelected = true; }
-    [RelayCommand] private void ClearRouteSystems() { foreach (var system in RouteSystems) system.IsSelected = false; }
+    private void ApplyRouteSystemSelection()
+    {
+        OnPropertyChanged(nameof(RouteSystemsSummary));
+        RefreshVoyageDestinations();
+        RecalculateHauling();
+    }
+
+    [RelayCommand]
+    private void SelectAllRouteSystems()
+    {
+        _updatingRouteSystems = true;
+        try { foreach (var system in RouteSystems) system.IsSelected = true; }
+        finally { _updatingRouteSystems = false; }
+        ApplyRouteSystemSelection();
+    }
+
+    [RelayCommand]
+    private void ClearRouteSystems()
+    {
+        _updatingRouteSystems = true;
+        try { foreach (var system in RouteSystems) system.IsSelected = false; }
+        finally { _updatingRouteSystems = false; }
+        ApplyRouteSystemSelection();
+    }
 
     partial void OnVoyageModeChanged(string value)
     {

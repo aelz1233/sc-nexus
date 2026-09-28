@@ -37,6 +37,13 @@ public class FlightLogServiceTests
             var (ships, flights) = await restarted.LoadAsync();
             Assert.Equal(425_000, Assert.Single(ships).Earned);
             Assert.Equal(425_000, Assert.Single(flights).Profit);
+            var removed = await restarted.DeleteFinishedFlightAsync(finished.Id);
+            Assert.NotNull(removed);
+            Assert.Equal(425_000, removed.Profit);
+            Assert.Empty((await restarted.LoadAsync()).Flights);
+
+            var second = await restarted.StartFlightAsync(ship.Id, ship.Name, "A", "B", "Gold", 100, start.AddHours(1));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => restarted.DeleteFinishedFlightAsync(second.Id));
             await restarted.DeleteShipAsync(ship.Id);
             var afterDelete = await restarted.LoadAsync();
             Assert.Empty(afterDelete.Ships);

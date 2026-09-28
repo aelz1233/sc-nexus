@@ -219,6 +219,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         {
             GameTrades.Clear();
             foreach (var candidate in snapshot.Candidates) GameTrades.Add(candidate);
+            ApplyGameTradesToFlight(onlyNew: true);
         }
         GameProcessStatus = monitor.IsRunning ? "Игра запущена" : "Игра не запущена";
         GameRegion = monitor.Region;
@@ -245,7 +246,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         if (candidate.IsPurchase) FlightInvestment = candidate.Amount;
         else FlightRevenue = candidate.Amount;
         OpenHistory();
-        FlightStatus = $"Подставлена сумма {candidate.AmountDisplay} из журнала. Проверь, что сделка завершилась в игре.";
+        AutoFillStatus = $"Подставлена сумма {candidate.AmountDisplay} из журнала. Поле можно исправить вручную.";
     }
 
     partial void OnBalanceChanged(decimal value) { OnPropertyChanged(nameof(BalanceDisplay)); OnPropertyChanged(nameof(HaulingBudgetDisplay)); OnPropertyChanged(nameof(TradeBudgetHint)); QueueSave(); RecalculateHauling(); }
@@ -537,6 +538,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             ?? Ships.FirstOrDefault();
         Flights.Clear();
         foreach (var flight in flights) Flights.Add(flight);
+        RefreshFlightStatistics();
         ActiveFlight = Flights.FirstOrDefault(x => x.EndedAtUtc is null);
         if (ActiveFlight is { } active)
         {

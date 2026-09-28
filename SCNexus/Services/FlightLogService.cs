@@ -76,4 +76,16 @@ public sealed class FlightLogService(SettingsService settingsService)
         await db.SaveChangesAsync();
         return flight;
     }
+
+    public async Task<FlightRecord?> DeleteFinishedFlightAsync(int id)
+    {
+        await using var db = settingsService.CreateDbContext();
+        var flight = await db.FlightRecords.FindAsync(id);
+        if (flight is null) return null;
+        if (flight.EndedAtUtc is null)
+            throw new InvalidOperationException("Активный рейс нельзя удалить из статистики. Сначала заверши его.");
+        db.FlightRecords.Remove(flight);
+        await db.SaveChangesAsync();
+        return flight;
+    }
 }

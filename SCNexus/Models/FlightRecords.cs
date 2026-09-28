@@ -29,6 +29,7 @@ public sealed class FlightRecord
     public string DateDisplay => StartedAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
     public string ProfitDisplay => $"{Profit:+#,##0;-#,##0;0} aUEC";
     public string ResultDisplay => EndedAtUtc is null ? "В пути" : ProfitDisplay;
+    public bool CanDeleteFromStatistics => EndedAtUtc is not null;
     public string DurationDisplay => EndedAtUtc is { } end
         ? $"{(int)(end - StartedAtUtc).TotalHours} ч {(end - StartedAtUtc).Minutes} мин" : "В пути";
 }
