@@ -85,6 +85,22 @@ public class VoyagePlannerTests
     }
 
     [Fact]
+    public void SelectedSystemsRestrictEveryStopInBothModes()
+    {
+        var data = Data(Quote(1, 1, buy: 10), Quote(2, 1, sell: 20), Quote(2, 2, buy: 10), Quote(5, 2, sell: 20));
+        var stantonOnly = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Stanton" };
+        var both = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Stanton", "Pyro" };
+        var request = new VoyageRequest("Цепочка", 10, 1000, AllowedSystems: stantonOnly);
+        Assert.Empty(new VoyagePlanner().Calculate(data, request));
+        Assert.NotEmpty(new VoyagePlanner().Calculate(data, request with { AllowedSystems = both }));
+        var collection = Data(Quote(1, 1, buy: 10, stock: 2), Quote(2, 1, buy: 10, stock: 2), Quote(3, 1, sell: 20), Quote(5, 1, sell: 40));
+        var plans = new VoyagePlanner().Calculate(collection, request with { Mode = "Сбор груза" });
+        Assert.NotEmpty(plans);
+        Assert.All(plans.SelectMany(x => x.Stops), s => Assert.Equal("Stanton", s.System));
+        Assert.Empty(new VoyagePlanner().Calculate(collection, request with { Mode = "Сбор груза", AllowedSystems = new HashSet<string>() }));
+    }
+
+    [Fact]
     public void CollectionHonorsTotalMinimumsAndCancellation()
     {
         var data = Data(Quote(1, 1, buy: 10, stock: 2), Quote(2, 1, buy: 10, stock: 2), Quote(3, 1, sell: 20));

@@ -275,8 +275,24 @@
                                 </Expander>
                                 <TextBlock Text="Режим планирования" Style="{StaticResource FieldLabel}" />
                                 <ComboBox ItemsSource="{Binding VoyageModes}" SelectedItem="{Binding VoyageMode}" Margin="0,0,0,12" />
+                                <Border Background="#0C1520" CornerRadius="8" Padding="14" Margin="0,0,0,14">
+                                    <TextBlock Text="{Binding VoyageHelp}" TextWrapping="Wrap" Foreground="{StaticResource Muted}" LineHeight="22" />
+                                </Border>
+                                <DockPanel Margin="0,0,0,6">
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                        <Button Content="Все" Command="{Binding SelectAllRouteSystemsCommand}" Padding="10,5" Margin="0,0,6,0" />
+                                        <Button Content="Снять выбор" Command="{Binding ClearRouteSystemsCommand}" Padding="10,5" />
+                                    </StackPanel>
+                                    <TextBlock Text="Системы маршрута" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" />
+                                </DockPanel>
+                                <ItemsControl ItemsSource="{Binding RouteSystems}" Margin="0,4,0,8">
+                                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate><DataTemplate>
+                                        <CheckBox Content="{Binding Display}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Foreground="#EAF0F6" Margin="0,0,22,6" Padding="4,2" />
+                                    </DataTemplate></ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock Text="{Binding RouteSystemsSummary}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,0,0,14" />
                                 <StackPanel Visibility="{Binding IsMultiVoyage, Converter={StaticResource BoolVisibility}}">
-                                    <TextBlock Text="{Binding VoyageHelp}" TextWrapping="Wrap" Margin="0,0,0,12" Foreground="{StaticResource Muted}" />
                                     <Grid>
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="180"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                         <StackPanel Margin="0,0,14,0">

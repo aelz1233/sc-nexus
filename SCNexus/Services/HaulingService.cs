@@ -13,10 +13,11 @@ public sealed class HaulingService
         bool allowRisky, bool sameSystemOnly, string sortMode, string category = "Все маршруты",
         string? startLocation = null, string? startSystem = null,
         bool avoidPyro = false, int minimumFillPercent = 0, decimal minimumProfit = 0,
-        int limit = int.MaxValue)
+        int limit = int.MaxValue, IReadOnlySet<string>? allowedSystems = null)
     {
         if (cargoScu <= 0 || budget <= 0) return [];
         var terminals = data.Terminals.Where(x => x.Type == "commodity" && x.IsAvailableLive == 1)
+            .Where(x => allowedSystems is null || allowedSystems.Contains(x.StarSystemName ?? "Неизвестно"))
             .ToDictionary(x => x.Id);
         var sellers = data.Quotes.Where(x => x.PriceSell > 0 && x.ScuSell > 0 && x.StatusSell != 1 && terminals.ContainsKey(x.IdTerminal))
             .GroupBy(x => x.IdCommodity).ToDictionary(x => x.Key, x => x.ToArray());

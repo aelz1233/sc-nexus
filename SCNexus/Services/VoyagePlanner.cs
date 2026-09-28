@@ -5,7 +5,8 @@ namespace SCNexus.Services;
 public sealed record VoyageRequest(string Mode, int Capacity, decimal Budget, int MaxPurchases = 3,
     int DestinationId = 0, string? StartLocation = null, string? StartSystem = null,
     bool AllowRisky = false, bool AvoidPyro = false, bool SameSystemOnly = false,
-    int MinimumFill = 0, decimal MinimumProfit = 0, string Category = "Все маршруты");
+    int MinimumFill = 0, decimal MinimumProfit = 0, string Category = "Все маршруты",
+    IReadOnlySet<string>? AllowedSystems = null);
 
 /// <summary>Bounded search over reported quotes. No distance or travel-time assumptions.</summary>
 public sealed class VoyagePlanner
@@ -16,7 +17,7 @@ public sealed class VoyagePlanner
         var searchBudget = Math.Max(request.Budget, data.Quotes.Select(x => x.PriceBuy).DefaultIfEmpty().Max() * request.Capacity);
         var edges = new HaulingService().Calculate(data, request.Capacity, searchBudget,
             request.AllowRisky, request.SameSystemOnly, "За рейс", request.Category,
-            avoidPyro: request.AvoidPyro).ToArray();
+            avoidPyro: request.AvoidPyro, allowedSystems: request.AllowedSystems).ToArray();
         var starts = data.Terminals.Where(x => string.IsNullOrWhiteSpace(request.StartLocation) || request.StartLocation == "Не указана" ||
             (x.MatchesLocation(request.StartLocation) && (string.IsNullOrWhiteSpace(request.StartSystem) ||
              string.Equals(x.StarSystemName, request.StartSystem, StringComparison.OrdinalIgnoreCase))))

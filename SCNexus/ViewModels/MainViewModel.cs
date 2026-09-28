@@ -491,7 +491,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         var budget = Math.Max(0, Balance - Reserve);
         _allHaulingRoutes = haulingService.Calculate(_haulingData, SelectedShip.Ship.CargoScu,
             budget, AllowRisky, HaulingSameSystemOnly, HaulingSortMode, HaulingCategory,
-            CurrentLocation, CurrentSystem, AvoidPyro, MinimumFillPercent, MinimumProfit);
+            CurrentLocation, CurrentSystem, AvoidPyro, MinimumFillPercent, MinimumProfit, allowedSystems: AllowedRouteSystems);
         ShowMoreHaulingRoutes();
         HaulingBestRoute = _allHaulingRoutes.FirstOrDefault();
         var oldQuote = _allHaulingRoutes.Any(x => DateTimeOffset.UtcNow - x.UpdatedAt > TimeSpan.FromHours(24));
