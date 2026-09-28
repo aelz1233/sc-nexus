@@ -61,7 +61,7 @@ public sealed class UpdateService
         return request;
     }
 
-    private static async Task EnsureSuccessAsync(HttpResponseMessage response, bool hasToken)
+    private static void EnsureSuccess(HttpResponseMessage response, bool hasToken)
     {
         if (response.IsSuccessStatusCode) return;
         if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
@@ -71,12 +71,24 @@ public sealed class UpdateService
         throw new HttpRequestException($"GitHub ответил кодом {(int)response.StatusCode}.");
     }
 
+    private async Task<HttpResponseMessage> SendAsync(string url, string? token, bool binary, HttpCompletionOption completion, CancellationToken cancellationToken)
+    {
+        using var request = Request(url, token, binary);
+        var response = await _client.SendAsync(request, completion, cancellationToken);
+        if (token is not null && response.StatusCode is (HttpStatusCode.NotFound or HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden))
+        {
+            response.Dispose();
+            using var anonymous = Request(url, null, binary);
+            response = await _client.SendAsync(anonymous, completion, cancellationToken);
+        }
+        try { EnsureSuccess(response, token is not null); return response; }
+        catch { response.Dispose(); throw; }
+    }
+
     public async Task<UpdateRelease> GetLatestAsync(CancellationToken cancellationToken = default)
     {
         var token = ReadToken();
-        using var request = Request(_latestReleaseUrl, token);
-        using var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        await EnsureSuccessAsync(response, token is not null);
+        using var response = await SendAsync(_latestReleaseUrl, token, false, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var json = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
         var root = json.RootElement;
@@ -101,9 +113,7 @@ public sealed class UpdateService
             if (uri.Scheme != Uri.UriSchemeHttps || !uri.Host.Equals(apiHost, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("Адрес файла обновления не принадлежит GitHub API.");
         }
-        using var checksumRequest = Request(release.Checksums.ApiUrl, token, binary: true);
-        using var checksumResponse = await _client.SendAsync(checksumRequest, cancellationToken);
-        await EnsureSuccessAsync(checksumResponse, token is not null);
+        using var checksumResponse = await SendAsync(release.Checksums.ApiUrl, token, true, HttpCompletionOption.ResponseContentRead, cancellationToken);
         var checksumText = await checksumResponse.Content.ReadAsStringAsync(cancellationToken);
         var expected = checksumText.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(x => x.Split(' ', StringSplitOptions.RemoveEmptyEntries))
@@ -118,9 +128,7 @@ public sealed class UpdateService
         var temporary = path + ".download";
         try
         {
-            using var installerRequest = Request(release.Installer.ApiUrl, token, binary: true);
-            using var installerResponse = await _client.SendAsync(installerRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-            await EnsureSuccessAsync(installerResponse, token is not null);
+            using var installerResponse = await SendAsync(release.Installer.ApiUrl, token, true, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             await using var source = await installerResponse.Content.ReadAsStreamAsync(cancellationToken);
             await using (var target = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true))
             {

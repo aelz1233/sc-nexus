@@ -72,4 +72,47 @@ public class UpdateServiceTests
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.GetLatestAsync());
         Assert.Contains("токен", error.Message);
     }
+
+    [Fact]
+    public async Task PublicReleaseWorksWhenSavedTokenWasRevoked()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        var name = "SCNexus-Setup-99.88.76-win-x64.exe";
+        var bytes = Encoding.UTF8.GetBytes("public installer fixture");
+        var hash = Convert.ToHexStringLower(SHA256.HashData(bytes));
+        var release = JsonSerializer.Serialize(new
+        {
+            tag_name = "v99.88.76", html_url = "https://github.test/release",
+            assets = new[]
+            {
+                new { name, url = "https://api.github.test/installer", size = bytes.Length },
+                new { name = "SHA256SUMS.txt", url = "https://api.github.test/checksums", size = 80 }
+            }
+        });
+        var anonymousRequests = 0;
+        using var client = new HttpClient(new Handler(request =>
+        {
+            if (request.Headers.Authorization is not null) return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+            anonymousRequests++;
+            var content = request.RequestUri!.AbsolutePath switch
+            {
+                "/latest" => new StringContent(release, Encoding.UTF8, "application/json"),
+                "/checksums" => new ByteArrayContent(Encoding.UTF8.GetBytes($"{hash}  {name}\n")),
+                "/installer" => new ByteArrayContent(bytes),
+                _ => throw new InvalidOperationException()
+            };
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = content };
+        }));
+        try
+        {
+            var service = new UpdateService(client, Path.Combine(root, "token.bin"), "https://api.github.test/latest");
+            service.SaveToken("revoked-token");
+            var latest = await service.GetLatestAsync();
+            var path = await service.DownloadInstallerAsync(latest);
+            Assert.Equal(bytes, await File.ReadAllBytesAsync(path));
+            Assert.Equal(3, anonymousRequests);
+            File.Delete(path);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
 }
