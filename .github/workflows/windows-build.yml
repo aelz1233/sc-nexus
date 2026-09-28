@@ -1,0 +1,27 @@
+name: Windows build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+      - name: Install .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Run tests
+        run: dotnet test SCNexus.slnx -c Release -p:UseAppHost=false
+      - name: Publish Windows application
+        run: dotnet publish SCNexus/SCNexus.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: SCNexus-win-x64
+          path: publish/SCNexus.exe
+          if-no-files-found: error
