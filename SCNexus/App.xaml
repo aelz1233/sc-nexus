@@ -72,7 +72,8 @@
             <Setter Property="Template">
                 <Setter.Value><ControlTemplate TargetType="ComboBox">
                     <Grid>
-                        <ToggleButton x:Name="DropDownToggle" Focusable="False" ClickMode="Press"
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="32"/></Grid.ColumnDefinitions>
+                        <ToggleButton x:Name="DropDownToggle" Grid.ColumnSpan="2" Focusable="False" ClickMode="Press"
                                       IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
                             <ToggleButton.Template>
                                 <ControlTemplate TargetType="ToggleButton">
@@ -88,14 +89,16 @@
                                 </ControlTemplate>
                             </ToggleButton.Template>
                         </ToggleButton>
-                        <ContentPresenter x:Name="Selection" Content="{TemplateBinding SelectionBoxItem}"
+                        <ContentPresenter x:Name="Selection" Grid.Column="0" Content="{TemplateBinding SelectionBoxItem}"
                                           ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
-                                          Margin="12,7,35,7" VerticalAlignment="Center" HorizontalAlignment="Left"
+                                          Margin="12,7,3,7" VerticalAlignment="Center" HorizontalAlignment="Left"
                                           IsHitTestVisible="False"/>
-                        <TextBox x:Name="PART_EditableTextBox" Visibility="Hidden" Background="Transparent" Foreground="White"
-                                 CaretBrush="#75A8FF" BorderThickness="0" Padding="11,7,35,7" Margin="1"
+                        <TextBox x:Name="PART_EditableTextBox" Grid.Column="0" Visibility="Hidden" Background="Transparent" Foreground="White"
+                                 CaretBrush="#75A8FF" BorderThickness="0" Padding="11,7,3,7" Margin="1"
                                  Focusable="True" IsReadOnly="{TemplateBinding IsReadOnly}"/>
-                        <Popup x:Name="PART_Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}"
+                        <Popup x:Name="PART_Popup" Grid.ColumnSpan="2" Placement="Bottom"
+                               PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                               IsOpen="{TemplateBinding IsDropDownOpen}"
                                AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
                             <Border Background="#192541" BorderBrush="#496495" BorderThickness="1" CornerRadius="5"
                                     MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">

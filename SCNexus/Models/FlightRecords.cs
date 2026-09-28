@@ -39,4 +39,5 @@ public sealed record ShipSummary(PersonalShip Ship, decimal Earned)
     public string BuildNotes => Ship.BuildNotes;
     public string CargoDisplay => $"{Ship.CargoScu} SCU";
     public string EarnedDisplay => $"{Earned:+#,##0;-#,##0;0} aUEC";
+    public override string ToString() => Name;
 }

@@ -27,9 +27,18 @@ public class SettingsServiceTests
             settings.CargoScu = 696;
             settings.Reserve = 1_000_000;
             settings.CurrentSystem = "Stanton";
+            settings.AvoidPyro = true;
+            settings.MinimumFillPercent = 50;
+            settings.MinimumProfit = 100_000;
+            settings.GameDirectoryPath = @"D:\RSI\StarCitizen\LIVE";
             await service.SaveAsync(settings);
             Assert.Equal(696, (await service.LoadAsync()).CargoScu);
             Assert.Equal("Stanton", (await service.LoadAsync()).CurrentSystem);
+            var saved = await service.LoadAsync();
+            Assert.True(saved.AvoidPyro);
+            Assert.Equal(50, saved.MinimumFillPercent);
+            Assert.Equal(100_000, saved.MinimumProfit);
+            Assert.Equal(@"D:\RSI\StarCitizen\LIVE", saved.GameDirectoryPath);
         }
         finally
         {

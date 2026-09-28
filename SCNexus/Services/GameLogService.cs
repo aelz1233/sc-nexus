@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Diagnostics;
 using System.IO;
 using SCNexus.Models;
 
@@ -7,14 +8,18 @@ namespace SCNexus.Services;
 public sealed class GameLogService(string? gameDirectory = null)
 {
     private const int TailBytes = 4 * 1024 * 1024;
+    public string GameDirectoryOverride { get; set; } = "";
     public sealed record Snapshot(string? GameDirectory, IReadOnlyList<GameTradeCandidate> Candidates);
+
+    public string? ResolveGameDirectory() =>
+        Directory.Exists(GameDirectoryOverride) ? GameDirectoryOverride : gameDirectory ?? FindGameDirectory();
 
     public Task<Snapshot> ReadRecentAsync(CancellationToken token = default) =>
         Task.Run(() => ReadRecent(token), token);
 
     private Snapshot ReadRecent(CancellationToken token)
     {
-        var directory = gameDirectory ?? FindGameDirectory();
+        var directory = ResolveGameDirectory();
         if (directory is null) return new Snapshot(null, []);
         var logs = new List<string>();
         var liveLog = Path.Combine(directory, "Game.log");
@@ -87,6 +92,17 @@ public sealed class GameLogService(string? gameDirectory = null)
 
     public static string? FindGameDirectory()
     {
+        foreach (var process in Process.GetProcessesByName("StarCitizen"))
+        {
+            try
+            {
+                var binary = process.MainModule?.FileName;
+                var install = binary is null ? null : Directory.GetParent(Path.GetDirectoryName(binary)!)?.FullName;
+                if (install is not null && Directory.Exists(install)) return install;
+            }
+            catch (System.ComponentModel.Win32Exception) { }
+            catch (InvalidOperationException) { }
+        }
         foreach (var drive in DriveInfo.GetDrives().Where(x => x.IsReady && x.DriveType == DriveType.Fixed))
         {
             var root = drive.RootDirectory.FullName;
@@ -94,11 +110,14 @@ public sealed class GameLogService(string? gameDirectory = null)
             {
                 @"RSI\StarCitizen\LIVE", @"StarCitizen\LIVE",
                 @"Roberts Space Industries\StarCitizen\LIVE",
-                @"Games\StarCitizen\LIVE", @"Program Files\Roberts Space Industries\StarCitizen\LIVE"
+                @"Games\StarCitizen\LIVE", @"Program Files\Roberts Space Industries\StarCitizen\LIVE",
+                @"RSI\StarCitizen\PTU", @"RSI\StarCitizen\EPTU",
+                @"RSI\Roberts Space Industries\StarCitizen\LIVE"
             })
             {
                 var candidate = Path.Combine(root, relative);
-                if (File.Exists(Path.Combine(candidate, "Game.log"))) return candidate;
+                if (File.Exists(Path.Combine(candidate, "Game.log")) ||
+                    File.Exists(Path.Combine(candidate, "Bin64", "StarCitizen.exe"))) return candidate;
             }
         }
         return null;

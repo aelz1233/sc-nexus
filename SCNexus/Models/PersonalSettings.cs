@@ -10,4 +10,8 @@ public sealed class PersonalSettings
     public int CargoScu { get; set; }
     public decimal Reserve { get; set; }
     public bool AllowRisky { get; set; }
+    public bool AvoidPyro { get; set; }
+    public int MinimumFillPercent { get; set; }
+    public decimal MinimumProfit { get; set; }
+    public string GameDirectoryPath { get; set; } = "";
 }

@@ -28,4 +28,21 @@ public class GameLogServiceTests
         }
         finally { Directory.Delete(directory, true); }
     }
+
+    [Fact]
+    public async Task CanUseManuallySelectedGameDirectory()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(directory, "Game.log"),
+                "<2026-09-24T19:46:43.557Z> Sending SShopCommodityBuyRequest shopName[Shop] price[100] quantity[100]");
+            var service = new GameLogService { GameDirectoryOverride = directory };
+            var snapshot = await service.ReadRecentAsync();
+            Assert.Equal(directory, snapshot.GameDirectory);
+            Assert.Single(snapshot.Candidates);
+        }
+        finally { Directory.Delete(directory, true); }
+    }
 }

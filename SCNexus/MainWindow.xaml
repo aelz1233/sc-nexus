@@ -40,12 +40,12 @@
                     <StackPanel VerticalAlignment="Center"><TextBlock Text="SC NEXUS" FontSize="18" FontWeight="Bold" Foreground="White"/><TextBlock Text="ЛИЧНЫЙ КОМПАНЬОН" FontSize="9" Foreground="{StaticResource Muted}"/></StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Style="{StaticResource Nav}" Content="⌂  Главная" Command="{Binding OpenDashboardCommand}"/>
-                    <Button Style="{StaticResource Nav}" Content="✦  Корабли" Command="{Binding OpenFleetCommand}"/>
-                    <Button Style="{StaticResource Nav}" Content="▣  Перевозки" Command="{Binding OpenHaulingCommand}"/>
-                    <Button Style="{StaticResource Nav}" Content="↗  Рейсы и история" Command="{Binding OpenHistoryCommand}"/>
-                    <Button Style="{StaticResource Nav}" Content="▦  Инструменты" Command="{Binding OpenToolsCommand}"/>
-                    <Button Style="{StaticResource Nav}" Content="⚙  Настройки" Command="{Binding OpenSettingsCommand}"/>
+                    <Button Style="{StaticResource Nav}" Content="Обзор" Command="{Binding OpenDashboardCommand}"/>
+                    <Button Style="{StaticResource Nav}" Content="Маршруты" Command="{Binding OpenHaulingCommand}"/>
+                    <Button Style="{StaticResource Nav}" Content="Корабли" Command="{Binding OpenFleetCommand}"/>
+                    <Button Style="{StaticResource Nav}" Content="Рейсы" Command="{Binding OpenHistoryCommand}"/>
+                    <Button Style="{StaticResource Nav}" Content="Инструменты" Command="{Binding OpenToolsCommand}"/>
+                    <Button Style="{StaticResource Nav}" Content="Настройки" Command="{Binding OpenSettingsCommand}"/>
                 </StackPanel>
                 <Border Grid.Column="2" Background="#14223B" BorderBrush="#2B3D61" BorderThickness="1" CornerRadius="14" Padding="12,6" VerticalAlignment="Center"><TextBlock Text="●  ЛОКАЛЬНЫЕ ДАННЫЕ" Foreground="#8FB5FF" FontSize="10" FontWeight="SemiBold"/></Border>
             </Grid>
@@ -53,78 +53,22 @@
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <Grid Margin="38,28,38,42">
                 <StackPanel Visibility="{Binding IsDashboardOpen, Converter={StaticResource BoolVisibility}}">
-                    <Border Background="{StaticResource HeroSurfaceBrush}" BorderBrush="#2B3460" BorderThickness="1" CornerRadius="20" Padding="32,26" Margin="0,0,0,22">
-                        <StackPanel HorizontalAlignment="Center">
-                            <Border Background="#1B2848" BorderBrush="#344879" BorderThickness="1" CornerRadius="14" Padding="13,6" HorizontalAlignment="Center"><TextBlock Text="●  STAR CITIZEN  ·  ЛИЧНЫЙ ЦЕНТР" Foreground="#A7C1FF" FontSize="11"/></Border>
-                            <TextBlock Text="SC NEXUS" FontSize="48" FontWeight="Bold" Foreground="{StaticResource HeroTitleBrush}" HorizontalAlignment="Center" Margin="0,13,0,0"/>
-                            <TextBlock Text="Корабли, рейсы и торговые маршруты в одном месте" FontSize="17" Foreground="#B5C1DC" HorizontalAlignment="Center" Margin="0,5,0,20"/>
-                            <Button Style="{StaticResource PrimaryButton}" Command="{Binding RecommendCommand}" Content="Найти торговый маршрут  →" FontSize="16" HorizontalAlignment="Center"/>
-                        </StackPanel>
-                    </Border>
-                    <TextBlock Text="ЛИЧНЫЙ ОБЗОР" Foreground="{StaticResource Accent}" FontSize="11" FontWeight="Bold" Margin="0,0,0,6"/>
-                    <TextBlock Text="Мои данные" FontSize="25" FontWeight="SemiBold" Margin="0,0,0,19"/>
+                    <Grid Margin="0,0,0,20"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <StackPanel><TextBlock Text="Обзор" FontSize="30" FontWeight="SemiBold"/><TextBlock Text="Твои корабли, баланс и маршруты" Foreground="{StaticResource Muted}" Margin="0,5,0,0"/></StackPanel>
+                        <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Command="{Binding OpenHaulingCommand}" Content="Открыть маршруты" VerticalAlignment="Center"/>
+                    </Grid>
                     <Grid Margin="0,0,0,13">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                         <Border Style="{StaticResource Card}" Margin="0,0,10,0" Background="{StaticResource BalanceBrush}" BorderBrush="#435687"><StackPanel><TextBlock Style="{StaticResource Caption}" Text="БАЛАНС"/><TextBlock Text="{Binding BalanceDisplay}" FontSize="30" FontWeight="Bold" Foreground="White" Margin="0,8,0,0"/></StackPanel></Border>
                         <Border Grid.Column="1" Style="{StaticResource Card}" Margin="0,0,10,0"><StackPanel><TextBlock Style="{StaticResource Caption}" Text="КОРАБЛЬ"/><TextBlock Text="{Binding CurrentShip}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,9,0,0"/><Button Content="Сменить" Command="{Binding OpenSettingsCommand}" HorizontalAlignment="Left" Margin="0,8,0,0" Padding="0" Background="Transparent" Foreground="{StaticResource Accent}"/></StackPanel></Border>
                         <Border Grid.Column="2" Style="{StaticResource Card}"><StackPanel><TextBlock Style="{StaticResource Caption}" Text="ЛОКАЦИЯ"/><TextBlock Text="{Binding LocationDisplay}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,9,0,0"/><Button Content="Сменить" Command="{Binding OpenSettingsCommand}" HorizontalAlignment="Left" Margin="0,8,0,0" Padding="0" Background="Transparent" Foreground="{StaticResource Accent}"/></StackPanel></Border>
                     </Grid>
-                    <Grid Margin="0,0,0,21">
-                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-                        <Border Style="{StaticResource Card}" Margin="0,0,10,0"><StackPanel><TextBlock Style="{StaticResource Caption}" Text="ЗАРАБОТАНО СЕГОДНЯ"/><TextBlock Text="{Binding TodayProfitDisplay}" FontSize="19" FontWeight="SemiBold" Margin="0,8,0,0"/></StackPanel></Border>
-                        <Border Grid.Column="1" Style="{StaticResource Card}" Margin="0,0,10,0"><StackPanel><TextBlock Style="{StaticResource Caption}" Text="ЗА ВСЕ РЕЙСЫ"/><TextBlock Text="{Binding TotalFlightProfitDisplay}" FontSize="19" FontWeight="SemiBold" Margin="0,8,0,0"/></StackPanel></Border>
-                        <Border Grid.Column="2" Style="{StaticResource Card}"><StackPanel><TextBlock Style="{StaticResource Caption}" Text="ЛИЧНАЯ ПРИБЫЛЬ В ЧАС"/><TextBlock Text="{Binding PersonalProfitHourDisplay}" FontSize="19" FontWeight="SemiBold" Margin="0,8,0,0"/></StackPanel></Border>
-                    </Grid>
-                    <Border Background="#17223E" BorderBrush="#334A85" BorderThickness="1" CornerRadius="13" Padding="12,6" HorizontalAlignment="Left" Margin="0,0,0,24"><TextBlock Text="{Binding DataStatus}" Foreground="#B9CEED" FontSize="11"/></Border>
-                    <Border Style="{StaticResource Card}" Margin="0,0,0,20" Visibility="{Binding ShowRecommendation, Converter={StaticResource BoolVisibility}}">
-                        <StackPanel><TextBlock Text="РЕЗУЛЬТАТ ПОИСКА" Foreground="{StaticResource Accent}" FontWeight="Bold"/><TextBlock Text="{Binding RecommendationMessage}" TextWrapping="Wrap" Margin="0,8,0,0"/></StackPanel>
-                    </Border>
-                    <TextBlock Text="ПОДХОДЯЩИЕ МАРШРУТЫ" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,12"/>
-                    <ItemsControl ItemsSource="{Binding Routes}">
-                        <ItemsControl.ItemTemplate><DataTemplate>
-                            <Border Style="{StaticResource Card}" Margin="0,0,0,10">
-                                <StackPanel>
-                                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="2*"/><ColumnDefinition Width="2*"/><ColumnDefinition Width="1.2*"/></Grid.ColumnDefinitions>
-                                        <StackPanel><TextBlock Text="{Binding Commodity}" Foreground="{StaticResource Accent}" FontSize="19" FontWeight="Bold" TextWrapping="Wrap"/><TextBlock Text="{Binding CargoDisplay}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0"/></StackPanel>
-                                        <StackPanel Grid.Column="1" Margin="8,0,10,0"><TextBlock Style="{StaticResource Caption}" Text="КУПИТЬ · ОТПРАВЛЕНИЕ"/><TextBlock Text="{Binding BuyAt}" TextWrapping="Wrap" Margin="0,6,0,0"/><TextBlock Text="{Binding BuySystemDisplay}" Foreground="#9DBBFF" Margin="0,5,0,0"/></StackPanel>
-                                        <StackPanel Grid.Column="2" Margin="8,0,10,0"><TextBlock Style="{StaticResource Caption}" Text="ПРОДАТЬ · НАЗНАЧЕНИЕ"/><TextBlock Text="{Binding SellAt}" TextWrapping="Wrap" Margin="0,6,0,0"/><TextBlock Text="{Binding SellSystemDisplay}" Foreground="#9DBBFF" Margin="0,5,0,0"/></StackPanel>
-                                        <StackPanel Grid.Column="3"><TextBlock Style="{StaticResource Caption}" Text="ОЖИДАЕМАЯ ПРИБЫЛЬ"/><TextBlock Text="{Binding ProfitDisplay}" Foreground="{StaticResource Accent}" FontWeight="Bold" Margin="0,6,0,0"/></StackPanel>
-                                    </Grid>
-                                    <WrapPanel Margin="0,15,0,0">
-                                        <TextBlock Text="{Binding StockDemandDisplay}" Margin="0,0,20,0"/>
-                                        <TextBlock Text="{Binding PricesDisplay}" Margin="0,0,20,0"/>
-                                    </WrapPanel>
-                                    <WrapPanel Margin="0,16,0,0">
-                                        <TextBlock Text="Закупка: " Foreground="{StaticResource Muted}"/><TextBlock Text="{Binding InvestmentDisplay}" Margin="0,0,14,0"/>
-                                        <TextBlock Text="Выручка: " Foreground="{StaticResource Muted}"/><TextBlock Text="{Binding RevenueDisplay}" Margin="0,0,14,0"/>
-                                        <TextBlock Text="Доходность: " Foreground="{StaticResource Muted}"/><TextBlock Text="{Binding RoiDisplay}" Margin="0,0,14,0"/>
-                                        <TextBlock Text="{Binding FreshnessDisplay}" Foreground="{StaticResource Muted}" Margin="0,0,14,0"/>
-                                        <TextBlock Text="{Binding RiskDisplay}" Foreground="{Binding RiskColor}" FontWeight="SemiBold" Margin="0,0,14,0"/>
-                                        <TextBlock Text="{Binding PersonalDurationDisplay}" Foreground="{StaticResource Muted}"/>
-                                    </WrapPanel>
-                                    <Button Content="Записать этот рейс" Command="{Binding DataContext.PrepareFlightCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" HorizontalAlignment="Left" Margin="0,15,0,0"/>
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate></ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <StackPanel Margin="0,7,0,12">
-                        <TextBlock Text="{Binding RecommendedCountDisplay}" Foreground="{StaticResource Muted}"/>
-                        <Button Content="Показать ещё 30 маршрутов" Command="{Binding ShowMoreRoutesCommand}"
-                                Visibility="{Binding HasMoreRoutes, Converter={StaticResource BoolVisibility}}"
-                                HorizontalAlignment="Left" Margin="0,9,0,0"/>
-                    </StackPanel>
-                    <TextBlock Text="Данные UEX поддерживаются игроками. Объёмы — последние сообщения/прогноз спроса; наличие и время рейса не гарантированы." Foreground="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11" Margin="0,5,0,0"/>
+                    <WrapPanel Margin="0,2,0,17"><TextBlock Text="Сегодня: " Foreground="{StaticResource Muted}"/><TextBlock Text="{Binding TodayProfitDisplay}" Margin="0,0,24,0"/><TextBlock Text="За всё время: " Foreground="{StaticResource Muted}"/><TextBlock Text="{Binding TotalFlightProfitDisplay}" Margin="0,0,24,0"/><TextBlock Text="В час: " Foreground="{StaticResource Muted}"/><TextBlock Text="{Binding PersonalProfitHourDisplay}"/></WrapPanel>
+                    <TextBlock Text="Поиск маршрутов, фильтры и запись рейса собраны в разделе «Маршруты»." Foreground="{StaticResource Muted}" Margin="0,3,0,0"/>
                 </StackPanel>
                 <StackPanel Visibility="{Binding IsHaulingOpen, Converter={StaticResource BoolVisibility}}">
-                    <TextBlock Text="ТОРГОВЛЯ  ·  UEX" Foreground="{StaticResource Accent}" FontSize="11" FontWeight="Bold"/>
-                    <TextBlock Text="Грузоперевозки" FontSize="30" FontWeight="SemiBold" Margin="0,7,0,5"/>
-                    <TextBlock Text="Выбери корабль и сравни рейсы по прибыли, вложениям и заполнению трюма." Foreground="{StaticResource Muted}" Margin="0,0,0,20"/>
-                    <Grid Margin="0,0,0,19"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-                        <Border Style="{StaticResource Card}" Margin="0,0,9,0"><StackPanel><TextBlock Text="МЕСТНЫЕ" Foreground="{StaticResource Accent}" FontWeight="Bold"/><TextBlock Text="Одна луна или планета" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,7,0,0"/></StackPanel></Border>
-                        <Border Grid.Column="1" Style="{StaticResource Card}" Margin="0,0,9,0"><StackPanel><TextBlock Text="ПЛАНЕТАРНЫЕ" Foreground="{StaticResource Accent}" FontWeight="Bold"/><TextBlock Text="Между точками одной планеты" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,7,0,0"/></StackPanel></Border>
-                        <Border Grid.Column="2" Style="{StaticResource Card}" Margin="0,0,9,0"><StackPanel><TextBlock Text="ЗВЁЗДНЫЕ" Foreground="{StaticResource Accent}" FontWeight="Bold"/><TextBlock Text="Между планетами системы" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,7,0,0"/></StackPanel></Border>
-                        <Border Grid.Column="3" Style="{StaticResource Card}"><StackPanel><TextBlock Text="МЕЖЗВЁЗДНЫЕ" Foreground="{StaticResource Accent}" FontWeight="Bold"/><TextBlock Text="Между разными системами" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,7,0,0"/></StackPanel></Border>
-                    </Grid>
+                    <TextBlock Text="Маршруты" FontSize="30" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <TextBlock Text="Выбери корабль, настрой фильтры и сравни рейсы." Foreground="{StaticResource Muted}" Margin="0,0,0,20"/>
                     <Border Style="{StaticResource Card}" Margin="0,0,0,18"><StackPanel>
                         <TextBlock Text="ПЛАНИРОВЩИК РЕЙСА" Foreground="{StaticResource Accent}" FontWeight="Bold" Margin="0,0,0,15"/>
                         <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="190"/><ColumnDefinition Width="190"/></Grid.ColumnDefinitions>
@@ -132,23 +76,24 @@
                             <StackPanel Grid.Column="1" Margin="0,0,12,0"><TextBlock Style="{StaticResource Caption}" Text="СОРТИРОВКА"/><ComboBox ItemsSource="{Binding HaulingSortOptions}" SelectedItem="{Binding HaulingSortMode, Mode=TwoWay}" Margin="0,6,0,0"/></StackPanel>
                             <StackPanel Grid.Column="2"><TextBlock Style="{StaticResource Caption}" Text="ТРЮМ"/><TextBlock Text="{Binding SelectedShip.Ship.CargoScu, StringFormat={}{0:N0} SCU}" FontSize="19" FontWeight="SemiBold" Margin="0,9,0,0"/></StackPanel>
                         </Grid>
+                        <WrapPanel Margin="0,14,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="Старт: " Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding HaulingStartDisplay}" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                            <Button Content="Выбрать" Command="{Binding OpenSettingsCommand}" Padding="10,6" Margin="0,0,7,0"/>
+                            <Button Content="Все локации" Command="{Binding ClearLocationCommand}" Padding="10,6"/>
+                        </WrapPanel>
                         <StackPanel Margin="0,15,0,0"><TextBlock Style="{StaticResource Caption}" Text="ТИП МАРШРУТА"/><ComboBox ItemsSource="{Binding HaulingCategories}" SelectedItem="{Binding HaulingCategory, Mode=TwoWay}" Width="210" HorizontalAlignment="Left" Margin="0,6,0,0"/></StackPanel>
                         <CheckBox Content="Только рейсы внутри одной системы" IsChecked="{Binding HaulingSameSystemOnly, Mode=TwoWay}" Foreground="White" Margin="0,16,0,9"/>
                         <CheckBox Content="Включить терминалы NQA" IsChecked="{Binding AllowRisky, Mode=TwoWay}" Foreground="White" Margin="0,0,0,9"/>
+                        <CheckBox Content="Скрыть маршруты через Pyro" IsChecked="{Binding AvoidPyro, Mode=TwoWay}" Foreground="White" Margin="0,0,0,12"/>
+                        <Grid Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="220"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,12,0"><TextBlock Style="{StaticResource Caption}" Text="МИНИМУМ ЗАПОЛНЕНИЯ, %"/><ComboBox ItemsSource="{Binding MinimumFillOptions}" SelectedItem="{Binding MinimumFillPercent, Mode=TwoWay}" Margin="0,6,0,0"/></StackPanel>
+                            <StackPanel Grid.Column="1"><TextBlock Style="{StaticResource Caption}" Text="МИНИМУМ ПРИБЫЛИ, aUEC"/><TextBox Text="{Binding MinimumProfit, UpdateSourceTrigger=LostFocus, ValidatesOnExceptions=True}" Margin="0,6,0,0"/></StackPanel>
+                        </Grid>
                         <TextBlock Text="{Binding HaulingBudgetDisplay, StringFormat=Доступно на закупку с учётом резерва: {0}}" Foreground="{StaticResource Muted}" Margin="0,0,0,6"/>
                         <TextBlock Text="{Binding HaulingStatus}" Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
                     </StackPanel></Border>
-                    <Border Style="{StaticResource Card}" Background="{StaticResource BalanceBrush}" BorderBrush="#394C7E" Margin="0,0,0,18" Visibility="{Binding HasHaulingBestRoute, Converter={StaticResource BoolVisibility}}">
-                        <StackPanel><TextBlock Text="ЛУЧШИЙ ПО ВЫБРАННОЙ СОРТИРОВКЕ" Foreground="#9DBBFF" FontSize="11" FontWeight="Bold"/>
-                            <TextBlock Text="{Binding HaulingBestRoute.Commodity}" FontSize="22" FontWeight="Bold" Margin="0,7,0,0"/>
-                            <TextBlock Text="{Binding HaulingBestRoute.ProfitDisplay}" Foreground="{StaticResource Accent}" FontSize="25" FontWeight="Bold" Margin="0,6,0,0"/>
-                            <TextBlock Text="{Binding HaulingBestRoute.RouteDisplay}" TextWrapping="Wrap" Margin="0,8,0,0"/>
-                            <TextBlock Text="{Binding HaulingBestRoute.CargoDisplay}" Foreground="{StaticResource Muted}" Margin="0,7,0,0"/>
-                            <TextBlock Text="{Binding HaulingBestRoute.InvestmentDisplay, StringFormat=Нужно на закупку: {0}}" Foreground="{StaticResource Muted}" Margin="0,4,0,0"/>
-                            <TextBlock Text="{Binding HaulingBestRoute.RiskDisplay}" Foreground="{Binding HaulingBestRoute.RiskColor}" FontWeight="SemiBold" Margin="0,6,0,0"/>
-                        </StackPanel>
-                    </Border>
-                    <TextBlock Text="МАРШРУТЫ ПО ЖИВЫМ КОТИРОВКАМ" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                    <TextBlock Text="Подходящие рейсы" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,12"/>
                     <ItemsControl ItemsSource="{Binding HaulingRoutes}"><ItemsControl.ItemTemplate><DataTemplate>
                         <Border Style="{StaticResource Card}" Margin="0,0,0,10"><StackPanel>
                             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -160,19 +105,24 @@
                             <Button Content="Записать этот рейс" Command="{Binding DataContext.PrepareHaulingFlightCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" HorizontalAlignment="Left" Margin="0,13,0,0"/>
                         </StackPanel></Border>
                     </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                    <StackPanel Margin="0,8,0,12">
+                        <TextBlock Text="{Binding HaulingCountDisplay}" Foreground="{StaticResource Muted}"/>
+                        <Button Content="Показать ещё 30" Command="{Binding ShowMoreHaulingRoutesCommand}"
+                                Visibility="{Binding HasMoreHaulingRoutes, Converter={StaticResource BoolVisibility}}"
+                                HorizontalAlignment="Left" Margin="0,9,0,0"/>
+                    </StackPanel>
                     <TextBlock Text="Запас и спрос меняются в игре. Перед закупкой проверь терминал; прибыль рассчитана по последним котировкам UEX." Foreground="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11" Margin="0,5,0,0"/>
                 </StackPanel>
                 <StackPanel Visibility="{Binding IsFleetOpen, Converter={StaticResource BoolVisibility}}">
-                    <TextBlock Text="ЛИЧНЫЕ ДАННЫЕ" Foreground="{StaticResource Accent}" FontSize="11" FontWeight="Bold"/>
-                    <TextBlock Text="Мой флот" FontSize="30" FontWeight="SemiBold" Margin="0,7,0,5"/>
-                    <TextBlock Text="Найди модель в каталоге, выбери её и добавь в свой флот. Вместимость подставится сама." Foreground="{StaticResource Muted}" Margin="0,0,0,24"/>
+                    <TextBlock Text="Корабли" FontSize="30" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <TextBlock Text="Выбери модель из каталога — вместимость и роль подставятся сами." Foreground="{StaticResource Muted}" Margin="0,0,0,20"/>
                     <Border Style="{StaticResource Card}" Margin="0,0,0,18">
                         <StackPanel>
-                            <Grid Margin="0,0,0,17"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="190"/></Grid.ColumnDefinitions>
-                                <TextBlock Text="ВЫБРАТЬ КОРАБЛЬ ИЗ КАТАЛОГА" Foreground="{StaticResource Accent}" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <Grid Margin="0,0,0,14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="190"/></Grid.ColumnDefinitions>
+                                <TextBlock Text="Добавить корабль" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                 <ComboBox Grid.Column="1" ItemsSource="{Binding ShipSortOptions}" SelectedItem="{Binding ShipSortMode, Mode=TwoWay}"/>
                             </Grid>
-                            <TextBlock Style="{StaticResource Caption}" Text="КОРАБЛЬ ИЗ СПИСКА"/>
+                            <TextBlock Style="{StaticResource Caption}" Text="МОДЕЛЬ"/>
                             <ComboBox ItemsSource="{Binding ShipMatches}" SelectedItem="{Binding SelectedCatalogVehicle, Mode=TwoWay}"
                                       Text="{Binding ShipSearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                       IsEditable="True" IsTextSearchEnabled="False" TextSearch.TextPath="Name"
@@ -180,21 +130,15 @@
                                 <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Display}" Foreground="White"/></DataTemplate></ComboBox.ItemTemplate>
                             </ComboBox>
                             <TextBlock Text="{Binding VehicleStatus}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11" Margin="0,6,0,17"/>
-                            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                <StackPanel Margin="0,0,12,0"><TextBlock Style="{StaticResource Caption}" Text="ВЫБРАННЫЙ КОРАБЛЬ"/><TextBlock Text="{Binding NewShipName}" FontSize="18" Foreground="{StaticResource Accent}" Margin="0,7,0,0"/></StackPanel>
-                                <StackPanel Grid.Column="1"><TextBlock Style="{StaticResource Caption}" Text="ВМЕСТИМОСТЬ"/><TextBlock Text="{Binding NewShipCargoScu, StringFormat={}{0} SCU}" FontSize="18" Margin="0,7,0,0"/></StackPanel>
-                            </Grid>
-                            <TextBlock Style="{StaticResource Caption}" Text="РОЛЬ · ОПРЕДЕЛЯЕТСЯ АВТОМАТИЧЕСКИ, МОЖНО ИЗМЕНИТЬ" Margin="0,16,0,0"/>
+                            <TextBlock Text="{Binding NewShipCargoScu, StringFormat=Вместимость: {0:N0} SCU}" Foreground="{StaticResource Muted}" Margin="0,0,0,0"/>
+                            <TextBlock Style="{StaticResource Caption}" Text="РОЛЬ (МОЖНО ИЗМЕНИТЬ)" Margin="0,14,0,0"/>
                             <TextBox Text="{Binding NewShipRole, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0"/>
                             <TextBlock Style="{StaticResource Caption}" Text="СБОРКА И ЗАМЕТКИ" Margin="0,16,0,0"/>
                             <TextBox Text="{Binding NewShipBuild, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,14"/>
                             <Button Style="{StaticResource PrimaryButton}" Content="Добавить корабль" Command="{Binding AddShipCommand}" IsEnabled="{Binding HasSelectedCatalogVehicle}" HorizontalAlignment="Left"/>
                         </StackPanel>
                     </Border>
-                    <Grid Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="190"/></Grid.ColumnDefinitions>
-                        <TextBlock Text="МОИ КОРАБЛИ" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                        <ComboBox Grid.Column="1" ItemsSource="{Binding ShipSortOptions}" SelectedItem="{Binding ShipSortMode, Mode=TwoWay}"/>
-                    </Grid>
+                    <TextBlock Text="Мой флот" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,12"/>
                     <ItemsControl ItemsSource="{Binding SortedShips}"><ItemsControl.ItemTemplate><DataTemplate>
                         <Border Style="{StaticResource Card}" Margin="0,0,0,10"><StackPanel>
                             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
@@ -278,7 +222,10 @@
                                 <TextBlock Text="{Binding GameLogUpdated, StringFormat=Журнал обновлён: {0}}" Foreground="{StaticResource Muted}" Margin="0,0,0,8"/>
                                 <TextBlock Text="{Binding GameLogStatus}" Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
                             </StackPanel>
-                            <Button Grid.Column="1" Content="Открыть журнал" Command="{Binding OpenHistoryCommand}" VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <Button Content="Обновить данные" Command="{Binding RefreshToolsCommand}" Margin="0,0,0,8"/>
+                                <Button Content="Выбрать Game.log" Command="{Binding ChooseGameLogCommand}"/>
+                            </StackPanel>
                         </Grid>
                     </Border>
                     <TextBlock Text="ПРОВЕРКА УСТАНОВКИ" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,13"/>
@@ -307,10 +254,7 @@
                         <TextBlock Style="{StaticResource Caption}" Text="БАЛАНС aUEC"/>
                         <TextBox Text="{Binding Balance, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}" Margin="0,7,0,18"/>
                         <TextBlock Style="{StaticResource Caption}" Text="ТЕКУЩИЙ КОРАБЛЬ"/>
-                        <Grid Margin="0,7,0,7"><Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                            <ComboBox ItemsSource="{Binding SortedShips}" SelectedItem="{Binding SelectedShip, Mode=TwoWay}" DisplayMemberPath="Name" Margin="0,0,10,0"/>
-                            <ComboBox Grid.Column="1" ItemsSource="{Binding ShipSortOptions}" SelectedItem="{Binding ShipSortMode, Mode=TwoWay}"/>
-                        </Grid>
+                        <ComboBox ItemsSource="{Binding SortedShips}" SelectedItem="{Binding SelectedShip, Mode=TwoWay}" DisplayMemberPath="Name" Margin="0,7,0,7"/>
                         <TextBlock Text="{Binding CargoScu, StringFormat=Грузовой объём: {0} SCU}" Foreground="{StaticResource Muted}" Margin="0,0,0,19"/>
                         <TextBlock Style="{StaticResource Caption}" Text="СИСТЕМА"/>
                         <ComboBox ItemsSource="{Binding Systems}" SelectedItem="{Binding SelectedSystem, Mode=TwoWay}" Margin="0,7,0,18"/>
@@ -328,6 +272,9 @@
                         <TextBlock Style="{StaticResource Caption}" Text="НЕ ТРАТИТЬ ПОСЛЕДНИЕ, aUEC"/>
                         <TextBox Text="{Binding Reserve, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}" Margin="0,7,0,18"/>
                         <CheckBox Content="Учитывать рискованные терминалы NQA" IsChecked="{Binding AllowRisky}" Foreground="White" Margin="0,0,0,18"/>
+                        <TextBlock Style="{StaticResource Caption}" Text="ПАПКА ИГРЫ (ЕСЛИ АВТОПОИСК НЕ СРАБОТАЛ)"/>
+                        <TextBox Text="{Binding GameDirectoryPath, UpdateSourceTrigger=LostFocus}" Margin="0,7,0,7"/>
+                        <Button Content="Выбрать Game.log" Command="{Binding ChooseGameLogCommand}" HorizontalAlignment="Left" Margin="0,0,0,18"/>
                         <TextBlock Text="{Binding SaveStatus}" Foreground="{StaticResource Accent}" Margin="0,0,0,24"/>
                         <Button Style="{StaticResource PrimaryButton}" Content="Вернуться на главную" Command="{Binding OpenDashboardCommand}" HorizontalAlignment="Left"/>
                         </StackPanel></Border>

@@ -65,6 +65,10 @@ public sealed class SettingsService
                 current.CargoScu = snapshot.CargoScu;
                 current.Reserve = snapshot.Reserve;
                 current.AllowRisky = snapshot.AllowRisky;
+                current.AvoidPyro = snapshot.AvoidPyro;
+                current.MinimumFillPercent = snapshot.MinimumFillPercent;
+                current.MinimumProfit = snapshot.MinimumProfit;
+                current.GameDirectoryPath = snapshot.GameDirectoryPath;
             }
             await db.SaveChangesAsync();
         }
@@ -86,6 +90,10 @@ public sealed class SettingsService
             if (!names.Contains("Reserve")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN Reserve TEXT NOT NULL DEFAULT '0'");
             if (!names.Contains("AllowRisky")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN AllowRisky INTEGER NOT NULL DEFAULT 0");
             if (!names.Contains("CurrentSystem")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN CurrentSystem TEXT NOT NULL DEFAULT ''");
+            if (!names.Contains("AvoidPyro")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN AvoidPyro INTEGER NOT NULL DEFAULT 0");
+            if (!names.Contains("MinimumFillPercent")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN MinimumFillPercent INTEGER NOT NULL DEFAULT 0");
+            if (!names.Contains("MinimumProfit")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN MinimumProfit TEXT NOT NULL DEFAULT '0'");
+            if (!names.Contains("GameDirectoryPath")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN GameDirectoryPath TEXT NOT NULL DEFAULT ''");
         }
         finally { await connection.CloseAsync(); }
     }

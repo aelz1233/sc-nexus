@@ -22,10 +22,16 @@ public static class GameHealthService
         var config = Path.Combine(gameDirectory, "user.cfg");
         results.Add(new("Личный конфиг", File.Exists(config) ? "user.cfg найден" : "user.cfg не найден; игра может использовать настройки по умолчанию"));
         var localisation = Path.Combine(gameDirectory, "data", "Localization");
-        var languages = Directory.Exists(localisation)
-            ? Directory.EnumerateFiles(localisation, "global.ini", SearchOption.AllDirectories)
-                .Select(Path.GetDirectoryName).Select(Path.GetFileName).Where(x => x is not null).ToArray()
-            : [];
+        string?[] languages;
+        try
+        {
+            languages = Directory.Exists(localisation)
+                ? Directory.EnumerateFiles(localisation, "global.ini", SearchOption.AllDirectories)
+                    .Select(Path.GetDirectoryName).Select(Path.GetFileName).Where(x => x is not null).ToArray()
+                : [];
+        }
+        catch (IOException) { languages = []; }
+        catch (UnauthorizedAccessException) { languages = []; }
         results.Add(new("Файлы локализации", languages.Length == 0 ? "global.ini не найден" :
             $"Найдены папки: {string.Join(", ", languages)}"));
         return results;
