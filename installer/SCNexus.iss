@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.2.7"
+  #define AppVersion "0.2.8"
 #endif
 #ifndef PublishDir
   #define PublishDir "..\publish"
@@ -35,6 +35,7 @@ Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "Создать ярлык на рабочем столе"; GroupDescription: "Ярлыки:"; Flags: unchecked
+Name: "restartafterupdate"; Description: "Запустить SC NEXUS после обновления"; Flags: unchecked
 
 [Files]
 Source: "{#PublishDir}\SCNexus.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -44,7 +45,16 @@ Name: "{group}\SC NEXUS"; Filename: "{app}\SCNexus.exe"
 Name: "{autodesktop}\SC NEXUS"; Filename: "{app}\SCNexus.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\SCNexus.exe"; Description: "Запустить SC NEXUS"; Flags: nowait postinstall
+Filename: "{app}\SCNexus.exe"; Description: "Запустить SC NEXUS"; Flags: nowait postinstall skipifsilent
+
+[Code]
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
+begin
+  if (CurStep = ssPostInstall) and IsSilent and WizardIsTaskSelected('restartafterupdate') then
+    Exec(ExpandConstant('{app}\SCNexus.exe'), '', '', SW_SHOWNORMAL, ewNoWait, ResultCode);
+end;
 
 ; User data lives in %LOCALAPPDATA%\SCNexus, outside {app}.
 ; Never delete that directory during upgrade or uninstall.

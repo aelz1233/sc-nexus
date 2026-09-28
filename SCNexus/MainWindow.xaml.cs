@@ -64,6 +64,7 @@ public partial class MainWindow : Window
                 startInfo.ArgumentList.Add("/SUPPRESSMSGBOXES");
                 startInfo.ArgumentList.Add("/NORESTART");
                 startInfo.ArgumentList.Add("/CLOSEAPPLICATIONS");
+                startInfo.ArgumentList.Add("/TASKS=restartafterupdate");
                 Process.Start(startInfo);
             }
             catch (Exception ex) { MessageBox.Show($"Не удалось запустить установщик:\n{ex.Message}\n\nФайл: {installer}", "SC NEXUS", MessageBoxButton.OK, MessageBoxImage.Error); }
