@@ -1,4 +1,5 @@
 using System.IO;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using SCNexus.Data;
 using SCNexus.Models;
@@ -9,11 +10,13 @@ public sealed class SettingsService
 {
     private readonly DbContextOptions<NexusDbContext> _options;
     private readonly SemaphoreSlim _gate = new(1, 1);
+    public string DatabasePath { get; }
 
     public SettingsService(string? databasePath = null)
     {
         databasePath ??= Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SCNexus", "nexus.db");
         Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
+        DatabasePath = Path.GetFullPath(databasePath);
         _options = new DbContextOptionsBuilder<NexusDbContext>()
             .UseSqlite($"Data Source={databasePath}").Options;
     }
@@ -69,6 +72,9 @@ public sealed class SettingsService
                 current.MinimumFillPercent = snapshot.MinimumFillPercent;
                 current.MinimumProfit = snapshot.MinimumProfit;
                 current.GameDirectoryPath = snapshot.GameDirectoryPath;
+                current.MonitorEnabled = snapshot.MonitorEnabled;
+                current.MonitorIntervalSeconds = snapshot.MonitorIntervalSeconds;
+                current.ShowRouteDetails = snapshot.ShowRouteDetails;
             }
             await db.SaveChangesAsync();
         }
@@ -94,7 +100,26 @@ public sealed class SettingsService
             if (!names.Contains("MinimumFillPercent")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN MinimumFillPercent INTEGER NOT NULL DEFAULT 0");
             if (!names.Contains("MinimumProfit")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN MinimumProfit TEXT NOT NULL DEFAULT '0'");
             if (!names.Contains("GameDirectoryPath")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN GameDirectoryPath TEXT NOT NULL DEFAULT ''");
+            if (!names.Contains("MonitorEnabled")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN MonitorEnabled INTEGER NOT NULL DEFAULT 1");
+            if (!names.Contains("MonitorIntervalSeconds")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN MonitorIntervalSeconds INTEGER NOT NULL DEFAULT 15");
+            if (!names.Contains("ShowRouteDetails")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN ShowRouteDetails INTEGER NOT NULL DEFAULT 1");
         }
         finally { await connection.CloseAsync(); }
+    }
+
+    public async Task BackupAsync(string destination)
+    {
+        if (Path.GetFullPath(destination).Equals(DatabasePath, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Выбери другое имя для резервной копии.");
+        await _gate.WaitAsync();
+        try
+        {
+            await using var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = DatabasePath }.ToString());
+            await using var target = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = destination }.ToString());
+            await source.OpenAsync();
+            await target.OpenAsync();
+            source.BackupDatabase(target);
+        }
+        finally { _gate.Release(); }
     }
 }

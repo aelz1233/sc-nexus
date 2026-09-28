@@ -4,6 +4,8 @@ using System.Net;
 using Microsoft.Extensions.DependencyInjection;
 using SCNexus.Services;
 using SCNexus.ViewModels;
+using System.Globalization;
+using System.Windows.Markup;
 
 namespace SCNexus;
 
@@ -15,6 +17,10 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("ru-RU");
+        CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("ru-RU");
+        FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement),
+            new FrameworkPropertyMetadata(XmlLanguage.GetLanguage("ru-RU")));
         try
         {
             var collection = new ServiceCollection();

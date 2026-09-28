@@ -22,11 +22,11 @@ public sealed class GameDataService
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SCNexus", "cache");
     }
 
-    public async Task<DataSnapshot> GetSnapshotAsync(CancellationToken token = default)
+    public async Task<DataSnapshot> GetSnapshotAsync(CancellationToken token = default, bool forceRefresh = false)
     {
         Directory.CreateDirectory(_cacheDirectory);
-        var pricesTask = LoadAsync<CommodityQuote>("prices", "commodities_prices_all", TimeSpan.FromMinutes(30), token);
-        var terminalsTask = LoadAsync<TradeTerminal>("terminals", "terminals?type=commodity", TimeSpan.FromHours(12), token);
+        var pricesTask = LoadAsync<CommodityQuote>("prices", "commodities_prices_all", forceRefresh ? TimeSpan.Zero : TimeSpan.FromMinutes(30), token);
+        var terminalsTask = LoadAsync<TradeTerminal>("terminals", "terminals?type=commodity", forceRefresh ? TimeSpan.Zero : TimeSpan.FromHours(12), token);
         var prices = await pricesTask;
         var terminals = await terminalsTask;
         return new DataSnapshot(prices.Data, terminals.Data, prices.FetchedAt, terminals.FetchedAt,
@@ -73,7 +73,7 @@ public sealed class GameDataService
             if (payload?.Status != "ok" || payload.Data.Count == 0)
                 throw new InvalidDataException("UEX не вернул торговые данные.");
             var result = new CachedData<T>(DateTimeOffset.UtcNow, payload.Data, false);
-            var temporary = path + ".tmp";
+            var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
             await using (var file = File.Create(temporary))
                 await JsonSerializer.SerializeAsync(file, result, Json, token);
             File.Move(temporary, path, true);

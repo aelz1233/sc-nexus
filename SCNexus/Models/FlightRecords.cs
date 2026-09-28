@@ -28,6 +28,7 @@ public sealed class FlightRecord
     public decimal ProfitPerHour => DurationHours > 0 ? Profit / (decimal)DurationHours : 0;
     public string DateDisplay => StartedAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
     public string ProfitDisplay => $"{Profit:+#,##0;-#,##0;0} aUEC";
+    public string ResultDisplay => EndedAtUtc is null ? "В пути" : ProfitDisplay;
     public string DurationDisplay => EndedAtUtc is { } end
         ? $"{(int)(end - StartedAtUtc).TotalHours} ч {(end - StartedAtUtc).Minutes} мин" : "В пути";
 }

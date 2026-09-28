@@ -109,7 +109,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     public string RecommendedCountDisplay => _recommendedRoutes.Count == 0 ? "" :
         $"Показано {_visibleRouteCount} из {_recommendedRoutes.Count} маршрутов";
     public string ActiveFlightDisplay => ActiveFlight is null ? "Нет активного рейса" :
-        $"{ActiveFlight.Commodity} • {ActiveFlight.Origin} → {ActiveFlight.Destination}";
+        $"{ActiveFlight.ShipName} · {ActiveFlight.Commodity} · {ActiveFlight.Origin} → {ActiveFlight.Destination}";
     public string PersonalProfitHourDisplay
     {
         get
@@ -137,6 +137,9 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         MinimumFillPercent = settings.MinimumFillPercent;
         MinimumProfit = settings.MinimumProfit;
         GameDirectoryPath = settings.GameDirectoryPath;
+        MonitorEnabled = settings.MonitorEnabled;
+        MonitorIntervalSeconds = MonitorIntervals.Contains(settings.MonitorIntervalSeconds) ? settings.MonitorIntervalSeconds : 15;
+        ShowRouteDetails = settings.ShowRouteDetails;
         gameLogService.GameDirectoryOverride = GameDirectoryPath;
         await ReloadFlightLogAsync();
         if (CurrentShip != "Не выбран" && Ships.All(x => !x.Name.Equals(CurrentShip, StringComparison.OrdinalIgnoreCase)))
@@ -172,8 +175,9 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         try
         {
             _allVehicles = await gameDataService.GetVehiclesAsync();
-            VehicleStatus = $"Каталог UEX: {_allVehicles.Count(x => x.IsSpaceship == 1)} кораблей. Открой список или введи две буквы.";
+            VehicleStatus = $"Каталог UEX: {_allVehicles.Count(x => x.IsSpaceship == 1)} кораблей. Выбери модель из списка.";
             RefreshShipMatches();
+            RefreshCatalog();
         }
         catch (Exception ex)
         {
@@ -187,8 +191,8 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         {
             try
             {
-                await RefreshGameInfoAsync(token);
-                await Task.Delay(TimeSpan.FromSeconds(15), token);
+                if (MonitorEnabled) await RefreshGameInfoAsync(token);
+                await Task.Delay(TimeSpan.FromSeconds(Math.Clamp(MonitorIntervalSeconds, 15, 60)), token);
             }
             catch (OperationCanceledException) { break; }
             catch (Exception ex)
@@ -203,6 +207,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     private async Task RefreshGameInfoAsync(CancellationToken token = default)
     {
         var snapshot = await gameLogService.ReadRecentAsync(token);
+        ResolvedGameDirectory = snapshot.GameDirectory ?? "Игра не найдена — выбери папку вручную";
         var monitor = await Task.Run(() => GameMonitorService.Inspect(snapshot.GameDirectory), token);
         var health = await Task.Run(() => GameHealthService.Scan(snapshot.GameDirectory), token);
         GameLogStatus = snapshot.GameDirectory is null
@@ -243,12 +248,12 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         FlightStatus = $"Подставлена сумма {candidate.AmountDisplay} из журнала. Проверь, что сделка завершилась в игре.";
     }
 
-    partial void OnBalanceChanged(decimal value) { OnPropertyChanged(nameof(BalanceDisplay)); OnPropertyChanged(nameof(HaulingBudgetDisplay)); QueueSave(); RecalculateHauling(); }
+    partial void OnBalanceChanged(decimal value) { OnPropertyChanged(nameof(BalanceDisplay)); OnPropertyChanged(nameof(HaulingBudgetDisplay)); OnPropertyChanged(nameof(TradeBudgetHint)); QueueSave(); RecalculateHauling(); }
     partial void OnCurrentShipChanged(string value) => QueueSave();
     partial void OnCurrentSystemChanged(string value) { OnPropertyChanged(nameof(LocationDisplay)); OnPropertyChanged(nameof(HaulingStartDisplay)); QueueSave(); RecalculateHauling(); }
     partial void OnCurrentLocationChanged(string value) { OnPropertyChanged(nameof(LocationDisplay)); OnPropertyChanged(nameof(HaulingStartDisplay)); QueueSave(); RecalculateHauling(); }
     partial void OnCargoScuChanged(int value) => QueueSave();
-    partial void OnReserveChanged(decimal value) { OnPropertyChanged(nameof(HaulingBudgetDisplay)); QueueSave(); RecalculateHauling(); }
+    partial void OnReserveChanged(decimal value) { OnPropertyChanged(nameof(HaulingBudgetDisplay)); OnPropertyChanged(nameof(TradeBudgetHint)); QueueSave(); RecalculateHauling(); }
     partial void OnAllowRiskyChanged(bool value) { QueueSave(); RecalculateHauling(); }
     partial void OnAvoidPyroChanged(bool value) { QueueSave(); RecalculateHauling(); }
     partial void OnMinimumFillPercentChanged(int value) { QueueSave(); RecalculateHauling(); }
@@ -256,12 +261,13 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     partial void OnGameDirectoryPathChanged(string value) { gameLogService.GameDirectoryOverride = value; QueueSave(); }
     partial void OnSelectedShipChanged(ShipSummary? value)
     {
+        OnPropertyChanged(nameof(CanStartFlight));
         if (!_loaded || value is null) return;
         CurrentShip = value.Name;
         CargoScu = value.Ship.CargoScu;
         RecalculateHauling();
     }
-    partial void OnShipSortModeChanged(string value) { RefreshSortedShips(); RefreshShipMatches(); }
+    partial void OnShipSortModeChanged(string value) { RefreshSortedShips(); RefreshShipMatches(); RefreshCatalog(); }
     partial void OnShipSearchQueryChanged(string value)
     {
         if (_selectingVehicle) return;
@@ -378,6 +384,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     {
         OnPropertyChanged(nameof(HasActiveFlight));
         OnPropertyChanged(nameof(ActiveFlightDisplay));
+        OnPropertyChanged(nameof(CanStartFlight));
     }
 
     private async void QueueSave()
@@ -417,17 +424,20 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             AvoidPyro = AvoidPyro,
             MinimumFillPercent = Math.Clamp(MinimumFillPercent, 0, 100),
             MinimumProfit = Math.Max(0, MinimumProfit),
-            GameDirectoryPath = GameDirectoryPath.Trim()
+            GameDirectoryPath = GameDirectoryPath.Trim(),
+            MonitorEnabled = MonitorEnabled,
+            MonitorIntervalSeconds = Math.Clamp(MonitorIntervalSeconds, 15, 60),
+            ShowRouteDetails = ShowRouteDetails
         };
 
-    [RelayCommand] private void OpenDashboard() { IsSettingsOpen = false; IsFleetOpen = false; IsHistoryOpen = false; IsToolsOpen = false; IsHaulingOpen = false; }
-    [RelayCommand] private void OpenSettings() { IsFleetOpen = false; IsHistoryOpen = false; IsToolsOpen = false; IsHaulingOpen = false; IsSettingsOpen = true; }
-    [RelayCommand] private void OpenFleet() { IsSettingsOpen = false; IsHistoryOpen = false; IsToolsOpen = false; IsHaulingOpen = false; IsFleetOpen = true; }
-    [RelayCommand] private void OpenHistory() { IsSettingsOpen = false; IsFleetOpen = false; IsToolsOpen = false; IsHaulingOpen = false; IsHistoryOpen = true; }
+    [RelayCommand] private void OpenDashboard() => Navigate("Обзор");
+    [RelayCommand] private void OpenSettings() => Navigate("Настройки");
+    [RelayCommand] private void OpenFleet() => Navigate("Флот");
+    [RelayCommand] private void OpenHistory() => Navigate("Рейсы");
     [RelayCommand]
     private async Task OpenToolsAsync()
     {
-        IsSettingsOpen = false; IsFleetOpen = false; IsHistoryOpen = false; IsHaulingOpen = false; IsToolsOpen = true;
+        Navigate("Инструменты");
         await RefreshToolsAsync();
     }
 
@@ -458,14 +468,9 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     [RelayCommand]
     private async Task OpenHaulingAsync()
     {
-        IsSettingsOpen = false; IsFleetOpen = false; IsHistoryOpen = false; IsToolsOpen = false; IsHaulingOpen = true;
-        HaulingStatus = "Загружаю цены и доступные объёмы UEX…";
-        try
-        {
-            _haulingData = await gameDataService.GetSnapshotAsync();
-            RecalculateHauling();
-        }
-        catch (Exception ex) { HaulingStatus = $"Не удалось загрузить данные: {ex.Message}"; }
+        Navigate("Маршруты");
+        if (_haulingData is null) await LoadMarketAsync(false);
+        else RecalculateHauling();
     }
 
     private void RecalculateHauling()
@@ -509,6 +514,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     private void PrepareHaulingFlight(HaulingRoute? route)
     {
         if (route is null) return;
+        if (HasActiveFlight) { OpenHistory(); FlightStatus = "Сначала заверши текущий рейс, затем выбери следующий маршрут."; return; }
         FlightOrigin = route.BuyAt;
         FlightDestination = route.SellAt;
         FlightCommodity = route.Commodity;
@@ -544,6 +550,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         OnPropertyChanged(nameof(PersonalProfitHourDisplay));
         OnPropertyChanged(nameof(TotalFlightProfitDisplay));
         OnPropertyChanged(nameof(TodayProfitDisplay));
+        NotifyWorkspace();
     }
 
     [RelayCommand]

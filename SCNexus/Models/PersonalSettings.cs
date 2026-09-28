@@ -14,4 +14,7 @@ public sealed class PersonalSettings
     public int MinimumFillPercent { get; set; }
     public decimal MinimumProfit { get; set; }
     public string GameDirectoryPath { get; set; } = "";
+    public bool MonitorEnabled { get; set; } = true;
+    public int MonitorIntervalSeconds { get; set; } = 15;
+    public bool ShowRouteDetails { get; set; } = true;
 }
