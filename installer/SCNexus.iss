@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.2.9"
+  #define AppVersion "0.2.10"
 #endif
 #ifndef PublishDir
   #define PublishDir "..\publish"
@@ -53,7 +53,9 @@ var
   ResultCode: Integer;
 begin
   if (CurStep = ssPostInstall) and WizardSilent() and WizardIsTaskSelected('restartafterupdate') then
+  begin
     Exec(ExpandConstant('{app}\SCNexus.exe'), '', '', SW_SHOWNORMAL, ewNoWait, ResultCode);
+  end;
 end;
 
 ; User data lives in %LOCALAPPDATA%\SCNexus, outside {app}.
