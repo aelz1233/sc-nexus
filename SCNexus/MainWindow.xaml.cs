@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
+using System.Diagnostics;
 
 namespace SCNexus;
 
@@ -43,6 +44,23 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(MainViewModel.ActivePage))
             Dispatcher.BeginInvoke(() => PageScroll.ScrollToTop());
+    }
+
+    private void SaveGithubToken_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm) return;
+        vm.SaveGithubToken(GithubTokenBox.Password);
+        GithubTokenBox.Clear();
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        if (DataContext is MainViewModel { PendingInstallerPath: { } installer })
+        {
+            try { Process.Start(new ProcessStartInfo(installer) { UseShellExecute = true }); }
+            catch (Exception ex) { MessageBox.Show($"Не удалось запустить установщик:\n{ex.Message}\n\nФайл: {installer}", "SC NEXUS", MessageBoxButton.OK, MessageBoxImage.Error); }
+        }
+        base.OnClosed(e);
     }
 
     protected override void OnClosing(CancelEventArgs e)

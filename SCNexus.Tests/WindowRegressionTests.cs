@@ -32,7 +32,7 @@ public class WindowRegressionTests
                     var settings = new SettingsService(Path.Combine(dir, "test.db"));
                     var data = new GameDataService(client, Path.Combine(dir, "cache"));
                     var vm = new MainViewModel(settings, new TradingService(data, new RouteService()),
-                        new FlightLogService(settings), data, new GameLogService(), new HaulingService());
+                        new FlightLogService(settings), data, new GameLogService(), new HaulingService(), new UpdateService());
                     var window = new MainWindow { DataContext = vm };
                     var list = LogicalDescendants(window).OfType<ItemsControl>().Single(x =>
                         BindingOperations.GetBinding(x, ItemsControl.ItemsSourceProperty)?.Path.Path == "HaulingRoutes");

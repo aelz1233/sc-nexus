@@ -10,7 +10,7 @@ namespace SCNexus.ViewModels;
 
 public partial class MainViewModel(SettingsService settingsService, TradingService tradingService,
     FlightLogService flightLogService, GameDataService gameDataService, GameLogService gameLogService,
-    HaulingService haulingService) : ObservableObject
+    HaulingService haulingService, UpdateService updateService) : ObservableObject
 {
     private bool _loaded;
     private bool _selectingLocation;

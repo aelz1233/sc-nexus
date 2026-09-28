@@ -182,7 +182,25 @@
             <Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="#9FAFBF"/><Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="16,13"/><Setter Property="Margin" Value="10,3"/>
             <Style.Triggers><DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True"><Setter Property="Background" Value="#1A3438"/><Setter Property="Foreground" Value="#88E4D4"/><Setter Property="FontWeight" Value="SemiBold"/></DataTrigger></Style.Triggers>
         </Style>
-        <Style TargetType="CheckBox"><Setter Property="Foreground" Value="#DBE5F0"/><Setter Property="FontSize" Value="13"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="Margin" Value="0,7"/></Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#DBE5F0"/><Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/><Setter Property="Margin" Value="0,7"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox">
+                <Grid Background="Transparent">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Border x:Name="Box" Width="16" Height="16" Background="#101B29" BorderBrush="#698094" BorderThickness="1" CornerRadius="3" VerticalAlignment="Center">
+                        <Path x:Name="Tick" Data="M 3 8 L 6.5 11 L 12.5 4" Stroke="#0B191A" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Collapsed"/>
+                    </Border>
+                    <ContentPresenter Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                </Grid>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsChecked" Value="True"><Setter TargetName="Box" Property="Background" Value="#69CFC0"/><Setter TargetName="Box" Property="BorderBrush" Value="#69CFC0"/><Setter TargetName="Tick" Property="Visibility" Value="Visible"/></Trigger>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Box" Property="BorderBrush" Value="#69CFC0"/></Trigger>
+                    <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Box" Property="BorderBrush" Value="#A6EDE3"/></Trigger>
+                    <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.5"/></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
         <Style x:Key="SystemFilterToggle" TargetType="ToggleButton">
             <Setter Property="Cursor" Value="Hand"/><Setter Property="Margin" Value="0,0,8,8"/><Setter Property="Padding" Value="11,7"/>
             <Setter Property="Foreground" Value="#AEBCCD"/><Setter Property="Background" Value="#101B29"/><Setter Property="BorderBrush" Value="#344656"/><Setter Property="BorderThickness" Value="1"/>
