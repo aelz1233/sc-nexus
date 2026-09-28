@@ -9,6 +9,7 @@ namespace SCNexus;
 public partial class MainWindow : Window
 {
     private bool _readyToClose;
+    private bool _closePending;
     public MainWindow()
     {
         InitializeComponent();
@@ -25,20 +26,31 @@ public partial class MainWindow : Window
             Dispatcher.BeginInvoke(() => PageScroll.ScrollToTop());
     }
 
-    protected override async void OnClosing(CancelEventArgs e)
+    protected override void OnClosing(CancelEventArgs e)
     {
         if (!_readyToClose && DataContext is MainViewModel vm)
         {
             if (Keyboard.FocusedElement is TextBox input) input.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
             e.Cancel = true;
-            try { await vm.SaveNowAsync(); }
-            catch (Exception ex)
+            if (_closePending) return;
+            _closePending = true;
+            // Leave WPF's Closing callback before saving and requesting Close again.
+            // SaveNowAsync can complete synchronously, including before initialization.
+            Dispatcher.BeginInvoke(async () =>
             {
-                MessageBox.Show($"Не удалось сохранить настройки:\n{ex.Message}", "SC NEXUS", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-            _readyToClose = true;
-            Close();
+                try
+                {
+                    await vm.SaveNowAsync();
+                    _readyToClose = true;
+                    Close();
+                }
+                catch (Exception ex)
+                {
+                    _closePending = false;
+                    _readyToClose = false;
+                    MessageBox.Show($"Не удалось сохранить настройки:\n{ex.Message}", "SC NEXUS", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            });
             return;
         }
         base.OnClosing(e);

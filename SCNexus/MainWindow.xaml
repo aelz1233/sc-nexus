@@ -311,7 +311,7 @@
                                                 <TextBlock Visibility="{Binding DataContext.ShowRouteDetails, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVisibility}}" Text="{Binding AvailabilityDisplay}" Foreground="{StaticResource Muted}" Margin="0,0,16,0" />
                                                 <TextBlock Text="{Binding UpdatedDisplay}" Foreground="{StaticResource Muted}" />
                                             </WrapPanel>
-                                            <ProgressBar Value="{Binding FillPercent}" Maximum="100" Margin="0,12,0,0" />
+                                            <ProgressBar Value="{Binding FillPercent, Mode=OneWay}" Maximum="100" Margin="0,12,0,0" />
                                             <WrapPanel Margin="0,8,0,0" Visibility="{Binding DataContext.ShowRouteDetails, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVisibility}}">
                                                 <TextBlock Text="{Binding BuyPrice, StringFormat=Покупка: {0:N0} / SCU}" Style="{StaticResource Hint}" Margin="0,0,18,0" />
                                                 <TextBlock Text="{Binding SellPrice, StringFormat=Продажа: {0:N0} / SCU}" Style="{StaticResource Hint}" />

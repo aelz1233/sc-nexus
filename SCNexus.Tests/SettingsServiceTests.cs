@@ -7,6 +7,37 @@ namespace SCNexus.Tests;
 public class SettingsServiceTests
 {
     [Fact]
+    public async Task InvalidStoredTypesProduceRecoveryMessageBeforeLoadingRecords()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, "invalid.db");
+        try
+        {
+            await using (var connection = new SqliteConnection($"Data Source={path}"))
+            {
+                await connection.OpenAsync();
+                await using var command = connection.CreateCommand();
+                command.CommandText = "CREATE TABLE PersonalSettings (Id INTEGER PRIMARY KEY, CargoScu INTEGER NOT NULL CHECK(typeof(CargoScu) = 'integer')); PRAGMA ignore_check_constraints=ON; INSERT INTO PersonalSettings VALUES (1, 'broken'); PRAGMA ignore_check_constraints=OFF;";
+                await command.ExecuteNonQueryAsync();
+            }
+            var error = await Assert.ThrowsAsync<InvalidDataException>(() => new SettingsService(path).LoadAsync());
+            Assert.Contains("Повреждена локальная база", error.Message);
+            Assert.Contains(path, error.Message);
+            await using var check = new SqliteConnection($"Data Source={path}");
+            await check.OpenAsync();
+            await using var query = check.CreateCommand();
+            query.CommandText = "SELECT CargoScu FROM PersonalSettings WHERE Id = 1";
+            Assert.Equal("broken", await query.ExecuteScalarAsync());
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
     public async Task ExistingStageOneDatabaseGetsNewSettingsColumns()
     {
         var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));

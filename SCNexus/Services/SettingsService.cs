@@ -25,12 +25,28 @@ public sealed class SettingsService
     {
         await using var db = new NexusDbContext(_options);
         await db.Database.EnsureCreatedAsync();
+        await VerifyDatabaseAsync(db);
         await AddMissingColumnsAsync(db);
         await EnsureFlightTablesAsync(db);
         return await db.PersonalSettings.AsNoTracking().SingleOrDefaultAsync(x => x.Id == 1) ?? new();
     }
 
     public NexusDbContext CreateDbContext() => new(_options);
+
+    private async Task VerifyDatabaseAsync(NexusDbContext db)
+    {
+        var connection = db.Database.GetDbConnection();
+        await connection.OpenAsync();
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA quick_check";
+            var result = await command.ExecuteScalarAsync();
+            if (!string.Equals(result as string, "ok", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"Повреждена локальная база данных. Сохранённые данные не изменены.\nФайл: {DatabasePath}\nПотребуется восстановление базы из резервной копии.");
+        }
+        finally { await connection.CloseAsync(); }
+    }
 
     private static async Task EnsureFlightTablesAsync(NexusDbContext db)
     {
