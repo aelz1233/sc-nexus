@@ -63,6 +63,15 @@ public class WindowRegressionTests
                     voyageCard.UpdateLayout();
                     Assert.Contains(VisualDescendants(voyageCard).OfType<TextBlock>(), x => x.Text.Contains("ОПАСНО: Pyro"));
 
+                    LocalizationService.SetLanguage("en");
+                    UiLocalization.Apply(window);
+                    Assert.Contains(LogicalDescendants(window).OfType<TextBlock>(), x => x.Text == "Dashboard");
+                    var pageTitle = LogicalDescendants(window).OfType<TextBlock>().Single(x =>
+                        BindingOperations.GetBinding(x, TextBlock.TextProperty)?.Path.Path == "PageTitle");
+                    Assert.NotNull(BindingOperations.GetBinding(pageTitle, TextBlock.TextProperty));
+                    LocalizationService.SetLanguage("ru");
+                    UiLocalization.Apply(window);
+
                     var closed = new TaskCompletionSource();
                     window.Closed += (_, _) => closed.TrySetResult();
                     // Uninitialized VM's save finishes synchronously: this previously re-entered Closing.
@@ -73,6 +82,7 @@ public class WindowRegressionTests
                 catch (Exception ex) { completion.TrySetException(ex); }
                 finally
                 {
+                    LocalizationService.SetLanguage("ru");
                     if (Directory.Exists(dir)) Directory.Delete(dir, true);
                     app.Shutdown();
                     dispatcher.BeginInvokeShutdown(DispatcherPriority.Background);

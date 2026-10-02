@@ -10,7 +10,7 @@ namespace SCNexus.ViewModels;
 
 public partial class MainViewModel(SettingsService settingsService, TradingService tradingService,
     FlightLogService flightLogService, GameDataService gameDataService, GameLogService gameLogService,
-    HaulingService haulingService, UpdateService updateService) : ObservableObject
+    HaulingService haulingService, UpdateService updateService, DataCollectionService? dataCollectionService = null) : ObservableObject
 {
     private bool _loaded;
     private bool _selectingLocation;
@@ -137,6 +137,9 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         MonitorEnabled = settings.MonitorEnabled;
         MonitorIntervalSeconds = MonitorIntervals.Contains(settings.MonitorIntervalSeconds) ? settings.MonitorIntervalSeconds : 15;
         ShowRouteDetails = settings.ShowRouteDetails;
+        OcrEnabled = settings.OcrEnabled;
+        Language = settings.Language is "en" ? "en" : "ru";
+        LocalizationService.SetLanguage(Language);
         gameLogService.GameDirectoryOverride = GameDirectoryPath;
         await ReloadFlightLogAsync();
         if (CurrentShip != "Не выбран" && Ships.All(x => !x.Name.Equals(CurrentShip, StringComparison.OrdinalIgnoreCase)))
@@ -179,6 +182,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             _allVehicles = await gameDataService.GetVehiclesAsync();
             VehicleStatus = $"Каталог UEX: {_allVehicles.Count(x => x.IsSpaceship == 1)} кораблей. Выбери модель из списка.";
             RefreshCatalog();
+            if (dataCollectionService is not null) _ = SyncDetectedFleetAsync(dataCollectionService.Current.Ships);
         }
         catch (Exception ex)
         {
@@ -188,6 +192,13 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
 
     public async Task WatchGameLogAsync(CancellationToken token)
     {
+        if (dataCollectionService is not null)
+        {
+            dataCollectionService.SnapshotUpdated += OnDataSnapshotUpdated;
+            try { await dataCollectionService.WatchAsync(() => OcrEnabled, token); }
+            finally { dataCollectionService.SnapshotUpdated -= OnDataSnapshotUpdated; }
+            return;
+        }
         while (!token.IsCancellationRequested)
         {
             try
@@ -397,7 +408,9 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             GameDirectoryPath = GameDirectoryPath.Trim(),
             MonitorEnabled = MonitorEnabled,
             MonitorIntervalSeconds = Math.Clamp(MonitorIntervalSeconds, 15, 60),
-            ShowRouteDetails = ShowRouteDetails
+            ShowRouteDetails = ShowRouteDetails,
+            OcrEnabled = OcrEnabled,
+            Language = Language
         };
 
     [RelayCommand] private void OpenDashboard() => Navigate("Обзор");

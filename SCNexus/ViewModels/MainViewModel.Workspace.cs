@@ -30,7 +30,8 @@ public partial class MainViewModel
     public bool HasNoHaulingRoutes => HaulingRoutes.Count == 0 && !IsMarketLoading;
     public string FleetSummary => $"Кораблей во флоте: {Ships.Count} · {Ships.Sum(x => x.Ship.CargoScu):N0} SCU всего";
     public string TradeBudgetHint => Reserve > Balance ? "Резерв больше баланса — денег на закупку нет." : $"На закупку: {Math.Max(0, Balance - Reserve):N0} aUEC";
-    public string PageDescription => ActivePage switch
+    public string PageTitle => LocalizationService.T(ActivePage);
+    public string PageDescription => LocalizationService.T(ActivePage switch
     {
         "Маршруты" => "Корабль, бюджет и подходящие торговые рейсы",
         "Флот" => "Твои корабли и каталог моделей",
@@ -39,9 +40,9 @@ public partial class MainViewModel
         "Инструменты" => "Состояние игры, проверка файлов и журнал сессий",
         "Настройки" => "Подключение к игре, отображение и сохранение данных",
         _ => "Всё для следующего вылета"
-    };
+    });
 
-    partial void OnActivePageChanged(string value) => OnPropertyChanged(nameof(PageDescription));
+    partial void OnActivePageChanged(string value) { OnPropertyChanged(nameof(PageTitle)); OnPropertyChanged(nameof(PageDescription)); }
     partial void OnMonitorEnabledChanged(bool value) => QueueSave();
     partial void OnMonitorIntervalSecondsChanged(int value) => QueueSave();
     partial void OnShowRouteDetailsChanged(bool value) => QueueSave();

@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.2.15"
+  #define AppVersion "0.3.0"
 #endif
 #ifndef PublishDir
   #define PublishDir "..\publish"
@@ -31,11 +31,22 @@ RestartApplications=no
 VersionInfoVersion={#AppVersion}
 
 [Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 
+[CustomMessages]
+english.DesktopIcon=Create a desktop shortcut
+russian.DesktopIcon=Создать ярлык на рабочем столе
+english.Shortcuts=Shortcuts:
+russian.Shortcuts=Ярлыки:
+english.RestartAfterUpdate=Start SC NEXUS after the update
+russian.RestartAfterUpdate=Запустить SC NEXUS после обновления
+english.LaunchApp=Start SC NEXUS
+russian.LaunchApp=Запустить SC NEXUS
+
 [Tasks]
-Name: "desktopicon"; Description: "Создать ярлык на рабочем столе"; GroupDescription: "Ярлыки:"; Flags: unchecked
-Name: "restartafterupdate"; Description: "Запустить SC NEXUS после обновления"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:DesktopIcon}"; GroupDescription: "{cm:Shortcuts}"; Flags: unchecked
+Name: "restartafterupdate"; Description: "{cm:RestartAfterUpdate}"; Flags: unchecked
 
 [Files]
 Source: "{#PublishDir}\SCNexus.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -45,7 +56,7 @@ Name: "{group}\SC NEXUS"; Filename: "{app}\SCNexus.exe"
 Name: "{autodesktop}\SC NEXUS"; Filename: "{app}\SCNexus.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\SCNexus.exe"; Description: "Запустить SC NEXUS"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\SCNexus.exe"; Description: "{cm:LaunchApp}"; Flags: nowait postinstall skipifsilent
 Filename: "{app}\SCNexus.exe"; Flags: nowait skipifdoesntexist; Tasks: restartafterupdate
 
 ; User data lives in %LOCALAPPDATA%\SCNexus, outside {app}.

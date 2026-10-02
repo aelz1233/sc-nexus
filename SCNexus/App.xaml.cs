@@ -19,8 +19,6 @@ public partial class App : Application
         base.OnStartup(e);
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("ru-RU");
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("ru-RU");
-        FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement),
-            new FrameworkPropertyMetadata(XmlLanguage.GetLanguage("ru-RU")));
         try
         {
             var collection = new ServiceCollection();
@@ -39,11 +37,23 @@ public partial class App : Application
             collection.AddSingleton<TradingService>();
             collection.AddSingleton<FlightLogService>();
             collection.AddSingleton<GameLogService>();
+            collection.AddSingleton<DataHistoryService>();
+            collection.AddSingleton<ShipComponentCatalogService>();
+            collection.AddSingleton<IDataProvider, GameLogProvider>();
+            collection.AddSingleton<IDataProvider, LocalGameDataProvider>();
+            collection.AddSingleton<IDataProvider, UexProvider>();
+            collection.AddSingleton<IDataProvider, SCWikiProvider>();
+            collection.AddSingleton<IDataProvider, OcrProvider>();
+            collection.AddSingleton<IDataProvider, NexusHistoryProvider>();
+            collection.AddSingleton<IDataProvider, ManualDataProvider>();
+            collection.AddSingleton<DataCollectionService>();
             collection.AddSingleton<UpdateService>();
             collection.AddSingleton<MainViewModel>();
             _services = collection.BuildServiceProvider();
             var vm = _services.GetRequiredService<MainViewModel>();
             await vm.InitializeAsync();
+            FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement),
+                new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(vm.IsEnglish ? "en-US" : "ru-RU")));
             new MainWindow { DataContext = vm }.Show();
             _ = vm.LoadLocationsAsync();
             _ = vm.LoadVehiclesAsync();

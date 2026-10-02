@@ -2,13 +2,13 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Version>0.2.15</Version>
+    <Version>0.3.0</Version>
     <Product>SC NEXUS</Product>
-    <Description>Личный компаньон Star Citizen</Description>
+    <Description>Star Citizen personal companion / Личный компаньон Star Citizen</Description>
     <ApplicationIcon>Assets\sc-nexus.ico</ApplicationIcon>
   </PropertyGroup>
 

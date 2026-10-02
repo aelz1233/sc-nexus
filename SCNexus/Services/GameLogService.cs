@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Diagnostics;
 using System.IO;
+using System.Text.Json;
 using SCNexus.Models;
 
 namespace SCNexus.Services;
@@ -103,23 +104,60 @@ public sealed class GameLogService(string? gameDirectory = null)
             catch (System.ComponentModel.Win32Exception) { }
             catch (InvalidOperationException) { }
         }
+        var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var drive in DriveInfo.GetDrives().Where(x => x.IsReady && x.DriveType == DriveType.Fixed))
         {
             var root = drive.RootDirectory.FullName;
             foreach (var relative in new[]
             {
-                @"RSI\StarCitizen\LIVE", @"StarCitizen\LIVE",
-                @"Roberts Space Industries\StarCitizen\LIVE",
-                @"Games\StarCitizen\LIVE", @"Program Files\Roberts Space Industries\StarCitizen\LIVE",
-                @"RSI\StarCitizen\PTU", @"RSI\StarCitizen\EPTU",
-                @"RSI\Roberts Space Industries\StarCitizen\LIVE"
+                @"RSI\StarCitizen", @"StarCitizen", @"Roberts Space Industries\StarCitizen",
+                @"Games\StarCitizen", @"Program Files\Roberts Space Industries\StarCitizen",
+                @"RSI\Roberts Space Industries\StarCitizen"
             })
+            foreach (var channel in new[] { "LIVE", "PTU", "EPTU" }) candidates.Add(Path.Combine(root, relative, channel));
+        }
+        AddLauncherLibraries(candidates);
+        return candidates.Where(IsGameDirectory)
+            .OrderByDescending(x => File.Exists(Path.Combine(x, "Game.log")) ? File.GetLastWriteTimeUtc(Path.Combine(x, "Game.log")) : DateTime.MinValue)
+            .ThenBy(x => ChannelPriority(new DirectoryInfo(x).Name)).FirstOrDefault();
+    }
+
+    private static bool IsGameDirectory(string path) => File.Exists(Path.Combine(path, "Game.log")) ||
+        File.Exists(Path.Combine(path, "Bin64", "StarCitizen.exe"));
+
+    private static int ChannelPriority(string channel) => channel.Equals("LIVE", StringComparison.OrdinalIgnoreCase) ? 0 :
+        channel.Equals("PTU", StringComparison.OrdinalIgnoreCase) ? 1 : 2;
+
+    private static void AddLauncherLibraries(HashSet<string> candidates)
+    {
+        var launcher = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "rsilauncher");
+        if (!Directory.Exists(launcher)) return;
+        try
+        {
+            foreach (var json in Directory.EnumerateFiles(launcher, "*.json", SearchOption.TopDirectoryOnly))
             {
-                var candidate = Path.Combine(root, relative);
-                if (File.Exists(Path.Combine(candidate, "Game.log")) ||
-                    File.Exists(Path.Combine(candidate, "Bin64", "StarCitizen.exe"))) return candidate;
+                using var document = JsonDocument.Parse(File.ReadAllText(json));
+                foreach (var path in JsonStrings(document.RootElement).Where(Path.IsPathFullyQualified))
+                {
+                    foreach (var channel in new[] { "LIVE", "PTU", "EPTU" })
+                    {
+                        candidates.Add(Path.Combine(path, "StarCitizen", channel));
+                        candidates.Add(Path.Combine(path, channel));
+                    }
+                }
             }
         }
-        return null;
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+        catch (JsonException) { }
+    }
+
+    private static IEnumerable<string> JsonStrings(JsonElement value)
+    {
+        if (value.ValueKind == JsonValueKind.String && value.GetString() is { Length: > 2 } text) yield return text;
+        else if (value.ValueKind == JsonValueKind.Array)
+            foreach (var child in value.EnumerateArray()) foreach (var nested in JsonStrings(child)) yield return nested;
+        else if (value.ValueKind == JsonValueKind.Object)
+            foreach (var property in value.EnumerateObject()) foreach (var nested in JsonStrings(property.Value)) yield return nested;
     }
 }

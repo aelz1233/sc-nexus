@@ -6,6 +6,9 @@ using System.Windows.Input;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using System.Diagnostics;
+using System.Windows.Threading;
+using SCNexus.Services;
+using System.Windows.Markup;
 
 namespace SCNexus;
 
@@ -13,9 +16,17 @@ public partial class MainWindow : Window
 {
     private bool _readyToClose;
     private bool _closePending;
+    private readonly DispatcherTimer _translationTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     public MainWindow()
     {
         InitializeComponent();
+        Loaded += (_, _) =>
+        {
+            Language = XmlLanguage.GetLanguage(LocalizationService.IsEnglish ? "en-US" : "ru-RU");
+            UiLocalization.Apply(this);
+            _translationTimer.Tick += (_, _) => { if (LocalizationService.IsEnglish) UiLocalization.Apply(this); };
+            _translationTimer.Start();
+        };
         SourceInitialized += (_, _) => ApplyDarkTitleBar();
         DataContextChanged += (_, e) =>
         {
@@ -44,6 +55,11 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(MainViewModel.ActivePage))
             Dispatcher.BeginInvoke(() => PageScroll.ScrollToTop());
+        if (e.PropertyName == nameof(MainViewModel.Language)) Dispatcher.BeginInvoke(() =>
+        {
+            Language = XmlLanguage.GetLanguage(LocalizationService.IsEnglish ? "en-US" : "ru-RU");
+            UiLocalization.Apply(this);
+        });
     }
 
     private void SaveGithubToken_Click(object sender, RoutedEventArgs e)
@@ -54,6 +70,7 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        _translationTimer.Stop();
         if (DataContext is MainViewModel { PendingInstallerPath: { } installer })
         {
             try

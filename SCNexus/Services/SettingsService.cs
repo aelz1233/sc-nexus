@@ -28,6 +28,7 @@ public sealed class SettingsService
         await VerifyDatabaseAsync(db);
         await AddMissingColumnsAsync(db);
         await EnsureFlightTablesAsync(db);
+        await EnsureDataCollectionTablesAsync(db);
         return await db.PersonalSettings.AsNoTracking().SingleOrDefaultAsync(x => x.Id == 1) ?? new();
     }
 
@@ -67,6 +68,20 @@ public sealed class SettingsService
             """);
     }
 
+    private static async Task EnsureDataCollectionTablesAsync(NexusDbContext db)
+    {
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS DataObservations (
+                Id INTEGER NOT NULL CONSTRAINT PK_DataObservations PRIMARY KEY AUTOINCREMENT,
+                Kind TEXT NOT NULL, RecordKey TEXT NOT NULL, PayloadJson TEXT NOT NULL,
+                Source INTEGER NOT NULL, TimestampUtc TEXT NOT NULL, Confidence REAL NOT NULL,
+                Fingerprint TEXT NOT NULL
+            )
+            """);
+        await db.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_DataObservations_Fingerprint ON DataObservations (Fingerprint)");
+        await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_DataObservations_Kind_RecordKey_TimestampUtc ON DataObservations (Kind, RecordKey, TimestampUtc)");
+    }
+
     public async Task SaveAsync(PersonalSettings snapshot)
     {
         await _gate.WaitAsync();
@@ -91,6 +106,8 @@ public sealed class SettingsService
                 current.MonitorEnabled = snapshot.MonitorEnabled;
                 current.MonitorIntervalSeconds = snapshot.MonitorIntervalSeconds;
                 current.ShowRouteDetails = snapshot.ShowRouteDetails;
+                current.OcrEnabled = snapshot.OcrEnabled;
+                current.Language = snapshot.Language;
             }
             await db.SaveChangesAsync();
         }
@@ -119,6 +136,8 @@ public sealed class SettingsService
             if (!names.Contains("MonitorEnabled")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN MonitorEnabled INTEGER NOT NULL DEFAULT 1");
             if (!names.Contains("MonitorIntervalSeconds")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN MonitorIntervalSeconds INTEGER NOT NULL DEFAULT 15");
             if (!names.Contains("ShowRouteDetails")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN ShowRouteDetails INTEGER NOT NULL DEFAULT 1");
+            if (!names.Contains("OcrEnabled")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OcrEnabled INTEGER NOT NULL DEFAULT 0");
+            if (!names.Contains("Language")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN Language TEXT NOT NULL DEFAULT 'ru'");
         }
         finally { await connection.CloseAsync(); }
     }

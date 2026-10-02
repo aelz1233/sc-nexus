@@ -62,6 +62,8 @@ public class SettingsServiceTests
             settings.MinimumFillPercent = 50;
             settings.MinimumProfit = 100_000;
             settings.GameDirectoryPath = @"D:\RSI\StarCitizen\LIVE";
+            settings.OcrEnabled = true;
+            settings.Language = "en";
             await service.SaveAsync(settings);
             Assert.Equal(696, (await service.LoadAsync()).CargoScu);
             Assert.Equal("Stanton", (await service.LoadAsync()).CurrentSystem);
@@ -70,6 +72,8 @@ public class SettingsServiceTests
             Assert.Equal(50, saved.MinimumFillPercent);
             Assert.Equal(100_000, saved.MinimumProfit);
             Assert.Equal(@"D:\RSI\StarCitizen\LIVE", saved.GameDirectoryPath);
+            Assert.True(saved.OcrEnabled);
+            Assert.Equal("en", saved.Language);
         }
         finally
         {

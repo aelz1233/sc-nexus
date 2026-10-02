@@ -26,8 +26,8 @@ public partial class ShipConfiguratorView : UserControl
         ShipPicker.ItemsSource = main.Ships;
         ShipPicker.SelectedItem = main.SelectedShip ?? main.Ships.FirstOrDefault();
         StatusText.Text = ShipPicker.SelectedItem is ShipSummary
-            ? "Укажи бюджет и нажми «Подобрать конфигурации»."
-            : "Добавь корабль во флот, чтобы подобрать оснащение.";
+            ? LocalizationService.T("Укажи бюджет и нажми «Подобрать конфигурации».")
+            : LocalizationService.T("Добавь корабль во флот, чтобы подобрать оснащение.");
         OnUseBalanceClick(sender, e);
     }
 
@@ -48,12 +48,12 @@ public partial class ShipConfiguratorView : UserControl
     {
         if (ShipPicker.SelectedItem is not ShipSummary ship)
         {
-            StatusText.Text = "Добавь корабль во флот и выбери его здесь.";
+            StatusText.Text = LocalizationService.T("Добавь корабль во флот и выбери его здесь.");
             return;
         }
         if (!TryReadBudget(BudgetBox.Text, out var budget))
         {
-            StatusText.Text = "Укажи бюджет в aUEC: целое число не меньше нуля.";
+            StatusText.Text = LocalizationService.T("Укажи бюджет в aUEC: целое число не меньше нуля.");
             BudgetBox.Focus();
             return;
         }
@@ -66,7 +66,7 @@ public partial class ShipConfiguratorView : UserControl
         SummaryCard.Visibility = Visibility.Collapsed;
         BudgetCard.Visibility = Visibility.Collapsed;
         BestCard.Visibility = Visibility.Collapsed;
-        StatusText.Text = "Загружаю порты корабля, детали и цены…";
+        StatusText.Text = LocalizationService.T("Загружаю порты корабля, детали и цены…");
         try
         {
             var catalog = await _catalogService.LoadAsync(ship.Name);
@@ -83,7 +83,7 @@ public partial class ShipConfiguratorView : UserControl
             MethodText.Text = profile == ShipBuildProfile.Combat
                 ? "Приоритет «Бой»: урон орудий и щиты, затем энергия, охлаждение и квантовый привод. Внутри типа сравниваются измеримые показатели."
                 : "Приоритет «Путешествие и торговля»: скорость и расход квантового привода, затем щиты, энергия, охлаждение и орудия. Внутри типа сравниваются измеримые показатели.";
-            StatusText.Text = "Подбор завершён.";
+            StatusText.Text = LocalizationService.T("Подбор завершён.");
         }
         catch (Exception ex)
         {
@@ -123,7 +123,7 @@ public partial class ShipConfiguratorView : UserControl
             {
                 $"{shipName} — {result.Title}", result.CostDisplay
             }.Concat(rows)));
-            StatusText.Text = "Список деталей скопирован.";
+            StatusText.Text = LocalizationService.T("Список деталей скопирован.");
         }
         catch (Exception ex)
         {

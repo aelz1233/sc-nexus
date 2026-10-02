@@ -77,7 +77,7 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel>
-                        <TextBlock Text="{Binding ActivePage}" FontSize="28" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding PageTitle}" FontSize="28" FontWeight="SemiBold" />
                         <TextBlock Text="{Binding PageDescription}" Style="{StaticResource Hint}" Margin="0,5,0,0" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="20,0,0,0">
@@ -697,6 +697,68 @@
                                 </StackPanel>
                             </Grid>
                         </Border>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,18">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,14">
+                                    <Button DockPanel.Dock="Right" Content="Обновить все источники" Command="{Binding RefreshAutomaticDataCommand}" Padding="10,6" />
+                                    <StackPanel>
+                                        <TextBlock Text="АВТОМАТИЧЕСКИЕ ДАННЫЕ" Foreground="{StaticResource Accent}" FontSize="11" FontWeight="Bold" />
+                                        <TextBlock Text="{Binding DataCollectionStatus}" Style="{StaticResource Hint}" Margin="0,6,12,0" />
+                                    </StackPanel>
+                                </DockPanel>
+                                <ItemsControl ItemsSource="{Binding AutomaticDataFields}">
+                                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate><DataTemplate>
+                                        <Border Background="#0D1622" BorderBrush="#26384A" BorderThickness="1" CornerRadius="7" Padding="14" Margin="0,0,10,10" MinWidth="230">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Label}" Foreground="{StaticResource Muted}" FontSize="11" />
+                                                <TextBlock Text="{Binding ValueAndSource}" FontSize="15" FontWeight="SemiBold" Margin="0,5,0,3" TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding Freshness}" Foreground="{StaticResource Muted}" FontSize="11" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate></ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="12" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                                    <Border Background="#0D1622" CornerRadius="7" Padding="14">
+                                        <StackPanel>
+                                            <TextBlock Text="Обнаружено в игре" FontWeight="SemiBold" />
+                                            <WrapPanel Margin="0,8,0,0">
+                                                <TextBlock Text="Миссии" Foreground="{StaticResource Muted}" /><TextBlock Text="{Binding DetectedMissions.Count, StringFormat=: {0}}" Margin="0,0,16,0" />
+                                                <TextBlock Text="Смерти" Foreground="{StaticResource Muted}" /><TextBlock Text="{Binding DetectedDeaths, StringFormat=: {0}}" Margin="0,0,16,0" />
+                                                <TextBlock Text="Перемещения" Foreground="{StaticResource Muted}" /><TextBlock Text="{Binding DetectedMovements, StringFormat=: {0}}" />
+                                            </WrapPanel>
+                                            <ItemsControl ItemsSource="{Binding DetectedMissions}" Margin="0,8,0,0">
+                                                <ItemsControl.ItemTemplate><DataTemplate><StackPanel Margin="0,0,0,6">
+                                                    <TextBlock Text="{Binding Name.Value, StringFormat=• {0}}" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding StatusDisplay}" Foreground="{StaticResource Muted}" FontSize="11" Margin="10,2,0,0" />
+                                                </StackPanel></DataTemplate></ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="2" Background="#0D1622" CornerRadius="7" Padding="14">
+                                        <StackPanel>
+                                            <TextBlock Text="Найденные корабли" FontWeight="SemiBold" />
+                                            <ItemsControl ItemsSource="{Binding DetectedShips}" Margin="0,8,0,0">
+                                                <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name.Value, StringFormat=• {0}}" TextTrimming="CharacterEllipsis" /></DataTemplate></ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                                <Expander Header="Источники данных" Margin="0,12,0,0">
+                                    <ItemsControl ItemsSource="{Binding DataSources}" Margin="0,10,0,0">
+                                        <ItemsControl.ItemTemplate><DataTemplate>
+                                            <Grid Margin="0,0,0,7">
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="210" /><ColumnDefinition Width="90" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding NameDisplay}" FontWeight="SemiBold" />
+                                                <TextBlock Grid.Column="1" Text="{Binding SourceDisplay}" Foreground="{StaticResource Accent}" />
+                                                <TextBlock Grid.Column="2" Text="{Binding StatusDisplay}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" />
+                                            </Grid>
+                                        </DataTemplate></ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Expander>
+                            </StackPanel>
+                        </Border>
                         <DockPanel Margin="0,0,0,14">
                             <Button DockPanel.Dock="Right" Content="Сохранить отчёт" Command="{Binding ExportDiagnosticsCommand}" />
                             <TextBlock Text="Проверка компьютера и установки" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
@@ -757,11 +819,11 @@
                                         <TextBlock Text="Подключение к Star Citizen" Style="{StaticResource SectionTitle}" />
                                         <TextBlock Text="Установка игры" Style="{StaticResource FieldLabel}" />
                                         <TextBlock Text="{Binding ResolvedGameDirectory}" TextWrapping="Wrap" Margin="0,0,0,16" />
-                                        <WrapPanel>
+                                        <WrapPanel Visibility="{Binding NeedsManualGamePath, Converter={StaticResource BoolVisibility}}">
                                             <Button Content="Выбрать папку игры" Command="{Binding ChooseGameFolderCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,10,8" />
                                             <Button Content="Найти автоматически" Command="{Binding AutoDetectGameCommand}" Margin="0,0,0,8" />
                                         </WrapPanel>
-                                        <TextBlock Text="Укажи папку LIVE, PTU или EPTU. Обычно программа находит её сама." Style="{StaticResource Hint}" Margin="0,7,0,0" />
+                                        <TextBlock Text="Ручной выбор нужен только если установка не найдена автоматически." Style="{StaticResource Hint}" Margin="0,7,0,0" />
                                     </StackPanel>
                                 </Border>
                                 <Border Style="{StaticResource Card}">
@@ -777,6 +839,17 @@
                                 </Border>
                             </StackPanel>
                             <StackPanel Grid.Column="2">
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Text="Данные и автоматизация" Style="{StaticResource SectionTitle}" />
+                                        <TextBlock Text="Язык" Style="{StaticResource FieldLabel}" />
+                                        <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}" Width="180" HorizontalAlignment="Left" Margin="0,5,0,14" />
+                                        <CheckBox IsChecked="{Binding OcrEnabled}">
+                                            <TextBlock Text="Использовать OCR, когда данных нет в журнале и API" TextWrapping="Wrap" />
+                                        </CheckBox>
+                                        <TextBlock Text="OCR экрана работает только когда окно Star Citizen находится на переднем плане. Снимок удаляется сразу после распознавания." Style="{StaticResource Hint}" Margin="0,7,0,0" />
+                                    </StackPanel>
+                                </Border>
                                 <Border Style="{StaticResource Card}">
                                     <StackPanel>
                                         <TextBlock Text="Отображение" Style="{StaticResource SectionTitle}" />

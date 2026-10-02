@@ -1,0 +1,170 @@
+using System.Globalization;
+using System.IO;
+using System.Net.Http;
+using SCNexus.Models;
+
+namespace SCNexus.Services;
+
+public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, DataHistoryService history,
+    GameLogService gameLogService)
+{
+    private readonly IDataProvider[] _providers = providers.OrderBy(x => x.Priority).ToArray();
+    private readonly Dictionary<string, ValueObservation> _values = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<(string Kind, string Key), TypedObservation> _records = new();
+    private readonly Dictionary<string, ProviderState> _providerStates = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, SemaphoreSlim> _providerGates = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _stateGate = new();
+
+    public DataCollectionSnapshot Current { get; private set; } = new();
+    public event EventHandler<DataCollectionSnapshot>? SnapshotUpdated;
+
+    public async Task WatchAsync(Func<bool> ocrEnabled, CancellationToken token)
+    {
+        var tasks = _providers.Select(provider => WatchProviderAsync(provider, ocrEnabled, token)).ToArray();
+        try { await Task.WhenAll(tasks); }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+    }
+
+    public async Task RefreshAsync(bool ocrEnabled, CancellationToken token = default) =>
+        await Task.WhenAll(_providers.Select(x => CollectProviderAsync(x, ocrEnabled, token)));
+
+    private async Task WatchProviderAsync(IDataProvider provider, Func<bool> ocrEnabled, CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            await CollectProviderAsync(provider, ocrEnabled(), token);
+            try { await Task.Delay(provider.RefreshInterval, token); }
+            catch (OperationCanceledException) { break; }
+        }
+    }
+
+    private async Task CollectProviderAsync(IDataProvider provider, bool ocrEnabled, CancellationToken token)
+    {
+        SemaphoreSlim gate;
+        lock (_stateGate)
+        {
+            if (!_providerGates.TryGetValue(provider.Name, out gate!))
+                _providerGates[provider.Name] = gate = new SemaphoreSlim(1, 1);
+        }
+        if (!await gate.WaitAsync(0, token)) return;
+        try
+        {
+            var now = DateTimeOffset.UtcNow;
+            ProviderState? known;
+            DataProviderContext context;
+            lock (_stateGate)
+            {
+                _providerStates.TryGetValue(provider.Name, out known);
+                _providerStates[provider.Name] = new ProviderState(now, known?.LastSuccess, false, "Updating");
+                context = new DataProviderContext(gameLogService.ResolveGameDirectory(), BuildPlayerState(), now, ocrEnabled);
+            }
+            try
+            {
+                var result = await provider.CollectAsync(context, token);
+                await history.SaveAsync(result.Values.Where(x => x.Source != DataSourceKind.NexusHistory),
+                    result.Records.Where(x => x.Source != DataSourceKind.NexusHistory), token);
+                Publish(provider, now, true, result.Status, result.Values, result.Records, known?.LastSuccess, known);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+            catch (Exception ex) { Publish(provider, now, false, FriendlyError(ex), [], [], known?.LastSuccess); }
+        }
+        finally { gate.Release(); }
+    }
+
+    private void Publish(IDataProvider provider, DateTimeOffset attempt, bool available, string status,
+        IReadOnlyList<ValueObservation> values, IReadOnlyList<TypedObservation> records,
+        DateTimeOffset? previousSuccess = null, ProviderState? previousState = null)
+    {
+        DataCollectionSnapshot snapshot;
+        lock (_stateGate)
+        {
+            var changed = false;
+            foreach (var value in values) changed |= MergeValue(value);
+            foreach (var record in records) changed |= MergeRecord(record);
+            _providerStates[provider.Name] = new ProviderState(attempt,
+                available ? DateTimeOffset.UtcNow : previousSuccess, available, status);
+            Current = snapshot = BuildSnapshot();
+            if (!changed && previousState is not null && previousState.Available == available && previousState.Status == status)
+                return;
+        }
+        SnapshotUpdated?.Invoke(this, snapshot);
+    }
+
+    private bool MergeValue(ValueObservation incoming)
+    {
+        if (_values.TryGetValue(incoming.Key, out var existing) && !Prefer(incoming.Source, incoming.Timestamp, incoming.Confidence,
+                existing.Source, existing.Timestamp, existing.Confidence)) return false;
+        _values[incoming.Key] = incoming;
+        return true;
+    }
+
+    private bool MergeRecord(TypedObservation incoming)
+    {
+        var key = (incoming.Kind, incoming.Key);
+        if (_records.TryGetValue(key, out var existing) && !Prefer(incoming.Source, incoming.Timestamp, incoming.Confidence,
+                existing.Source, existing.Timestamp, existing.Confidence)) return false;
+        _records[key] = incoming;
+        return true;
+    }
+
+    private static bool Prefer(DataSourceKind incomingSource, DateTimeOffset incomingTime, double incomingConfidence,
+        DataSourceKind existingSource, DateTimeOffset existingTime, double existingConfidence)
+    {
+        if (incomingSource == existingSource) return incomingTime >= existingTime && incomingConfidence >= existingConfidence * .75;
+        var existingStale = DateTimeOffset.UtcNow - existingTime > TimeSpan.FromHours(6);
+        if (existingStale && incomingTime > existingTime && incomingConfidence >= existingConfidence) return true;
+        return (int)incomingSource < (int)existingSource && incomingConfidence >= .6;
+    }
+
+    private DataCollectionSnapshot BuildSnapshot() => new()
+    {
+        Player = BuildPlayerState(), Sessions = Records<GameSession>("session", 100),
+        Ships = Records<DetectedShip>("ship", 100), Missions = Records<MissionState>("mission", 200),
+        Trades = Records<TradeEvent>("trade", 500), Movements = Records<MovementEvent>("movement", 500),
+        Deaths = Records<DeathEvent>("death", 200),
+        Values = new Dictionary<string, ValueObservation>(_values, StringComparer.OrdinalIgnoreCase),
+        Sources = _providers.Select(provider =>
+        {
+            _providerStates.TryGetValue(provider.Name, out var state);
+            return new DataSourceInfo
+            {
+                Name = provider.Name, Source = provider.Source, Priority = provider.Priority,
+                LastSuccess = state?.LastSuccess, Status = state?.Status ?? "Waiting",
+                IsAvailable = state?.Available == true
+            };
+        }).ToArray(),
+        UpdatedAt = DateTimeOffset.UtcNow
+    };
+
+    private PlayerState BuildPlayerState() => new()
+    {
+        GameBuild = Text("game.build"), Environment = Text("game.environment"),
+        CurrentSystem = Text("player.system"), CurrentLocation = Text("player.location"),
+        CurrentShip = Text("player.ship"), Balance = Decimal("player.balance"),
+        CurrentLoadout = Text("player.loadout")
+    };
+
+    private ObservedValue<string>? Text(string key) => _values.TryGetValue(key, out var item)
+        ? new ObservedValue<string>(item.Value, item.Source, item.Timestamp, item.Confidence) : null;
+
+    private ObservedValue<decimal>? Decimal(string key)
+    {
+        if (!_values.TryGetValue(key, out var item)) return null;
+        var cleaned = new string(item.Value.Where(x => char.IsDigit(x) || x is '.' or ',' or '-').ToArray()).Replace(',', '.');
+        return decimal.TryParse(cleaned, NumberStyles.Number, CultureInfo.InvariantCulture, out var value)
+            ? new ObservedValue<decimal>(value, item.Source, item.Timestamp, item.Confidence) : null;
+    }
+
+    private IReadOnlyList<T> Records<T>(string kind, int limit) => _records.Values
+        .Where(x => x.Kind == kind && x.Value is T).OrderByDescending(x => x.Timestamp)
+        .Take(limit).Select(x => (T)x.Value).ToArray();
+
+    private static string FriendlyError(Exception ex) => ex switch
+    {
+        HttpRequestException => "Network data unavailable", IOException => "File is temporarily unavailable",
+        UnauthorizedAccessException => "Read access denied", _ => ex.Message
+    };
+
+    private sealed record ProviderState(DateTimeOffset LastAttempt, DateTimeOffset? LastSuccess,
+        bool Available, string Status);
+}
