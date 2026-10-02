@@ -10,7 +10,7 @@ using SCNexus.ViewModels;
 
 namespace SCNexus.Controls;
 
-public partial class ShipConfiguratorView : UserControl
+public partial class ShipConfiguratorView : System.Windows.Controls.UserControl
 {
     private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(90) };
     private readonly ShipComponentCatalogService _catalogService = new(Client);

@@ -898,6 +898,7 @@
                                             <TextBlock Text="Подробности торговых маршрутов" TextWrapping="Wrap" />
                                         </CheckBox>
                                         <TextBlock Text="Показывать цены за SCU, запас и спрос в каждой карточке." Style="{StaticResource Hint}" Margin="0,6,0,0" />
+                                        <TextBlock Text="Крестик сворачивает SC NEXUS в трей. Для полного выхода используй меню значка в области уведомлений." Style="{StaticResource Hint}" Margin="0,9,0,0" />
                                     </StackPanel>
                                 </Border>
                                 <Border Style="{StaticResource Card}">
@@ -910,17 +911,26 @@
                                             <TextBlock Text="Расширенный вид: миссия, следующая остановка и свежесть данных" TextWrapping="Wrap" />
                                         </CheckBox>
                                         <TextBlock Text="Бинд показать / скрыть" Style="{StaticResource FieldLabel}" Margin="0,10,0,2" />
-                                        <ComboBox ItemsSource="{Binding OverlayHotkeyOptions}"
-                                                  DisplayMemberPath="Display" SelectedValuePath="Value"
-                                                  SelectedValue="{Binding OverlayHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                            <Button x:Name="OverlayHotkeyCaptureButton" Content="{Binding OverlayHotkeyCaptureText}"
+                                                    Style="{StaticResource HotkeyCaptureButton}" Click="BeginOverlayHotkeyCapture_Click"
+                                                    PreviewKeyDown="OverlayHotkeyCapture_PreviewKeyDown"
+                                                    LostKeyboardFocus="OverlayHotkeyCapture_LostKeyboardFocus" Margin="0,0,8,0" />
+                                            <Button Grid.Column="1" Content="Очистить" Click="ClearOverlayHotkey_Click" />
+                                        </Grid>
                                         <TextBlock Text="{Binding OverlayHotkeyStatus}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,6,0,0" />
-                                        <TextBlock Text="Прозрачность" Style="{StaticResource FieldLabel}" Margin="0,10,0,2" />
-                                        <Slider Minimum="0.65" Maximum="1" TickFrequency="0.05" IsSnapToTickEnabled="True" Value="{Binding OverlayOpacity, Mode=TwoWay}" />
+                                        <TextBlock Text="Можно нажать любую свободную комбинацию клавиатуры. Escape отменяет запись, Delete очищает бинд." Style="{StaticResource Hint}" Margin="0,4,0,0" />
+                                        <Grid Margin="0,10,0,2">
+                                            <TextBlock Text="Прозрачность" Style="{StaticResource FieldLabel}" Margin="0" />
+                                            <TextBlock Text="{Binding OverlayOpacityDisplay}" Style="{StaticResource FieldLabel}" Margin="0" HorizontalAlignment="Right" />
+                                        </Grid>
+                                        <Slider Minimum="0.65" Maximum="1" Value="{Binding OverlayOpacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                         <WrapPanel Margin="0,12,0,0">
                                             <Button Content="{Binding OverlayPreviewButtonText}" Command="{Binding ToggleOverlayPreviewCommand}" Margin="0,0,8,0" />
                                             <Button Content="{Binding OverlayModeDisplay}" Command="{Binding ToggleOverlayModeCommand}" />
                                         </WrapPanel>
-                                        <TextBlock Text="Оверлей — отдельное окно только для чтения. Бинд по умолчанию не назначен; выбранное сочетание работает, пока запущен Nexus. Оверлей не внедряется в Star Citizen и не перехватывает управление." Style="{StaticResource Hint}" Margin="0,9,0,0" />
+                                        <TextBlock Text="Оверлей — отдельное окно только для чтения. Можно назначить любое свободное сочетание; по умолчанию бинда нет. Nexus не внедряется в Star Citizen и не перехватывает управление." Style="{StaticResource Hint}" Margin="0,9,0,0" />
                                     </StackPanel>
                                 </Border>
                                 <Border Style="{StaticResource Card}">

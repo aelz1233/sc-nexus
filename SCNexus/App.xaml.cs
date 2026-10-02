@@ -9,7 +9,7 @@ using System.Windows.Markup;
 
 namespace SCNexus;
 
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
     private ServiceProvider? _services;
     private readonly CancellationTokenSource _gameLogCancellation = new();
@@ -65,6 +65,7 @@ public partial class App : Application
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             var mainWindow = new MainWindow { DataContext = vm };
             MainWindow = mainWindow;
+            mainWindow.EnableTrayMode();
             mainWindow.Show();
             _services.GetRequiredService<OverlayCoordinator>().Attach(vm, mainWindow);
             _ = vm.LoadLocationsAsync();
@@ -77,6 +78,12 @@ public partial class App : Application
             MessageBox.Show($"Не удалось запустить SC NEXUS:\n{ex.Message}", "SC NEXUS", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1);
         }
+    }
+
+    protected override void OnSessionEnding(SessionEndingCancelEventArgs e)
+    {
+        if (MainWindow is SCNexus.MainWindow window) window.RequestExit();
+        base.OnSessionEnding(e);
     }
 
     protected override void OnExit(ExitEventArgs e)

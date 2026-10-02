@@ -64,7 +64,7 @@ public partial class MainViewModel
             var installer = await updateService.DownloadInstallerAsync(release, progress);
             PendingInstallerPath = installer;
             UpdateStatus = "Обновление готово. Закрываю приложение: установка пройдёт в фоне, затем SC NEXUS откроется снова…";
-            Application.Current.MainWindow.Close();
+            System.Windows.Application.Current.MainWindow.Close();
         }
         catch (Exception ex) { UpdateStatus = $"Не удалось обновить программу: {ex.Message}"; }
         finally { IsUpdateBusy = false; }

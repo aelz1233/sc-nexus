@@ -14,6 +14,7 @@ public sealed class OverlayCoordinator : IDisposable
     private const uint ModAlt = 0x0001;
     private const uint ModControl = 0x0002;
     private const uint ModShift = 0x0004;
+    private const uint ModWin = 0x0008;
     private const uint ModNoRepeat = 0x4000;
     private MainViewModel? _viewModel;
     private OverlayWindow? _window;
@@ -119,19 +120,41 @@ public sealed class OverlayCoordinator : IDisposable
             if (modifier.Equals("Ctrl", StringComparison.OrdinalIgnoreCase)) modifiers |= ModControl;
             else if (modifier.Equals("Alt", StringComparison.OrdinalIgnoreCase)) modifiers |= ModAlt;
             else if (modifier.Equals("Shift", StringComparison.OrdinalIgnoreCase)) modifiers |= ModShift;
+            else if (modifier.Equals("Win", StringComparison.OrdinalIgnoreCase) ||
+                     modifier.Equals("Windows", StringComparison.OrdinalIgnoreCase)) modifiers |= ModWin;
             else return false;
         }
-        if (key is >= Key.A and <= Key.Z && modifiers == ModNoRepeat) return false;
+        if (IsModifierKey(key)) return false;
         virtualKey = (uint)KeyInterop.VirtualKeyFromKey(key);
         return virtualKey != 0;
     }
 
+    internal static bool TryFormatHotkey(Key key, ModifierKeys modifiers, out string value)
+    {
+        value = "";
+        if (key is Key.None or Key.System or Key.ImeProcessed or Key.DeadCharProcessed || IsModifierKey(key))
+            return false;
+
+        var parts = new List<string>(5);
+        if (modifiers.HasFlag(ModifierKeys.Control)) parts.Add("Ctrl");
+        if (modifiers.HasFlag(ModifierKeys.Alt)) parts.Add("Alt");
+        if (modifiers.HasFlag(ModifierKeys.Shift)) parts.Add("Shift");
+        if (modifiers.HasFlag(ModifierKeys.Windows)) parts.Add("Win");
+        parts.Add(key.ToString());
+        value = string.Join('+', parts);
+        return TryParseHotkey(value, out _, out _);
+    }
+
+    private static bool IsModifierKey(Key key) => key is
+        Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or
+        Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin;
+
     private void Reevaluate()
     {
-        if (_viewModel is null || Application.Current is null) return;
-        if (!Application.Current.Dispatcher.CheckAccess())
+        if (_viewModel is null || System.Windows.Application.Current is null) return;
+        if (!System.Windows.Application.Current.Dispatcher.CheckAccess())
         {
-            Application.Current.Dispatcher.BeginInvoke(Reevaluate);
+            System.Windows.Application.Current.Dispatcher.BeginInvoke(Reevaluate);
             return;
         }
         var visible = _viewModel.OverlayPreview || _viewModel.OverlayHotkeyVisible ||

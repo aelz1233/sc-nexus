@@ -50,7 +50,7 @@ public partial class MainViewModel
 
     private void OnDataSnapshotUpdated(object? sender, DataCollectionSnapshot snapshot)
     {
-        var dispatcher = Application.Current?.Dispatcher;
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
         if (dispatcher is not null && !dispatcher.CheckAccess())
         {
             dispatcher.BeginInvoke(() => ApplyDataSnapshot(snapshot));

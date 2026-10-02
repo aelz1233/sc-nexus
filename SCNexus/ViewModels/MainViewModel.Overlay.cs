@@ -10,19 +10,19 @@ public partial class MainViewModel
     [ObservableProperty] private bool overlayExpanded;
     [ObservableProperty] private double overlayOpacity = 0.92;
     [ObservableProperty] private string overlayHotkey = "";
+    [ObservableProperty] private bool isOverlayHotkeyCapturing;
     [ObservableProperty] private bool overlayPreview;
     [ObservableProperty] private bool isGameRunning;
     private bool _overlayHotkeyVisible;
     private bool _overlaySuppressed;
     private string _overlayHotkeyRegistrationState = "none";
 
-    public IReadOnlyList<OverlayHotkeyOption> OverlayHotkeyOptions =>
-    [
-        new("", IsEnglish ? "Not assigned" : "Не назначен"),
-        new("F8", "F8"), new("F9", "F9"), new("F10", "F10"), new("F11", "F11"), new("F12", "F12"),
-        new("Ctrl+Shift+O", "Ctrl+Shift+O"), new("Ctrl+Alt+O", "Ctrl+Alt+O"),
-        new("Alt+Shift+O", "Alt+Shift+O")
-    ];
+    public string OverlayHotkeyCaptureText => IsOverlayHotkeyCapturing
+        ? (IsEnglish ? "Press a shortcut…" : "Нажми сочетание…")
+        : string.IsNullOrWhiteSpace(OverlayHotkey)
+            ? (IsEnglish ? "Click to assign" : "Нажми, чтобы назначить")
+            : OverlayHotkey;
+    public string OverlayOpacityDisplay => $"{Math.Round(OverlayOpacity * 100):N0}%";
     public string OverlayHotkeyStatus => _overlayHotkeyRegistrationState switch
     {
         "active" => IsEnglish
@@ -145,12 +145,19 @@ public partial class MainViewModel
         QueueSave();
     }
 
-    partial void OnOverlayOpacityChanged(double value) => QueueSave();
+    partial void OnOverlayOpacityChanged(double value)
+    {
+        OnPropertyChanged(nameof(OverlayOpacityDisplay));
+        QueueSave();
+    }
     partial void OnOverlayPreviewChanged(bool value) => OnPropertyChanged(nameof(OverlayPreviewButtonText));
     partial void OnOverlayHotkeyChanged(string value)
     {
+        OnPropertyChanged(nameof(OverlayHotkeyCaptureText));
         QueueSave();
     }
+    partial void OnIsOverlayHotkeyCapturingChanged(bool value) =>
+        OnPropertyChanged(nameof(OverlayHotkeyCaptureText));
 
     partial void OnIsGameRunningChanged(bool value)
     {
@@ -176,6 +183,4 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(OverlayDanger));
         OnPropertyChanged(nameof(OverlayDangerDisplay));
     }
-
-    public sealed record OverlayHotkeyOption(string Value, string Display);
 }

@@ -145,6 +145,8 @@
                         </ToggleButton>
                         <ContentPresenter x:Name="Selection" Grid.Column="0" Content="{TemplateBinding SelectionBoxItem}"
                                           ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                          ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                          ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
                                           Margin="12,7,3,7" VerticalAlignment="Center" HorizontalAlignment="Left"
                                           IsHitTestVisible="False"/>
                         <TextBox x:Name="PART_EditableTextBox" Grid.Column="0" Visibility="Hidden" Background="Transparent" Foreground="White"
@@ -197,6 +199,69 @@
                     <Trigger Property="IsChecked" Value="True"><Setter TargetName="Box" Property="Background" Value="#69CFC0"/><Setter TargetName="Box" Property="BorderBrush" Value="#69CFC0"/><Setter TargetName="Tick" Property="Visibility" Value="Visible"/></Trigger>
                     <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Box" Property="BorderBrush" Value="#69CFC0"/></Trigger>
                     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Box" Property="BorderBrush" Value="#A6EDE3"/></Trigger>
+                    <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.5"/></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
+        <Style TargetType="PasswordBox">
+            <Setter Property="FontSize" Value="14"/><Setter Property="MinHeight" Value="38"/>
+            <Setter Property="Padding" Value="11,8"/><Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#0F1825"/><Setter Property="BorderBrush" Value="#324052"/>
+            <Setter Property="CaretBrush" Value="{StaticResource Accent}"/>
+        </Style>
+        <Style x:Key="SliderTrackButton" TargetType="RepeatButton">
+            <Setter Property="Focusable" Value="False"/><Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RepeatButton">
+                <Border Background="{TemplateBinding Background}" Height="6" CornerRadius="3" VerticalAlignment="Center"/>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
+        <Style TargetType="Slider">
+            <Setter Property="Height" Value="28"/><Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="IsMoveToPointEnabled" Value="True"/><Setter Property="SmallChange" Value="0.01"/>
+            <Setter Property="LargeChange" Value="0.05"/><Setter Property="IsSnapToTickEnabled" Value="False"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Slider">
+                <Grid Background="Transparent" Height="28">
+                    <Track x:Name="PART_Track" Margin="9,0" VerticalAlignment="Center"
+                           IsDirectionReversed="{TemplateBinding IsDirectionReversed}">
+                        <Track.DecreaseRepeatButton>
+                            <RepeatButton Command="Slider.DecreaseLarge" Background="{StaticResource Accent}" Style="{StaticResource SliderTrackButton}"/>
+                        </Track.DecreaseRepeatButton>
+                        <Track.IncreaseRepeatButton>
+                            <RepeatButton Command="Slider.IncreaseLarge" Background="#344556" Style="{StaticResource SliderTrackButton}"/>
+                        </Track.IncreaseRepeatButton>
+                        <Track.Thumb>
+                            <Thumb Width="18" Height="18">
+                                <Thumb.Template><ControlTemplate TargetType="Thumb">
+                                    <Border x:Name="Knob" Background="#EAFBF7" BorderBrush="#69CFC0" BorderThickness="2" CornerRadius="9">
+                                        <Border.Effect><DropShadowEffect Color="#081017" BlurRadius="6" ShadowDepth="1" Opacity="0.7"/></Border.Effect>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Knob" Property="Background" Value="#FFFFFF"/><Setter TargetName="Knob" Property="BorderBrush" Value="#8AF3E2"/></Trigger>
+                                        <Trigger Property="IsDragging" Value="True"><Setter TargetName="Knob" Property="Background" Value="#69CFC0"/><Setter TargetName="Knob" Property="BorderBrush" Value="#C8FFF7"/></Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate></Thumb.Template>
+                            </Thumb>
+                        </Track.Thumb>
+                    </Track>
+                </Grid>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45"/></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
+        <Style x:Key="HotkeyCaptureButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="MinHeight" Value="38"/><Setter Property="Padding" Value="11,8"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Background" Value="#0F1825"/>
+            <Setter Property="BorderBrush" Value="#3B527E"/><Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+                <Border x:Name="Field" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5" Padding="{TemplateBinding Padding}">
+                    <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Field" Property="BorderBrush" Value="#69CFC0"/></Trigger>
+                    <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Field" Property="BorderBrush" Value="#8AF3E2"/></Trigger>
+                    <Trigger Property="Tag" Value="Capturing"><Setter TargetName="Field" Property="Background" Value="#173039"/><Setter TargetName="Field" Property="BorderBrush" Value="#69CFC0"/></Trigger>
                     <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.5"/></Trigger>
                 </ControlTemplate.Triggers>
             </ControlTemplate></Setter.Value></Setter>

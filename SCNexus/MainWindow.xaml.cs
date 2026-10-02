@@ -16,6 +16,14 @@ public partial class MainWindow : Window
 {
     private bool _readyToClose;
     private bool _closePending;
+    private bool _trayModeEnabled;
+    private bool _exitRequested;
+    private bool _trayHintShown;
+    private System.Windows.Forms.NotifyIcon? _notifyIcon;
+    private System.Windows.Forms.ContextMenuStrip? _trayMenu;
+    private System.Windows.Forms.ToolStripMenuItem? _trayOpenItem;
+    private System.Windows.Forms.ToolStripMenuItem? _trayExitItem;
+    private System.Drawing.Icon? _trayIcon;
     private readonly DispatcherTimer _translationTimer = new() { Interval = TimeSpan.FromMilliseconds(80) };
     public MainWindow()
     {
@@ -62,6 +70,7 @@ public partial class MainWindow : Window
         {
             Language = XmlLanguage.GetLanguage(LocalizationService.IsEnglish ? "en-US" : "ru-RU");
             UiLocalization.Apply(this);
+            UpdateTrayText();
         });
         else if (LocalizationService.IsEnglish)
         {
@@ -74,6 +83,123 @@ public partial class MainWindow : Window
     {
         if (DataContext is not MainViewModel vm) return;
         if (vm.SaveGithubToken(GithubTokenBox.Password)) GithubTokenBox.Clear();
+    }
+
+    private void BeginOverlayHotkeyCapture_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm) return;
+        vm.IsOverlayHotkeyCapturing = true;
+        OverlayHotkeyCaptureButton.Tag = "Capturing";
+        OverlayHotkeyCaptureButton.Focus();
+        Keyboard.Focus(OverlayHotkeyCaptureButton);
+    }
+
+    private void OverlayHotkeyCapture_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (DataContext is not MainViewModel { IsOverlayHotkeyCapturing: true } vm) return;
+        e.Handled = true;
+
+        var key = e.Key switch
+        {
+            Key.System => e.SystemKey,
+            Key.ImeProcessed => e.ImeProcessedKey,
+            Key.DeadCharProcessed => e.DeadCharProcessedKey,
+            _ => e.Key
+        };
+        if (key == Key.Escape)
+        {
+            EndOverlayHotkeyCapture();
+            return;
+        }
+        if (key is Key.Delete or Key.Back && Keyboard.Modifiers == ModifierKeys.None)
+        {
+            vm.OverlayHotkey = "";
+            EndOverlayHotkeyCapture();
+            return;
+        }
+        if (!OverlayCoordinator.TryFormatHotkey(key, Keyboard.Modifiers, out var shortcut)) return;
+        vm.OverlayHotkey = shortcut;
+        EndOverlayHotkeyCapture();
+    }
+
+    private void OverlayHotkeyCapture_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (DataContext is MainViewModel { IsOverlayHotkeyCapturing: true }) EndOverlayHotkeyCapture();
+    }
+
+    private void ClearOverlayHotkey_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm) vm.OverlayHotkey = "";
+        EndOverlayHotkeyCapture();
+    }
+
+    private void EndOverlayHotkeyCapture()
+    {
+        if (DataContext is MainViewModel vm) vm.IsOverlayHotkeyCapturing = false;
+        OverlayHotkeyCaptureButton.Tag = null;
+    }
+
+    internal void EnableTrayMode()
+    {
+        if (_trayModeEnabled) return;
+        _trayModeEnabled = true;
+
+        if (Environment.ProcessPath is { Length: > 0 } executable)
+            _trayIcon = System.Drawing.Icon.ExtractAssociatedIcon(executable);
+        _trayOpenItem = new System.Windows.Forms.ToolStripMenuItem();
+        _trayExitItem = new System.Windows.Forms.ToolStripMenuItem();
+        _trayOpenItem.Click += (_, _) => Dispatcher.BeginInvoke(RestoreFromTray);
+        _trayExitItem.Click += (_, _) => Dispatcher.BeginInvoke(RequestExit);
+        _trayMenu = new System.Windows.Forms.ContextMenuStrip { ShowImageMargin = false };
+        _trayMenu.Items.AddRange([_trayOpenItem, new System.Windows.Forms.ToolStripSeparator(), _trayExitItem]);
+        _trayMenu.Opening += (_, _) => UpdateTrayText();
+        _notifyIcon = new System.Windows.Forms.NotifyIcon
+        {
+            Text = "SC NEXUS",
+            Icon = _trayIcon ?? System.Drawing.SystemIcons.Application,
+            ContextMenuStrip = _trayMenu,
+            Visible = true
+        };
+        _notifyIcon.DoubleClick += (_, _) => Dispatcher.BeginInvoke(RestoreFromTray);
+        UpdateTrayText();
+    }
+
+    internal void RequestExit()
+    {
+        _exitRequested = true;
+        Close();
+    }
+
+    private void UpdateTrayText()
+    {
+        if (_trayOpenItem is not null) _trayOpenItem.Text = LocalizationService.IsEnglish ? "Open SC NEXUS" : "Открыть SC NEXUS";
+        if (_trayExitItem is not null) _trayExitItem.Text = LocalizationService.IsEnglish ? "Exit" : "Выйти";
+    }
+
+    private void HideToTray()
+    {
+        EndOverlayHotkeyCapture();
+        ShowInTaskbar = false;
+        Hide();
+        if (_notifyIcon is null || _trayHintShown) return;
+        _trayHintShown = true;
+        _notifyIcon.BalloonTipTitle = "SC NEXUS";
+        _notifyIcon.BalloonTipText = LocalizationService.IsEnglish
+            ? "The app is still running in the notification area."
+            : "Приложение продолжает работать в области уведомлений.";
+        _notifyIcon.BalloonTipIcon = System.Windows.Forms.ToolTipIcon.Info;
+        _notifyIcon.ShowBalloonTip(2500);
+    }
+
+    private void RestoreFromTray()
+    {
+        ShowInTaskbar = true;
+        Show();
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Activate();
+        Topmost = true;
+        Topmost = false;
+        Focus();
     }
 
     protected override void OnClosed(EventArgs e)
@@ -94,6 +220,16 @@ public partial class MainWindow : Window
             }
             catch (Exception ex) { MessageBox.Show($"Не удалось запустить установщик:\n{ex.Message}\n\nФайл: {installer}", "SC NEXUS", MessageBoxButton.OK, MessageBoxImage.Error); }
         }
+        if (_notifyIcon is not null)
+        {
+            _notifyIcon.Visible = false;
+            _notifyIcon.Dispose();
+            _notifyIcon = null;
+        }
+        _trayMenu?.Dispose();
+        _trayMenu = null;
+        _trayIcon?.Dispose();
+        _trayIcon = null;
         base.OnClosed(e);
     }
 
@@ -101,6 +237,7 @@ public partial class MainWindow : Window
     {
         if (!_readyToClose && DataContext is MainViewModel vm)
         {
+            var hideInTray = _trayModeEnabled && !_exitRequested && vm.PendingInstallerPath is null;
             if (Keyboard.FocusedElement is TextBox input) input.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
             e.Cancel = true;
             if (_closePending) return;
@@ -112,6 +249,12 @@ public partial class MainWindow : Window
                 try
                 {
                     await vm.SaveNowAsync();
+                    if (hideInTray)
+                    {
+                        _closePending = false;
+                        HideToTray();
+                        return;
+                    }
                     _readyToClose = true;
                     Close();
                 }
