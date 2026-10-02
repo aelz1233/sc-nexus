@@ -897,12 +897,7 @@
                         </Border>
                     </StackPanel>
                     <StackPanel Visibility="{Binding IsSettingsOpen, Converter={StaticResource BoolVisibility}}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="3*" />
-                                <ColumnDefinition Width="16" />
-                                <ColumnDefinition Width="2*" />
-                            </Grid.ColumnDefinitions>
+                        <StackPanel>
                             <StackPanel>
                                 <Border Style="{StaticResource Card}">
                                     <StackPanel>
@@ -925,7 +920,7 @@
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
-                            <StackPanel Grid.Column="2">
+                            <StackPanel>
                                 <Border Style="{StaticResource Card}">
                                     <StackPanel>
                                         <TextBlock Text="Данные и автоматизация" Style="{StaticResource SectionTitle}" />
@@ -1025,7 +1020,7 @@
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
-                        </Grid>
+                        </StackPanel>
                         <Border Style="{StaticResource Card}">
                             <StackPanel>
                                 <TextBlock Text="Личные данные" Style="{StaticResource SectionTitle}" />

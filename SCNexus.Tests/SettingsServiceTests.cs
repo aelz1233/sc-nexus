@@ -7,6 +7,65 @@ namespace SCNexus.Tests;
 public class SettingsServiceTests
 {
     [Fact]
+    public async Task CorruptDatabaseIsRestoredFromTheLatestVerifiedBackup()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(directory, "nexus.db");
+        try
+        {
+            var service = new SettingsService(path);
+            await service.LoadAsync();
+            await service.SaveAsync(new PersonalSettings { Balance = 12_400_000, CurrentShip = "C2 Hercules" });
+            Directory.CreateDirectory(service.BackupDirectory);
+            await service.BackupAsync(Path.Combine(service.BackupDirectory, "nexus-2026-10-02.db"));
+
+            SqliteConnection.ClearAllPools();
+            await File.WriteAllTextAsync(path, "this is not a sqlite database");
+
+            var recovered = new SettingsService(path);
+            var settings = await recovered.LoadAsync();
+            Assert.Equal(12_400_000, settings.Balance);
+            Assert.Equal("C2 Hercules", settings.CurrentShip);
+            Assert.Contains("восстановлена", recovered.StartupRecoveryMessage);
+            Assert.Single(Directory.GetFiles(directory, "nexus-corrupt-*.db"));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (Directory.Exists(directory)) Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
+    public async Task NullValuesFromAnOlderDatabaseAreNormalizedBeforeSave()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(directory, "nexus.db");
+        try
+        {
+            var service = new SettingsService(path);
+            await service.LoadAsync();
+            await service.SaveAsync(new PersonalSettings
+            {
+                CurrentShip = null!, CurrentLocation = null!, CurrentSystem = null!,
+                GameDirectoryPath = null!, Language = null!, OverlayAnchor = null!,
+                OverlayHotkey = null!, ActiveVoyageJson = null!, LastSessionSummary = null!
+            });
+
+            var saved = await service.LoadAsync();
+            Assert.Equal("Не выбран", saved.CurrentShip);
+            Assert.Equal("Не указана", saved.CurrentLocation);
+            Assert.Equal("", saved.CurrentSystem);
+            Assert.Equal("", saved.OverlayHotkey);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (Directory.Exists(directory)) Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
     public async Task InvalidStoredTypesProduceRecoveryMessageBeforeLoadingRecords()
     {
         var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));

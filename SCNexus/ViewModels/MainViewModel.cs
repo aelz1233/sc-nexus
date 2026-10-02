@@ -172,6 +172,8 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             CurrentShip = ship.Name;
             CargoScu = ship.Ship.CargoScu;
         }
+        if (settingsService.StartupRecoveryMessage is { Length: > 0 } recoveryMessage)
+            WorkspaceStatus = recoveryMessage;
         _loaded = true;
     }
 
@@ -473,14 +475,23 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             if (!token.IsCancellationRequested) SaveStatus = "Сохранено локально";
         }
         catch (OperationCanceledException) { }
-        catch (Exception ex) { SaveStatus = $"Ошибка сохранения: {ex.Message}"; }
+        catch (Exception ex)
+        {
+            AppLogService.Write("Settings save", ex);
+            SaveStatus = SettingsService.DescribeSaveFailure(ex);
+        }
     }
 
     public async Task SaveNowAsync()
     {
         if (!_loaded) return;
         _pendingSave?.Cancel();
-        await settingsService.SaveAsync(SettingsSnapshot());
+        try { await settingsService.SaveAsync(SettingsSnapshot()); }
+        catch (Exception ex)
+        {
+            AppLogService.Write("Settings save", ex);
+            throw new InvalidOperationException(SettingsService.DescribeSaveFailure(ex), ex);
+        }
     }
 
     private PersonalSettings SettingsSnapshot() => new()
@@ -488,7 +499,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             Balance = Balance,
             CurrentShip = string.IsNullOrWhiteSpace(CurrentShip) ? "Не выбран" : CurrentShip.Trim(),
             CurrentLocation = string.IsNullOrWhiteSpace(CurrentLocation) ? "Не указана" : CurrentLocation.Trim(),
-            CurrentSystem = CurrentSystem,
+            CurrentSystem = CurrentSystem?.Trim() ?? "",
             CargoScu = Math.Max(0, CargoScu),
             Reserve = Math.Max(0, Reserve),
             AllowRisky = AllowRisky,

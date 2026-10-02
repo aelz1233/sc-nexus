@@ -8,12 +8,14 @@ namespace SCNexus.Services;
 
 public sealed class SettingsService
 {
+    private const string CorruptDatabasePrefix = "Повреждена локальная база данных.";
     private readonly DbContextOptions<NexusDbContext> _options;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly bool _databaseExistedAtStartup;
     private bool _automaticBackupChecked;
     public string DatabasePath { get; }
     public string BackupDirectory => Path.Combine(Path.GetDirectoryName(DatabasePath)!, "backups");
+    public string? StartupRecoveryMessage { get; private set; }
 
     public SettingsService(string? databasePath = null)
     {
@@ -21,11 +23,27 @@ public sealed class SettingsService
         Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
         DatabasePath = Path.GetFullPath(databasePath);
         _databaseExistedAtStartup = File.Exists(DatabasePath) && new FileInfo(DatabasePath).Length > 0;
+        var connection = new SqliteConnectionStringBuilder
+        {
+            DataSource = DatabasePath,
+            DefaultTimeout = 10,
+            Pooling = true
+        }.ToString();
         _options = new DbContextOptionsBuilder<NexusDbContext>()
-            .UseSqlite($"Data Source={databasePath}").Options;
+            .UseSqlite(connection).Options;
     }
 
     public async Task<PersonalSettings> LoadAsync()
+    {
+        try { return await LoadCoreAsync(); }
+        catch (Exception ex) when (_databaseExistedAtStartup && IsDatabaseCorruption(ex))
+        {
+            await RestoreLatestVerifiedBackupAsync(ex);
+            return await LoadCoreAsync();
+        }
+    }
+
+    private async Task<PersonalSettings> LoadCoreAsync()
     {
         await using var db = new NexusDbContext(_options);
         await db.Database.EnsureCreatedAsync();
@@ -35,7 +53,9 @@ public sealed class SettingsService
         await EnsureFlightTablesAsync(db);
         await EnsureDataCollectionTablesAsync(db);
         await ConfigureDatabaseAsync(db);
-        return await db.PersonalSettings.AsNoTracking().SingleOrDefaultAsync(x => x.Id == 1) ?? new();
+        var settings = await db.PersonalSettings.AsNoTracking().SingleOrDefaultAsync(x => x.Id == 1) ?? new();
+        NormalizeSettings(settings);
+        return settings;
     }
 
     public NexusDbContext CreateDbContext() => new(_options);
@@ -60,10 +80,109 @@ public sealed class SettingsService
             command.CommandText = "PRAGMA quick_check";
             var result = await command.ExecuteScalarAsync();
             if (!string.Equals(result as string, "ok", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException($"Повреждена локальная база данных. Сохранённые данные не изменены.\nФайл: {DatabasePath}\nПотребуется восстановление базы из резервной копии.");
+                throw new InvalidDataException($"{CorruptDatabasePrefix} Сохранённые данные не изменены.\nФайл: {DatabasePath}\nПотребуется восстановление базы из резервной копии.");
         }
         finally { await connection.CloseAsync(); }
     }
+
+    private async Task RestoreLatestVerifiedBackupAsync(Exception original)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            var backup = await FindLatestVerifiedBackupAsync();
+            if (backup is null) throw original;
+
+            SqliteConnection.ClearAllPools();
+            var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+            var preserved = MoveAside(DatabasePath, $"{Path.GetFileNameWithoutExtension(DatabasePath)}-corrupt-{timestamp}.db");
+            MoveAside(DatabasePath + "-wal", $"{Path.GetFileNameWithoutExtension(DatabasePath)}-corrupt-{timestamp}.db-wal");
+            MoveAside(DatabasePath + "-shm", $"{Path.GetFileNameWithoutExtension(DatabasePath)}-corrupt-{timestamp}.db-shm");
+            if (!preserved && File.Exists(DatabasePath))
+                throw new IOException("Не удалось сохранить повреждённый файл базы перед восстановлением.");
+
+            File.Copy(backup, DatabasePath, overwrite: true);
+            DeleteIfExists(DatabasePath + "-wal");
+            DeleteIfExists(DatabasePath + "-shm");
+            StartupRecoveryMessage = $"Повреждённая база восстановлена из резервной копии {Path.GetFileName(backup)}.";
+            AppLogService.Write("Database recovery", original);
+        }
+        catch (Exception recoveryError) when (!ReferenceEquals(recoveryError, original))
+        {
+            AppLogService.Write("Database recovery", recoveryError);
+            throw original;
+        }
+        finally { _gate.Release(); }
+    }
+
+    private async Task<string?> FindLatestVerifiedBackupAsync()
+    {
+        if (!Directory.Exists(BackupDirectory)) return null;
+        foreach (var candidate in Directory.EnumerateFiles(BackupDirectory,
+                     $"{Path.GetFileNameWithoutExtension(DatabasePath)}-*.db")
+                 .OrderByDescending(File.GetLastWriteTimeUtc))
+        {
+            if (await IsHealthyDatabaseAsync(candidate)) return candidate;
+        }
+        return null;
+    }
+
+    private static async Task<bool> IsHealthyDatabaseAsync(string path)
+    {
+        try
+        {
+            await using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+            {
+                DataSource = path, Mode = SqliteOpenMode.ReadOnly, Pooling = false
+            }.ToString());
+            await connection.OpenAsync();
+            await using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA quick_check";
+            return string.Equals(await command.ExecuteScalarAsync() as string, "ok", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (SqliteException) { return false; }
+        catch (IOException) { return false; }
+        catch (UnauthorizedAccessException) { return false; }
+    }
+
+    private static bool MoveAside(string source, string destinationName)
+    {
+        if (!File.Exists(source)) return false;
+        var destination = Path.Combine(Path.GetDirectoryName(source)!, destinationName);
+        File.Move(source, destination, overwrite: false);
+        return true;
+    }
+
+    private static void DeleteIfExists(string path)
+    {
+        if (File.Exists(path)) File.Delete(path);
+    }
+
+    private static bool IsDatabaseCorruption(Exception exception)
+    {
+        if (exception is InvalidDataException { Message: var message } && message.StartsWith(CorruptDatabasePrefix, StringComparison.Ordinal)) return true;
+        if (exception is SqliteException { SqliteErrorCode: 11 or 26 }) return true;
+        return exception.InnerException is not null && IsDatabaseCorruption(exception.InnerException);
+    }
+
+    public static string DescribeSaveFailure(Exception exception)
+    {
+        var sqlite = UnwrapSqliteException(exception);
+        return sqlite?.SqliteErrorCode switch
+        {
+            5 or 6 => "Не удалось сохранить данные: база занята. Повтори действие через несколько секунд.",
+            11 or 26 => "Не удалось сохранить данные: база повреждена. Перезапусти SC NEXUS для восстановления из резервной копии.",
+            _ when sqlite is not null => "Не удалось сохранить данные SQLite. Подробности записаны в локальный журнал приложения.",
+            _ => "Не удалось сохранить данные. Подробности записаны в локальный журнал приложения."
+        };
+    }
+
+    private static SqliteException? UnwrapSqliteException(Exception exception) => exception switch
+    {
+        SqliteException sqlite => sqlite,
+        _ when exception.InnerException is not null => UnwrapSqliteException(exception.InnerException),
+        _ => null
+    };
 
     private static async Task EnsureFlightTablesAsync(NexusDbContext db)
     {
@@ -120,6 +239,7 @@ public sealed class SettingsService
         await _gate.WaitAsync();
         try
         {
+            NormalizeSettings(snapshot);
             await using var db = new NexusDbContext(_options);
             var current = await db.PersonalSettings.SingleOrDefaultAsync(x => x.Id == 1);
             if (current is null) db.PersonalSettings.Add(snapshot);
@@ -227,6 +347,19 @@ public sealed class SettingsService
                 throw new InvalidDataException("Созданная резервная копия не прошла проверку целостности.");
         }
         finally { _gate.Release(); }
+    }
+
+    private static void NormalizeSettings(PersonalSettings settings)
+    {
+        settings.CurrentShip ??= "Не выбран";
+        settings.CurrentLocation ??= "Не указана";
+        settings.CurrentSystem ??= "";
+        settings.GameDirectoryPath ??= "";
+        settings.Language ??= "ru";
+        settings.OverlayAnchor ??= "BottomRight";
+        settings.OverlayHotkey ??= "";
+        settings.ActiveVoyageJson ??= "";
+        settings.LastSessionSummary ??= "";
     }
 
     public async Task<string> CreatePreUpdateBackupAsync(Version targetVersion)
