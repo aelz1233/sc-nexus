@@ -186,6 +186,26 @@
                         </Grid>
                     </StackPanel>
                     <StackPanel Visibility="{Binding IsHaulingOpen, Converter={StaticResource BoolVisibility}}">
+                        <Border Style="{StaticResource Card}" Visibility="{Binding HasActiveVoyage, Converter={StaticResource BoolVisibility}}">
+                            <StackPanel>
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding ActiveVoyageProfitDisplay}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource Accent}" />
+                                    <TextBlock Text="ВЕДЕНИЕ ПО МАРШРУТУ" Foreground="{StaticResource Accent}" FontWeight="Bold" />
+                                </DockPanel>
+                                <TextBlock Text="{Binding ActiveVoyageStopDisplay}" FontSize="18" FontWeight="SemiBold" Margin="0,12,0,0" TextWrapping="Wrap" />
+                                <TextBlock Text="⚠ ОПАСНО: Pyro" Foreground="#FF9A8F" Visibility="{Binding ActiveVoyageStop.IsPyro, Converter={StaticResource BoolVisibility}}" Margin="0,6,0,0" />
+                                <TextBlock Text="{Binding ActiveVoyageActionDisplay}" TextWrapping="Wrap" Margin="0,9,0,0" />
+                                <TextBlock Text="{Binding ActiveVoyageCargoDisplay}" Style="{StaticResource Hint}" Margin="0,7,0,0" />
+                                <TextBlock Text="{Binding ActiveVoyageNextDisplay}" Foreground="{StaticResource Muted}" Margin="0,6,0,0" />
+                                <ProgressBar Value="{Binding ActiveVoyageProgress, Mode=OneWay}" Maximum="100" Margin="0,12,0,8" />
+                                <TextBlock Text="Остановка переключается автоматически по Game.log. Если журнал не сообщил локацию или сделку, скорректируй шаг вручную." Style="{StaticResource Hint}" />
+                                <WrapPanel Margin="0,12,0,0">
+                                    <Button Content="Назад" Command="{Binding PreviousVoyageStopCommand}" Margin="0,0,8,0" />
+                                    <Button Content="Следующая остановка" Command="{Binding NextVoyageStopCommand}" Margin="0,0,8,0" />
+                                    <Button Content="Завершить ведение" Command="{Binding CancelVoyageGuidanceCommand}" Background="Transparent" Foreground="{StaticResource Muted}" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
                         <Border Style="{StaticResource Card}" Margin="0,0,0,18">
                             <StackPanel>
                                 <TextBlock Text="Параметры рейса" Foreground="{StaticResource Accent}" FontWeight="Bold" Margin="0,0,0,15" />
@@ -878,6 +898,29 @@
                                             <TextBlock Text="Подробности торговых маршрутов" TextWrapping="Wrap" />
                                         </CheckBox>
                                         <TextBlock Text="Показывать цены за SCU, запас и спрос в каждой карточке." Style="{StaticResource Hint}" Margin="0,6,0,0" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Text="Игровой оверлей" Style="{StaticResource SectionTitle}" />
+                                        <CheckBox IsChecked="{Binding OverlayEnabled}">
+                                            <TextBlock Text="Показывать оверлей при запущенном Star Citizen" TextWrapping="Wrap" />
+                                        </CheckBox>
+                                        <CheckBox IsChecked="{Binding OverlayExpanded}">
+                                            <TextBlock Text="Расширенный вид: миссия, следующая остановка и свежесть данных" TextWrapping="Wrap" />
+                                        </CheckBox>
+                                        <TextBlock Text="Бинд показать / скрыть" Style="{StaticResource FieldLabel}" Margin="0,10,0,2" />
+                                        <ComboBox ItemsSource="{Binding OverlayHotkeyOptions}"
+                                                  DisplayMemberPath="Display" SelectedValuePath="Value"
+                                                  SelectedValue="{Binding OverlayHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <TextBlock Text="{Binding OverlayHotkeyStatus}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                                        <TextBlock Text="Прозрачность" Style="{StaticResource FieldLabel}" Margin="0,10,0,2" />
+                                        <Slider Minimum="0.65" Maximum="1" TickFrequency="0.05" IsSnapToTickEnabled="True" Value="{Binding OverlayOpacity, Mode=TwoWay}" />
+                                        <WrapPanel Margin="0,12,0,0">
+                                            <Button Content="{Binding OverlayPreviewButtonText}" Command="{Binding ToggleOverlayPreviewCommand}" Margin="0,0,8,0" />
+                                            <Button Content="{Binding OverlayModeDisplay}" Command="{Binding ToggleOverlayModeCommand}" />
+                                        </WrapPanel>
+                                        <TextBlock Text="Оверлей — отдельное окно только для чтения. Бинд по умолчанию не назначен; выбранное сочетание работает, пока запущен Nexus. Оверлей не внедряется в Star Citizen и не перехватывает управление." Style="{StaticResource Hint}" Margin="0,9,0,0" />
                                     </StackPanel>
                                 </Border>
                                 <Border Style="{StaticResource Card}">

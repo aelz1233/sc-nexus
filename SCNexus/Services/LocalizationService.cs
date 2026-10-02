@@ -54,6 +54,12 @@ public static class LocalizationService
         ["Автоматический мониторинг"] = "Automatic monitoring", ["Game.log отслеживается постоянно"] = "Game.log is monitored continuously",
         ["Nexus читает только новые строки журнала. Частота API и OCR регулируется автоматически, чтобы не создавать лишнюю нагрузку."] = "Nexus reads only new log lines. API and OCR intervals are adjusted automatically to avoid unnecessary load.",
         ["Подробности торговых маршрутов"] = "Trade route details", ["Обновление программы"] = "Application update",
+        ["Игровой оверлей"] = "Game overlay", ["Показывать оверлей при запущенном Star Citizen"] = "Show the overlay while Star Citizen is running",
+        ["Расширенный вид: миссия, следующая остановка и свежесть данных"] = "Expanded view: mission, next stop, and data freshness",
+        ["Бинд показать / скрыть"] = "Show / hide shortcut", ["Прозрачность"] = "Opacity",
+        ["Показать пример"] = "Show preview", ["Скрыть пример"] = "Hide preview",
+        ["Компактный"] = "Compact", ["Расширенный"] = "Expanded",
+        ["Оверлей — отдельное окно только для чтения. Бинд по умолчанию не назначен; выбранное сочетание работает, пока запущен Nexus. Оверлей не внедряется в Star Citizen и не перехватывает управление."] = "The overlay is a separate read-only window. No shortcut is assigned by default; a selected shortcut works while Nexus is running. The overlay does not inject into Star Citizen or intercept input.",
         ["Проверить обновление"] = "Check for updates", ["Токен для закрытого репозитория"] = "Token for a private repository",
         ["Сохранить токен"] = "Save token", ["Удалить токен"] = "Remove token", ["Личные данные"] = "Personal data",
         ["Резервная копия"] = "Backup", ["Открыть папку данных"] = "Open data folder", ["АВТОМАТИЧЕСКИЕ ДАННЫЕ"] = "AUTOMATIC DATA",
@@ -68,6 +74,11 @@ public static class LocalizationService
         ["Подставить доступный баланс"] = "Use available balance", ["Скопировать список деталей"] = "Copy component list",
         ["КОРАБЛЬ ИЗ ФЛОТА"] = "SHIP FROM FLEET", ["БЮДЖЕТ, aUEC"] = "BUDGET, aUEC", ["ПРИОРИТЕТ"] = "PRIORITY",
         ["ЛУЧШЕЕ ЗА БЮДЖЕТ"] = "BEST WITHIN BUDGET", ["ЛУЧШЕЕ БЕЗ ОГРАНИЧЕНИЯ БЮДЖЕТА"] = "BEST WITHOUT BUDGET LIMIT",
+        ["ЭНЕРГИЯ, ОХЛАЖДЕНИЕ И КВАНТ"] = "POWER, COOLING, AND QUANTUM",
+        ["Маршрут покупки компонентов"] = "Component shopping route", ["Остановки и список покупок"] = "Stops and shopping list",
+        ["ВЕДЕНИЕ ПО МАРШРУТУ"] = "ROUTE GUIDANCE", ["Назад"] = "Back",
+        ["Следующая остановка"] = "Next stop", ["Завершить ведение"] = "Stop guidance",
+        ["Остановка переключается автоматически по Game.log. Если журнал не сообщил локацию или сделку, скорректируй шаг вручную."] = "The stop advances automatically from Game.log. If the log does not report the location or transaction, adjust the step manually.",
         ["Час"] = "Hour", ["День"] = "Day", ["Три дня"] = "Three days", ["Неделя"] = "Week",
         ["Месяц"] = "Month", ["Полгода"] = "Six months", ["Год"] = "Year", ["Прямой рейс"] = "Direct route",
         ["Цепочка"] = "Chain", ["Сбор груза"] = "Cargo collection", ["Все системы"] = "All systems",
@@ -171,7 +182,7 @@ public static class LocalizationService
         , ["Проверь цены и наличие в игре. Время, топливо и стоимость перелётов не включены."] = "Verify prices and availability in game. Travel time, fuel, and flight costs are not included."
         , ["Запрос покупки"] = "Purchase request", ["Запрос продажи"] = "Sale request"
         , ["В пути"] = "In progress", ["Уже установлен"] = "Already installed", ["Цена неизвестна"] = "Price unknown"
-        , ["Магазин не указан"] = "Store not specified", ["Цена от "] = "Price from "
+        , ["Магазин не указан"] = "Store not specified", ["Неизвестная система"] = "Unknown system", ["Цена от "] = "Price from "
         , ["Характеристики не загружены"] = "Stats not loaded", ["Характеристики не указаны"] = "Stats not available"
         , ["Прочность "] = "Strength ", [" · восстановление "] = " · regeneration "
         , ["Скорость "] = "Speed ", [" · расход неизвестен"] = " · consumption unknown", [" · расход "] = " · consumption "
@@ -181,7 +192,20 @@ public static class LocalizationService
         , [" · без цены:"] = " · without price:", ["Подтверждённые слоты компонентов рассчитаны"] = "Verified component slots calculated"
         , ["Не удалось подобрать для "] = "No compatible component for ", [" слотов"] = " slots"
         , ["Заменить компонентов:"] = "Components to replace:", [" · оставить штатными:"] = " · keep installed:"
-        , ["Покупки не требуются."] = "No purchases required.", ["Где купить:"] = "Where to buy:"
+        , ["Купить "] = "Buy ", ["Продать "] = "Sell ", [" SCU за "] = " SCU for "
+        , ["На этой остановке:"] = "At this stop:", [" за шт."] = " each", ["Энергия и охлаждение: данных недостаточно"] = "Power and cooling: insufficient data"
+        , ["Энергия:"] = "Power:", ["Охлаждение:"] = "Cooling:", [" сегм. · резерв "] = " segments · reserve "
+        , ["⚠ Расчётная нагрузка превышает выработку энергии."] = "⚠ Estimated load exceeds power generation."
+        , ["⚠ Расчётная нагрузка превышает возможности охлаждения."] = "⚠ Estimated load exceeds cooling capacity."
+        , ["Нагрузка рассчитана для сравниваемых сменных слотов; неподдерживаемые системы корабля не включены."] = "Load is calculated for the compared replaceable slots; unsupported ship systems are excluded."
+        , ["Квантовый привод: данных недостаточно"] = "Quantum drive: insufficient data", ["Квант:"] = "Quantum:"
+        , ["скорость неизвестна"] = "speed unknown", [" · расчётная дальность "] = " · estimated range "
+        , ["Маршрут покупок не нужен или магазины не указаны."] = "No shopping route is needed or store data is unavailable."
+        , ["Рекомендуемый маршрут:"] = "Recommended route:", ["остановка"] = "stop", ["остановки"] = "stops", ["остановок"] = "stops"
+        , [" · покупки "] = " · purchases ", [" к минимальной сумме"] = " above the minimum total", [" · без переплаты"] = " · no extra cost"
+        , ["Сначала сокращаем число остановок. Учитываются магазины, где каждая деталь дороже своей минимальной цены не более чем на 5%. Безопасные точки, текущие локация и система в приоритете, Pyro — в конце."] = "The planner first reduces the number of stops. It considers stores where each component costs no more than 5% above its lowest price. Safe locations, the current location, and the current system are preferred; Pyro is placed last."
+        , ["Остановок:"] = "Stops:", [" · сумма:"] = " · total:"
+        , ["Ракеты и системы без проверенной совместимости в расчёт не входят. Энергия и охлаждение считаются только для подтверждённых сменных слотов, поэтому итоговую сборку проверь в игре."] = "Missiles and systems without verified compatibility are excluded. Power and cooling are calculated only for verified replaceable slots, so verify the final build in game."
     };
 
     public static bool IsEnglish { get; private set; }

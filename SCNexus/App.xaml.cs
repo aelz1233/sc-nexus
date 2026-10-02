@@ -55,13 +55,18 @@ public partial class App : Application
             collection.AddSingleton<IDataProvider, ManualDataProvider>();
             collection.AddSingleton<DataCollectionService>();
             collection.AddSingleton<UpdateService>();
+            collection.AddSingleton<OverlayCoordinator>();
             collection.AddSingleton<MainViewModel>();
             _services = collection.BuildServiceProvider();
             var vm = _services.GetRequiredService<MainViewModel>();
             await vm.InitializeAsync();
             FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement),
                 new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(vm.IsEnglish ? "en-US" : "ru-RU")));
-            new MainWindow { DataContext = vm }.Show();
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
+            var mainWindow = new MainWindow { DataContext = vm };
+            MainWindow = mainWindow;
+            mainWindow.Show();
+            _services.GetRequiredService<OverlayCoordinator>().Attach(vm, mainWindow);
             _ = vm.LoadLocationsAsync();
             _ = vm.LoadVehiclesAsync();
             _ = vm.WatchGameLogAsync(_gameLogCancellation.Token);

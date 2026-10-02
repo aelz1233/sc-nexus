@@ -32,3 +32,6 @@ public sealed record VoyagePlan(string Mode, IReadOnlyList<HaulingRoute> Trades,
     public string Manifest => string.Join(Environment.NewLine, Stops.Select(x => $"{x.Heading}\n{x.Action}\n{x.LoadDisplay} · {x.CashDisplay}"));
     public string ExportText => $"SC NEXUS — {Title}\n{PathDisplay}\n{Summary}\nОжидаемая прибыль: {ProfitDisplay}\n{RiskDisplay}\n{QuoteDisplay}\n\n{Manifest}\n\nПроверь цены и наличие в игре. Время, топливо и стоимость перелётов не включены.\n";
 }
+
+public sealed record VoyageGuidanceState(VoyagePlan Plan, int StopIndex, bool Completed,
+    DateTimeOffset StartedAtUtc);

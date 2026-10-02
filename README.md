@@ -36,9 +36,11 @@ SC NEXUS never uses DLL injection, process memory reading, hooks, packet interce
 
 ### Features
 
-**Trade routes.** Select a ship and budget, or let automatic data fill what is available. Direct routes, trade chains, and multi-stop cargo collection use current UEX prices, stock, and demand. Pyro routes are marked dangerous. Completed trips add personal travel time and estimated profit per hour to matching route cards.
+**Trade routes.** Select a ship and budget, or let automatic data fill what is available. Direct routes, trade chains, and multi-stop cargo collection use current UEX prices, stock, and demand. Pyro routes are marked dangerous. When a multi-stop plan is selected, route guidance advances from detected locations and matching trade events in `Game.log`, persists across restarts, and still allows a manual step correction when the log is incomplete. Completed trips add personal travel time and estimated profit per hour to matching route cards.
 
-**Fleet and loadouts.** Add ships from the UEX catalog or let reliable detections add them. The loadout planner is embedded in the Ships page and uses compatible ports and component stats from Star Citizen Wiki plus store prices from UEX. It produces the best build within a budget, an unrestricted build, and a purchase list grouped by store and quantity.
+**Fleet and loadouts.** Add ships from the UEX catalog or let reliable detections add them. The loadout planner is embedded in the Ships page and uses compatible ports and component stats from Star Citizen Wiki plus store prices from UEX. It produces the best build within a budget and an unrestricted build, compares power generation, component power draw, cooling, quantum speed, fuel consumption, and estimated range, then builds a component shopping route. The planner minimizes store stops among offers no more than 5% above each component's lowest price, shows the exact premium, prefers the current location, current system, and safe locations, and places Pyro last.
+
+**External game overlay.** An optional compact or expanded click-through window shows the detected ship and location, active route stop, cargo, expected profit, mission, data freshness, and Pyro/NQA warnings. It is controlled from Nexus settings and appears automatically only while Star Citizen is running. A show/hide shortcut can be selected in Settings; none is assigned by default. It does not inject into the game or add Windows startup entries.
 
 **Journal and history.** Missions, deaths, movement, and trade requests detected in `Game.log` appear in one journal. Trade requests can fill actual purchase and sale amounts. Manual correction remains available. Statistics can be filtered by time and exported to CSV.
 
@@ -93,9 +95,11 @@ SC NEXUS не использует DLL injection, чтение памяти пр
 
 ### Возможности
 
-**Торговые маршруты.** Выберите корабль и бюджет либо используйте автоматически найденные значения. Прямые рейсы, цепочки и сбор груза с нескольких остановок используют цены, stock и demand UEX. Маршруты через Pyro помечаются опасными. Завершённые рейсы добавляют в карточки личное время перелёта и расчёт прибыли в час.
+**Торговые маршруты.** Выберите корабль и бюджет либо используйте автоматически найденные значения. Прямые рейсы, цепочки и сбор груза с нескольких остановок используют цены, stock и demand UEX. Маршруты через Pyro помечаются опасными. После выбора многоэтапного плана ведение само переключает остановки по обнаруженной локации и подходящим торговым событиям `Game.log`, сохраняется между запусками и допускает ручную коррекцию шага, если журнал не дал нужного события. Завершённые рейсы добавляют в карточки личное время перелёта и расчёт прибыли в час.
 
-**Корабли и конфигуратор.** Добавляйте корабли из каталога UEX или используйте надёжное автоопределение. Конфигуратор встроен в экран кораблей, получает совместимые порты и характеристики из Star Citizen Wiki, а цены магазинов — из UEX. Он показывает лучший вариант в пределах бюджета, вариант без ограничения суммы и список покупок по магазинам с количеством деталей.
+**Корабли и конфигуратор.** Добавляйте корабли из каталога UEX или используйте надёжное автоопределение. Конфигуратор встроен в экран кораблей, получает совместимые порты и характеристики из Star Citizen Wiki, а цены магазинов — из UEX. Он показывает лучший вариант в пределах бюджета и без ограничения суммы, сравнивает выработку и расход энергии, охлаждение, скорость квантового привода, расход топлива и расчётную дальность, затем строит маршрут закупки. Планировщик сокращает число магазинов среди предложений с переплатой не более 5% за каждую деталь, показывает точную переплату, предпочитает текущую локацию, текущую систему и безопасные точки, а Pyro ставит в конец.
+
+**Внешний игровой оверлей.** Необязательное компактное или расширенное окно показывает обнаруженный корабль и локацию, текущую остановку маршрута, груз, ожидаемую прибыль, миссию, свежесть данных и предупреждения Pyro/NQA. Оверлей включается в настройках Nexus и появляется автоматически только при запущенном Star Citizen. В настройках можно выбрать бинд показа и скрытия; по умолчанию он не назначен. Оверлей не внедряется в игру и не добавляет приложение в автозапуск Windows.
 
 **Журнал и история.** Миссии, смерти, перемещения и торговые запросы из `Game.log` собраны на одном экране. Торговые запросы могут автоматически заполнить фактические покупки и продажи. Поля разрешено исправлять вручную. Статистика фильтруется по времени и экспортируется в CSV.
 

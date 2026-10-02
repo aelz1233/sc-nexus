@@ -64,6 +64,11 @@ public class SettingsServiceTests
             settings.GameDirectoryPath = @"D:\RSI\StarCitizen\LIVE";
             settings.OcrEnabled = true;
             settings.Language = "en";
+            settings.OverlayEnabled = false;
+            settings.OverlayExpanded = true;
+            settings.OverlayOpacity = .75;
+            settings.OverlayHotkey = "Ctrl+Alt+O";
+            settings.ActiveVoyageJson = "{\"route\":1}";
             await service.SaveAsync(settings);
             Assert.Equal(696, (await service.LoadAsync()).CargoScu);
             Assert.Equal("Stanton", (await service.LoadAsync()).CurrentSystem);
@@ -74,6 +79,11 @@ public class SettingsServiceTests
             Assert.Equal(@"D:\RSI\StarCitizen\LIVE", saved.GameDirectoryPath);
             Assert.True(saved.OcrEnabled);
             Assert.Equal("en", saved.Language);
+            Assert.False(saved.OverlayEnabled);
+            Assert.True(saved.OverlayExpanded);
+            Assert.Equal(.75, saved.OverlayOpacity, 2);
+            Assert.Equal("Ctrl+Alt+O", saved.OverlayHotkey);
+            Assert.Equal("{\"route\":1}", saved.ActiveVoyageJson);
         }
         finally
         {

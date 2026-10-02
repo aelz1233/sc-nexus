@@ -11,6 +11,7 @@ namespace SCNexus.Services;
 /// <summary>Ship ports and item statistics from Star Citizen Wiki API; shop prices are supplied by UEX.</summary>
 public sealed class ShipComponentCatalogService
 {
+    private const int CatalogSchemaVersion = 2;
     private const string Api = "https://api.star-citizen.wiki/api/";
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromHours(12);
     private static readonly TimeSpan MaximumPriceAge = TimeSpan.FromDays(45);
@@ -49,7 +50,8 @@ public sealed class ShipComponentCatalogService
             catch (IOException) { }
         }
 
-        if (cached is { Slots.Count: > 0 } && DateTimeOffset.UtcNow - cached.FetchedAt < CacheLifetime)
+        if (cached is { Slots.Count: > 0, SchemaVersion: >= CatalogSchemaVersion } &&
+            DateTimeOffset.UtcNow - cached.FetchedAt < CacheLifetime)
             return cached;
 
         try
@@ -115,7 +117,11 @@ public sealed class ShipComponentCatalogService
 
         AddInstalledComponents(Get(vehicle, "ports"), "", slots, components, version);
         return new ShipComponentCatalog(match.Name, version, DateTimeOffset.UtcNow, slots,
-            components.Values.OrderBy(x => x.Type).ThenBy(x => x.Size).ThenBy(x => x.Name).ToArray());
+            components.Values.OrderBy(x => x.Type).ThenBy(x => x.Size).ThenBy(x => x.Name).ToArray())
+        {
+            SchemaVersion = CatalogSchemaVersion,
+            QuantumFuelCapacityScu = Number(Get(vehicle, "quantum"), "quantum_fuel_capacity")
+        };
     }
 
     private async Task<List<JsonElement>> LoadItemsAsync(string type, CancellationToken token)
@@ -226,7 +232,8 @@ public sealed class ShipComponentCatalogService
     private static ShipComponent ParseComponent(JsonElement item, string fallbackVersion)
     {
         var type = String(item, "type");
-        var (price, shop, priceUpdated) = ReadPrice(Get(Get(item, "uex_prices"), "purchase"), fallbackVersion);
+        var offers = ReadPrices(Get(Get(item, "uex_prices"), "purchase"), fallbackVersion);
+        var cheapest = offers.FirstOrDefault();
         var metric = type switch
         {
             "Shield" => (Number(Get(item, "shield"), "max_health"), Number(Get(item, "shield"), "max_shield_regen"), "Прочность щита / восстановление"),
@@ -238,26 +245,47 @@ public sealed class ShipComponentCatalogService
                 Number(Get(Get(item, "vehicle_weapon"), "damage"), "burst"), "Урон за 60 секунд / пиковый урон"),
             _ => (0d, 0d, "")
         };
+        var resource = Get(item, "resource_network");
+        var usage = Get(resource, "usage");
+        var generation = Get(resource, "generation");
         return new ShipComponent(String(item, "uuid"), String(item, "name"), type, Int(item, "size"),
-            price, shop, priceUpdated, String(item, "version", fallbackVersion), metric.Item1, metric.Item2, metric.Item3);
+            cheapest?.PriceAuec, cheapest?.Shop, cheapest?.UpdatedAt,
+            String(item, "version", fallbackVersion), metric.Item1, metric.Item2, metric.Item3)
+        {
+            Offers = offers,
+            PowerDraw = Number(Get(usage, "power"), "max"),
+            CoolantDraw = Number(Get(usage, "coolant"), "max"),
+            PowerGeneration = Number(generation, "power"),
+            CoolantGeneration = Number(generation, "coolant"),
+            QuantumFuelConsumptionScuPerGm = Number(Get(item, "quantum_drive"), "fuel_consumption_scu_per_gm")
+        };
     }
 
-    private static (decimal? Price, string? Shop, DateTimeOffset? Updated) ReadPrice(JsonElement purchase, string version)
+    private static IReadOnlyList<ComponentShopOffer> ReadPrices(JsonElement purchase, string version)
     {
-        if (purchase.ValueKind != JsonValueKind.Array) return (null, null, null);
+        if (purchase.ValueKind != JsonValueKind.Array) return [];
         var now = DateTimeOffset.UtcNow;
-        var prices = purchase.EnumerateArray().Select(x => new
+        return purchase.EnumerateArray().Select(x =>
         {
-            Amount = Decimal(x, "price_buy"),
-            Shop = String(x, "terminal_name"),
-            Version = String(x, "game_version"),
-            Updated = DateTimeOffset.TryParse(String(x, "date_updated"), CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeUniversal, out var date) ? date : (DateTimeOffset?)null
+            var location = Get(x, "starmap_location");
+            var updated = DateTimeOffset.TryParse(String(x, "date_updated"), CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal, out var date) ? date : (DateTimeOffset?)null;
+            return new
+            {
+                Amount = Decimal(x, "price_buy"),
+                Shop = String(x, "terminal_name"),
+                Location = String(location, "name"),
+                Parent = String(location, "parent_name"),
+                System = String(location, "star_system_name"),
+                Version = String(x, "game_version"),
+                Updated = updated
+            };
         }).Where(x => x.Amount > 0 && x.Updated is { } updated &&
             now - updated <= MaximumPriceAge && updated <= now.AddDays(1) &&
             (string.IsNullOrWhiteSpace(x.Version) || string.IsNullOrWhiteSpace(version) || x.Version == version))
-          .OrderBy(x => x.Amount).ThenByDescending(x => x.Updated).FirstOrDefault();
-        return prices is null ? (null, null, null) : (prices.Amount, prices.Shop, prices.Updated);
+          .OrderBy(x => x.Amount).ThenByDescending(x => x.Updated)
+          .Select(x => new ComponentShopOffer(x.Amount, x.Shop, x.Location, x.Parent, x.System, x.Updated!.Value))
+          .ToArray();
     }
 
     private static double Reciprocal(double value) => value > 0 ? 1 / value : 0;

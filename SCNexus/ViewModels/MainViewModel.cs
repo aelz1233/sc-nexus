@@ -138,6 +138,11 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         ShowRouteDetails = settings.ShowRouteDetails;
         OcrEnabled = settings.OcrEnabled;
         Language = settings.Language is "en" ? "en" : "ru";
+        OverlayEnabled = settings.OverlayEnabled;
+        OverlayExpanded = settings.OverlayExpanded;
+        OverlayOpacity = Math.Clamp(settings.OverlayOpacity, 0.65, 1);
+        OverlayHotkey = settings.OverlayHotkey ?? "";
+        RestoreActiveVoyage(settings.ActiveVoyageJson);
         LocalizationService.SetLanguage(Language);
         gameLogService.GameDirectoryOverride = GameDirectoryPath;
         await ReloadFlightLogAsync();
@@ -420,7 +425,12 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             MonitorIntervalSeconds = Math.Clamp(MonitorIntervalSeconds, 15, 60),
             ShowRouteDetails = ShowRouteDetails,
             OcrEnabled = OcrEnabled,
-            Language = Language
+            Language = Language,
+            OverlayEnabled = OverlayEnabled,
+            OverlayExpanded = OverlayExpanded,
+            OverlayOpacity = Math.Clamp(OverlayOpacity, 0.65, 1),
+            OverlayHotkey = OverlayHotkey,
+            ActiveVoyageJson = SerializeActiveVoyage()
         };
 
     [RelayCommand] private void OpenDashboard() => Navigate("Обзор");

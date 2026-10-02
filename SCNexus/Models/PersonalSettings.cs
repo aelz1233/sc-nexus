@@ -19,4 +19,9 @@ public sealed class PersonalSettings
     public bool ShowRouteDetails { get; set; } = true;
     public bool OcrEnabled { get; set; }
     public string Language { get; set; } = "ru";
+    public bool OverlayEnabled { get; set; } = true;
+    public bool OverlayExpanded { get; set; }
+    public double OverlayOpacity { get; set; } = 0.92;
+    public string OverlayHotkey { get; set; } = "";
+    public string ActiveVoyageJson { get; set; } = "";
 }

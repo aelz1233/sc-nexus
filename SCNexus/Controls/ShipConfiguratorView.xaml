@@ -43,7 +43,7 @@
                 <TextBlock x:Name="DataStatusText" FontWeight="SemiBold" Foreground="{StaticResource Accent}" TextWrapping="Wrap" />
                 <TextBlock x:Name="CoverageText" Style="{StaticResource Hint}" Margin="0,8,0,0" />
                 <TextBlock x:Name="MethodText" Style="{StaticResource Hint}" Margin="0,7,0,0" />
-                <TextBlock Text="Ракеты и другие системы без проверенной совместимости в расчёт не входят. Орудия турелей требуют экипажа. Общая нагрузка на питание и охлаждение пока не проверяется: перед покупкой проверь сборку в игре." Style="{StaticResource Hint}" Margin="0,7,0,0" />
+                <TextBlock Text="Ракеты и системы без проверенной совместимости в расчёт не входят. Энергия и охлаждение считаются только для подтверждённых сменных слотов, поэтому итоговую сборку проверь в игре." Style="{StaticResource Hint}" Margin="0,7,0,0" />
                 <TextBlock Margin="0,9,0,0" FontSize="12" Foreground="{StaticResource Muted}">
                     <Run Text="Данные: " />
                     <Hyperlink NavigateUri="https://api.star-citizen.wiki/developers" RequestNavigate="OnSourceNavigate" Foreground="{StaticResource Accent}">Star Citizen Wiki API</Hyperlink>
@@ -59,8 +59,35 @@
                 <TextBlock Text="{Binding Status}" Style="{StaticResource Hint}" Margin="0,7,0,0" />
                 <TextBlock Text="{Binding CoverageDisplay}" Style="{StaticResource Hint}" Margin="0,5,0,14" />
                 <TextBlock Text="{Binding ChangesDisplay}" Style="{StaticResource Hint}" Margin="0,0,0,6" />
-                <TextBlock Text="{Binding PurchasePlanDisplay}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,0,0,14" />
+                <Border Background="#0C1723" CornerRadius="7" Padding="13" Margin="0,5,0,12">
+                    <StackPanel>
+                        <TextBlock Text="ЭНЕРГИЯ, ОХЛАЖДЕНИЕ И КВАНТ" Foreground="{StaticResource Accent}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding EngineeringDisplay}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                        <TextBlock Text="{Binding EngineeringStatus}" Style="{StaticResource Hint}" Margin="0,5,0,0" />
+                        <TextBlock Text="{Binding QuantumDisplay}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                    </StackPanel>
+                </Border>
+                <TextBlock Text="{Binding ShoppingRouteDisplay}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,5" />
+                <TextBlock Text="{Binding ShoppingRouteLogic}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,0,0,12" />
                 <Button Content="Скопировать список деталей" Click="OnCopyBudgetClick" HorizontalAlignment="Left" Margin="0,0,0,12" />
+                <Expander Header="Остановки и список покупок" IsExpanded="False" Margin="0,0,0,14">
+                    <StackPanel Margin="0,10,0,0">
+                        <ItemsControl ItemsSource="{Binding ShoppingStops}">
+                            <ItemsControl.ItemTemplate><DataTemplate>
+                                <Border Background="#0C1723" CornerRadius="7" Padding="12" Margin="0,0,0,7">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Heading}" FontWeight="SemiBold" Foreground="{StaticResource Accent}" TextWrapping="Wrap" />
+                                        <TextBlock Text="⚠ ОПАСНО: Pyro" Foreground="#FF9A8F" Visibility="{Binding IsPyro, Converter={StaticResource BoolVisibility}}" Margin="0,4,0,0" />
+                                        <ItemsControl ItemsSource="{Binding Items}" Margin="0,6,0,0">
+                                            <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding Display}" TextWrapping="Wrap" Margin="0,2" /></DataTemplate></ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Text="{Binding CostDisplay}" Style="{StaticResource Hint}" Margin="0,5,0,0" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate></ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Expander>
                 <ItemsControl ItemsSource="{Binding Lines}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
@@ -92,8 +119,35 @@
                 <TextBlock Text="{Binding Status}" Style="{StaticResource Hint}" Margin="0,7,0,0" />
                 <TextBlock Text="{Binding CoverageDisplay}" Style="{StaticResource Hint}" Margin="0,5,0,14" />
                 <TextBlock Text="{Binding ChangesDisplay}" Style="{StaticResource Hint}" Margin="0,0,0,6" />
-                <TextBlock Text="{Binding PurchasePlanDisplay}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,0,0,14" />
+                <Border Background="#0C1723" CornerRadius="7" Padding="13" Margin="0,5,0,12">
+                    <StackPanel>
+                        <TextBlock Text="ЭНЕРГИЯ, ОХЛАЖДЕНИЕ И КВАНТ" Foreground="{StaticResource Accent}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding EngineeringDisplay}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                        <TextBlock Text="{Binding EngineeringStatus}" Style="{StaticResource Hint}" Margin="0,5,0,0" />
+                        <TextBlock Text="{Binding QuantumDisplay}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                    </StackPanel>
+                </Border>
+                <TextBlock Text="{Binding ShoppingRouteDisplay}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,5" />
+                <TextBlock Text="{Binding ShoppingRouteLogic}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,0,0,12" />
                 <Button Content="Скопировать список деталей" Click="OnCopyBestClick" HorizontalAlignment="Left" Margin="0,0,0,12" />
+                <Expander Header="Остановки и список покупок" IsExpanded="False" Margin="0,0,0,14">
+                    <StackPanel Margin="0,10,0,0">
+                        <ItemsControl ItemsSource="{Binding ShoppingStops}">
+                            <ItemsControl.ItemTemplate><DataTemplate>
+                                <Border Background="#0C1723" CornerRadius="7" Padding="12" Margin="0,0,0,7">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Heading}" FontWeight="SemiBold" Foreground="{StaticResource Accent}" TextWrapping="Wrap" />
+                                        <TextBlock Text="⚠ ОПАСНО: Pyro" Foreground="#FF9A8F" Visibility="{Binding IsPyro, Converter={StaticResource BoolVisibility}}" Margin="0,4,0,0" />
+                                        <ItemsControl ItemsSource="{Binding Items}" Margin="0,6,0,0">
+                                            <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding Display}" TextWrapping="Wrap" Margin="0,2" /></DataTemplate></ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Text="{Binding CostDisplay}" Style="{StaticResource Hint}" Margin="0,5,0,0" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate></ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Expander>
                 <ItemsControl ItemsSource="{Binding Lines}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>

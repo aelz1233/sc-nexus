@@ -130,6 +130,11 @@ public sealed class SettingsService
                 current.ShowRouteDetails = snapshot.ShowRouteDetails;
                 current.OcrEnabled = snapshot.OcrEnabled;
                 current.Language = snapshot.Language;
+                current.OverlayEnabled = snapshot.OverlayEnabled;
+                current.OverlayExpanded = snapshot.OverlayExpanded;
+                current.OverlayOpacity = snapshot.OverlayOpacity;
+                current.OverlayHotkey = snapshot.OverlayHotkey;
+                current.ActiveVoyageJson = snapshot.ActiveVoyageJson;
             }
             await db.SaveChangesAsync();
         }
@@ -160,6 +165,11 @@ public sealed class SettingsService
             if (!names.Contains("ShowRouteDetails")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN ShowRouteDetails INTEGER NOT NULL DEFAULT 1");
             if (!names.Contains("OcrEnabled")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OcrEnabled INTEGER NOT NULL DEFAULT 0");
             if (!names.Contains("Language")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN Language TEXT NOT NULL DEFAULT 'ru'");
+            if (!names.Contains("OverlayEnabled")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayEnabled INTEGER NOT NULL DEFAULT 1");
+            if (!names.Contains("OverlayExpanded")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayExpanded INTEGER NOT NULL DEFAULT 0");
+            if (!names.Contains("OverlayOpacity")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayOpacity REAL NOT NULL DEFAULT 0.92");
+            if (!names.Contains("OverlayHotkey")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayHotkey TEXT NOT NULL DEFAULT ''");
+            if (!names.Contains("ActiveVoyageJson")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN ActiveVoyageJson TEXT NOT NULL DEFAULT ''");
         }
         finally { await connection.CloseAsync(); }
     }

@@ -100,6 +100,7 @@ public partial class MainViewModel
         var isRunning = snapshot.Values.TryGetValue("game.running", out var runningValue)
             ? bool.TryParse(runningValue.Value, out var parsedRunning) && parsedRunning
             : IsStarCitizenRunning();
+        IsGameRunning = isRunning;
         GameProcessStatus = isRunning ? (IsEnglish ? "Game is running" : "Игра запущена")
             : (IsEnglish ? "Game is not running" : "Игра не запущена");
         if (snapshot.Values.TryGetValue("game.shard", out var shard))
@@ -153,6 +154,8 @@ public partial class MainViewModel
             ? $"{snapshot.Sources.Count(x => x.IsAvailable)}/{snapshot.Sources.Count} sources available"
             : $"{snapshot.Sources.Count(x => x.IsAvailable)}/{snapshot.Sources.Count} источников доступны";
         NeedsManualGamePath = !Directory.Exists(gameLogService.ResolveGameDirectory());
+        UpdateVoyageProgress(snapshot);
+        NotifyOverlayChanged();
         OnPropertyChanged(nameof(LiveLocationDisplay));
         OnPropertyChanged(nameof(LiveServerDisplay));
         OnPropertyChanged(nameof(LiveMissionDisplay));

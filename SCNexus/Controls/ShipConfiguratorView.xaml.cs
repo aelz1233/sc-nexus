@@ -71,7 +71,8 @@ public partial class ShipConfiguratorView : UserControl
         {
             var catalog = await _catalogService.LoadAsync(ship.Name);
             var profile = ProfilePicker.SelectedIndex == 1 ? ShipBuildProfile.Travel : ShipBuildProfile.Combat;
-            var builds = await Task.Run(() => ShipBuildOptimizer.Build(catalog, budget, profile));
+            var builds = await Task.Run(() => ShipBuildOptimizer.Build(catalog, budget, profile,
+                _main?.CurrentSystem, _main?.CurrentLocation));
             BudgetCard.DataContext = builds.Budget;
             BestCard.DataContext = builds.Best;
             BudgetCard.Visibility = Visibility.Visible;
@@ -84,6 +85,7 @@ public partial class ShipConfiguratorView : UserControl
                 ? "Приоритет «Бой»: урон орудий и щиты, затем энергия, охлаждение и квантовый привод. Внутри типа сравниваются измеримые показатели."
                 : "Приоритет «Путешествие и торговля»: скорость и расход квантового привода, затем щиты, энергия, охлаждение и орудия. Внутри типа сравниваются измеримые показатели.";
             StatusText.Text = LocalizationService.T("Подбор завершён.");
+            if (LocalizationService.IsEnglish) UiLocalization.Apply(this);
         }
         catch (Exception ex)
         {
@@ -122,7 +124,8 @@ public partial class ShipConfiguratorView : UserControl
             Clipboard.SetText(string.Join(Environment.NewLine, new[]
             {
                 $"{shipName} — {result.Title}", result.CostDisplay
-            }.Concat(rows)));
+            }.Concat(rows).Concat(new[] { "", result.EngineeringDisplay, result.QuantumDisplay, "", result.ShoppingRouteDisplay })
+                .Concat(result.ShoppingStops.SelectMany(stop => new[] { stop.Heading }.Concat(stop.Items.Select(item => "  " + item.Display))))));
             StatusText.Text = LocalizationService.T("Список деталей скопирован.");
         }
         catch (Exception ex)

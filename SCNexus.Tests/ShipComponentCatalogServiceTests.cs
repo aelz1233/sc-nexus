@@ -26,6 +26,11 @@ public class ShipComponentCatalogServiceTests
             Assert.Contains(catalog.Components, x => x.Uuid == "military-shield" &&
                 x.PriceAuec == 12_000 && x.Shop == "New Babbage" &&
                 x.CompatibleSlotKeys.Contains(shieldSlot.Key));
+            var military = Assert.Single(catalog.Components, x => x.Uuid == "military-shield");
+            Assert.Equal(4, military.PowerDraw);
+            Assert.Equal("Stanton", Assert.Single(military.Offers).System);
+            Assert.Equal(10, catalog.QuantumFuelCapacityScu);
+            Assert.Equal(2, catalog.SchemaVersion);
             Assert.DoesNotContain(catalog.Components, x => x.Uuid == "civilian-shield");
             Assert.Contains(catalog.Components, x => x.Uuid == "gun-upgrade" &&
                 x.CompatibleSlotKeys.Contains(gunSlot.Key));
@@ -60,7 +65,7 @@ public class ShipComponentCatalogServiceTests
                 body = """{"data":[{"name":"Test Ship","slug":"test-ship"}]}""";
             else if (path.EndsWith("/vehicles/test-ship"))
                 body = """
-                    {"data":{"name":"Test Ship","version":"4.10-LIVE","ports":[
+                    {"data":{"name":"Test Ship","version":"4.10-LIVE","quantum":{"quantum_fuel_capacity":10},"ports":[
                       {"name":"shield","type":"Shield","editable":true,"sizes":{"min":2,"max":2},
                        "required_tags":["mil"],"equipped_item_uuid":"stock-shield",
                        "equipped_item":{"uuid":"stock-shield","name":"Stock Shield","type":"Shield","size":2,
@@ -78,7 +83,9 @@ public class ShipComponentCatalogServiceTests
                     {"data":[
                       {"uuid":"military-shield","name":"Military Shield","type":"Shield","size":2,"tags":["mil"],
                        "version":"4.10-LIVE","shield":{"max_health":200,"max_shield_regen":20},
+                       "resource_network":{"usage":{"power":{"max":4},"coolant":{"max":3}},"generation":{}},
                        "uex_prices":{"purchase":[{"price_buy":12000,"terminal_name":"New Babbage",
+                         "starmap_location":{"name":"New Babbage","parent_name":"microTech","star_system_name":"Stanton"},
                          "game_version":"4.10-LIVE","date_updated":"__DATE__"}]}},
                       {"uuid":"civilian-shield","name":"Civilian Shield","type":"Shield","size":2,"tags":[],
                        "version":"4.10-LIVE","shield":{"max_health":250,"max_shield_regen":25},
