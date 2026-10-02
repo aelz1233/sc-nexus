@@ -22,6 +22,8 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     private IReadOnlyList<TradeRoute> _recommendedRoutes = [];
     private int _visibleRouteCount;
     private CancellationTokenSource? _pendingSave;
+    private CancellationTokenSource? _catalogSearchCancellation;
+    private CancellationTokenSource? _locationSearchCancellation;
 
     [ObservableProperty] private decimal balance;
     [ObservableProperty] private string currentShip = "Не выбран";
@@ -141,7 +143,19 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         OverlayEnabled = settings.OverlayEnabled;
         OverlayExpanded = settings.OverlayExpanded;
         OverlayOpacity = Math.Clamp(settings.OverlayOpacity, 0.65, 1);
+        OverlayTextOpacity = Math.Clamp(settings.OverlayTextOpacity, 0.65, 1);
+        OverlayScale = Math.Clamp(settings.OverlayScale, 0.75, 1.5);
+        OverlayAnchor = settings.OverlayAnchor is "TopLeft" or "TopRight" or "BottomLeft" or "BottomRight" or "Custom"
+            ? settings.OverlayAnchor : "BottomRight";
+        OverlayCustomLeft = settings.OverlayCustomLeft;
+        OverlayCustomTop = settings.OverlayCustomTop;
+        OverlayShowShip = settings.OverlayShowShip;
+        OverlayShowLocation = settings.OverlayShowLocation;
+        OverlayShowRoute = settings.OverlayShowRoute;
+        OverlayShowMission = settings.OverlayShowMission;
+        OverlayShowFreshness = settings.OverlayShowFreshness;
         OverlayHotkey = settings.OverlayHotkey ?? "";
+        RestoreLastSessionSummary(settings.LastSessionSummary, settings.LastSessionEndedAt);
         RestoreActiveVoyage(settings.ActiveVoyageJson);
         LocalizationService.SetLanguage(Language);
         gameLogService.GameDirectoryOverride = GameDirectoryPath;
@@ -199,7 +213,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         if (dataCollectionService is not null)
         {
             dataCollectionService.SnapshotUpdated += OnDataSnapshotUpdated;
-            try { await dataCollectionService.WatchAsync(() => OcrEnabled, token); }
+            try { await dataCollectionService.WatchAsync(() => MonitorEnabled, () => OcrEnabled, token); }
             finally { dataCollectionService.SnapshotUpdated -= OnDataSnapshotUpdated; }
             return;
         }
@@ -307,10 +321,23 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         VehicleStatus = "Вместимость и роль заполнены автоматически.";
     }
     public bool HasSelectedCatalogVehicle => SelectedCatalogVehicle is not null;
-    partial void OnSelectedSystemChanged(string value) => RefreshLocationSuggestions();
+    partial void OnSelectedSystemChanged(string value) => ScheduleLocationRefresh();
     partial void OnLocationQueryChanged(string value)
     {
-        if (!_selectingLocation) RefreshLocationSuggestions();
+        if (!_selectingLocation) ScheduleLocationRefresh();
+    }
+
+    private async void ScheduleLocationRefresh()
+    {
+        _locationSearchCancellation?.Cancel();
+        var cancellation = _locationSearchCancellation = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(140, cancellation.Token);
+            if (!cancellation.IsCancellationRequested) RefreshLocationSuggestions();
+        }
+        catch (OperationCanceledException) { }
+        finally { if (ReferenceEquals(_locationSearchCancellation, cancellation)) _locationSearchCancellation = null; cancellation.Dispose(); }
     }
 
     private void RefreshSortedShips()
@@ -429,8 +456,20 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             OverlayEnabled = OverlayEnabled,
             OverlayExpanded = OverlayExpanded,
             OverlayOpacity = Math.Clamp(OverlayOpacity, 0.65, 1),
+            OverlayTextOpacity = Math.Clamp(OverlayTextOpacity, 0.65, 1),
+            OverlayScale = Math.Clamp(OverlayScale, 0.75, 1.5),
+            OverlayAnchor = OverlayAnchor,
+            OverlayCustomLeft = OverlayCustomLeft,
+            OverlayCustomTop = OverlayCustomTop,
+            OverlayShowShip = OverlayShowShip,
+            OverlayShowLocation = OverlayShowLocation,
+            OverlayShowRoute = OverlayShowRoute,
+            OverlayShowMission = OverlayShowMission,
+            OverlayShowFreshness = OverlayShowFreshness,
             OverlayHotkey = OverlayHotkey,
-            ActiveVoyageJson = SerializeActiveVoyage()
+            ActiveVoyageJson = SerializeActiveVoyage(),
+            LastSessionSummary = LastSessionSummaryForStorage,
+            LastSessionEndedAt = LastSessionEndedAtForStorage
         };
 
     [RelayCommand] private void OpenDashboard() => Navigate("Обзор");

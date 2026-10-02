@@ -23,6 +23,12 @@ public partial class MainWindow : Window
     private System.Windows.Forms.ContextMenuStrip? _trayMenu;
     private System.Windows.Forms.ToolStripMenuItem? _trayOpenItem;
     private System.Windows.Forms.ToolStripMenuItem? _trayExitItem;
+    private System.Windows.Forms.ToolStripMenuItem? _trayGameStatusItem;
+    private System.Windows.Forms.ToolStripMenuItem? _trayLocationItem;
+    private System.Windows.Forms.ToolStripMenuItem? _trayRouteItem;
+    private System.Windows.Forms.ToolStripMenuItem? _trayOverlayItem;
+    private System.Windows.Forms.ToolStripMenuItem? _trayMonitorItem;
+    private System.Windows.Forms.ToolStripMenuItem? _trayUpdateItem;
     private System.Drawing.Icon? _trayIcon;
     private readonly DispatcherTimer _translationTimer = new() { Interval = TimeSpan.FromMilliseconds(80) };
     public MainWindow()
@@ -41,8 +47,16 @@ public partial class MainWindow : Window
         SourceInitialized += (_, _) => ApplyDarkTitleBar();
         DataContextChanged += (_, e) =>
         {
-            if (e.OldValue is MainViewModel previous) previous.PropertyChanged -= OnViewModelChanged;
-            if (e.NewValue is MainViewModel current) current.PropertyChanged += OnViewModelChanged;
+            if (e.OldValue is MainViewModel previous)
+            {
+                previous.PropertyChanged -= OnViewModelChanged;
+                previous.NotificationRaised -= OnNotificationRaised;
+            }
+            if (e.NewValue is MainViewModel current)
+            {
+                current.PropertyChanged += OnViewModelChanged;
+                current.NotificationRaised += OnNotificationRaised;
+            }
         };
     }
 
@@ -148,10 +162,40 @@ public partial class MainWindow : Window
             _trayIcon = System.Drawing.Icon.ExtractAssociatedIcon(executable);
         _trayOpenItem = new System.Windows.Forms.ToolStripMenuItem();
         _trayExitItem = new System.Windows.Forms.ToolStripMenuItem();
+        _trayGameStatusItem = new System.Windows.Forms.ToolStripMenuItem { Enabled = false };
+        _trayLocationItem = new System.Windows.Forms.ToolStripMenuItem { Enabled = false };
+        _trayRouteItem = new System.Windows.Forms.ToolStripMenuItem { Enabled = false };
+        _trayOverlayItem = new System.Windows.Forms.ToolStripMenuItem();
+        _trayMonitorItem = new System.Windows.Forms.ToolStripMenuItem();
+        _trayUpdateItem = new System.Windows.Forms.ToolStripMenuItem();
         _trayOpenItem.Click += (_, _) => Dispatcher.BeginInvoke(RestoreFromTray);
         _trayExitItem.Click += (_, _) => Dispatcher.BeginInvoke(RequestExit);
+        _trayOverlayItem.Click += (_, _) => Dispatcher.BeginInvoke(() =>
+        {
+            if (DataContext is MainViewModel vm) vm.ToggleOverlayFromHotkey();
+        });
+        _trayMonitorItem.Click += (_, _) => Dispatcher.BeginInvoke(() =>
+        {
+            if (DataContext is not MainViewModel vm) return;
+            vm.MonitorEnabled = !vm.MonitorEnabled;
+            vm.RaiseNotification($"monitor:{vm.MonitorEnabled}",
+                vm.IsEnglish ? "Monitoring changed" : "Мониторинг изменён",
+                vm.MonitorEnabled ? (vm.IsEnglish ? "Automatic monitoring resumed." : "Автоматический мониторинг продолжен.")
+                    : (vm.IsEnglish ? "Automatic monitoring paused." : "Автоматический мониторинг приостановлен."));
+            UpdateTrayText();
+        });
+        _trayUpdateItem.Click += (_, _) => Dispatcher.BeginInvoke(() =>
+        {
+            RestoreFromTray();
+            if (DataContext is MainViewModel vm && vm.CheckForUpdatesCommand.CanExecute(null))
+                vm.CheckForUpdatesCommand.Execute(null);
+        });
         _trayMenu = new System.Windows.Forms.ContextMenuStrip { ShowImageMargin = false };
-        _trayMenu.Items.AddRange([_trayOpenItem, new System.Windows.Forms.ToolStripSeparator(), _trayExitItem]);
+        _trayMenu.Items.AddRange([
+            _trayGameStatusItem, _trayLocationItem, _trayRouteItem,
+            new System.Windows.Forms.ToolStripSeparator(), _trayOverlayItem, _trayMonitorItem, _trayUpdateItem,
+            new System.Windows.Forms.ToolStripSeparator(), _trayOpenItem, _trayExitItem
+        ]);
         _trayMenu.Opening += (_, _) => UpdateTrayText();
         _notifyIcon = new System.Windows.Forms.NotifyIcon
         {
@@ -174,6 +218,38 @@ public partial class MainWindow : Window
     {
         if (_trayOpenItem is not null) _trayOpenItem.Text = LocalizationService.IsEnglish ? "Open SC NEXUS" : "Открыть SC NEXUS";
         if (_trayExitItem is not null) _trayExitItem.Text = LocalizationService.IsEnglish ? "Exit" : "Выйти";
+        if (DataContext is not MainViewModel vm) return;
+        if (_trayGameStatusItem is not null) _trayGameStatusItem.Text = vm.IsGameRunning
+            ? (vm.IsEnglish ? "● Star Citizen is running" : "● Star Citizen запущен")
+            : (vm.IsEnglish ? "○ Star Citizen is not running" : "○ Star Citizen не запущен");
+        if (_trayLocationItem is not null) _trayLocationItem.Text = (vm.IsEnglish ? "Location: " : "Локация: ") + vm.LiveLocationDisplay;
+        if (_trayRouteItem is not null) _trayRouteItem.Text = vm.HasActiveVoyage
+            ? vm.ActiveVoyageStopDisplay : (vm.IsEnglish ? "No active route" : "Нет активного маршрута");
+        if (_trayOverlayItem is not null) _trayOverlayItem.Text = vm.IsEnglish ? "Show / hide overlay" : "Показать / скрыть оверлей";
+        if (_trayMonitorItem is not null) _trayMonitorItem.Text = vm.MonitorEnabled
+            ? (vm.IsEnglish ? "Pause monitoring" : "Приостановить мониторинг")
+            : (vm.IsEnglish ? "Resume monitoring" : "Продолжить мониторинг");
+        if (_trayUpdateItem is not null) _trayUpdateItem.Text = vm.IsEnglish ? "Check for updates" : "Проверить обновление";
+    }
+
+    private void OnNotificationRaised(object? sender, SCNexus.Models.NexusNotification notification)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(() => OnNotificationRaised(sender, notification));
+            return;
+        }
+        if (_notifyIcon is null || IsVisible) return;
+        _notifyIcon.BalloonTipTitle = notification.Title;
+        _notifyIcon.BalloonTipText = notification.Message.Length > 240
+            ? notification.Message[..237] + "…" : notification.Message;
+        _notifyIcon.BalloonTipIcon = notification.Kind switch
+        {
+            SCNexus.Models.NexusNotificationKind.Warning => System.Windows.Forms.ToolTipIcon.Warning,
+            SCNexus.Models.NexusNotificationKind.Error => System.Windows.Forms.ToolTipIcon.Error,
+            _ => System.Windows.Forms.ToolTipIcon.Info
+        };
+        _notifyIcon.ShowBalloonTip(4000);
     }
 
     private void HideToTray()
@@ -205,6 +281,11 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _translationTimer.Stop();
+        if (DataContext is MainViewModel vm)
+        {
+            vm.PropertyChanged -= OnViewModelChanged;
+            vm.NotificationRaised -= OnNotificationRaised;
+        }
         if (DataContext is MainViewModel { PendingInstallerPath: { } installer })
         {
             try

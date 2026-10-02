@@ -57,6 +57,10 @@ public static class LocalizationService
         ["Игровой оверлей"] = "Game overlay", ["Показывать оверлей при запущенном Star Citizen"] = "Show the overlay while Star Citizen is running",
         ["Расширенный вид: миссия, следующая остановка и свежесть данных"] = "Expanded view: mission, next stop, and data freshness",
         ["Бинд показать / скрыть"] = "Show / hide shortcut", ["Прозрачность"] = "Opacity",
+        ["Внешний вид и состав"] = "Appearance and content", ["Положение"] = "Position",
+        ["Масштаб"] = "Scale", ["Прозрачность фона"] = "Background opacity",
+        ["Прозрачность текста"] = "Text opacity", ["Маршрут"] = "Route", ["Миссия"] = "Mission",
+        ["Свежесть данных"] = "Data freshness", ["Вернуть справа снизу"] = "Reset to bottom right",
         ["Очистить"] = "Clear",
         ["Можно нажать любую свободную комбинацию клавиатуры. Escape отменяет запись, Delete очищает бинд."] = "Press any available keyboard shortcut. Escape cancels recording; Delete clears the shortcut.",
         ["Показать пример"] = "Show preview", ["Скрыть пример"] = "Hide preview",
@@ -64,6 +68,17 @@ public static class LocalizationService
         ["Оверлей — отдельное окно только для чтения. Можно назначить любое свободное сочетание; по умолчанию бинда нет. Nexus не внедряется в Star Citizen и не перехватывает управление."] = "The overlay is a separate read-only window. You can assign any available shortcut; none is assigned by default. Nexus does not inject into Star Citizen or intercept input.",
         ["Крестик сворачивает SC NEXUS в трей. Для полного выхода используй меню значка в области уведомлений."] = "The close button minimizes SC NEXUS to the notification area. Use the tray icon menu to exit completely.",
         ["Проверить обновление"] = "Check for updates", ["Токен для закрытого репозитория"] = "Token for a private repository",
+        ["Нажми кнопку, чтобы проверить новую версию."] = "Click the button to check for a new version.",
+        ["Установлена версия "] = "Installed version ", ["Проверяю GitHub…"] = "Checking GitHub…",
+        ["Уже установлена актуальная версия "] = "The latest version is already installed: ",
+        ["Доступна версия "] = "Version available: ", [" Установка отменена."] = " Installation cancelled.",
+        ["Скачиваю установщик: "] = "Downloading installer: ",
+        ["Создаю резервную копию перед обновлением…"] = "Creating a backup before the update…",
+        ["Обновление готово. Закрываю приложение: установка пройдёт в фоне, затем SC NEXUS откроется снова…"] = "The update is ready. SC NEXUS will close, install it in the background, and start again…",
+        ["Токен сохранён для доступа к закрытому репозиторию."] = "A token is saved for private repository access.",
+        ["Токен не сохранён. Для открытого репозитория он не нужен."] = "No token is saved. Public repositories do not require one.",
+        ["Токен сохранён для текущего пользователя Windows."] = "The token is saved for the current Windows user.",
+        ["Токен удалён."] = "The token was removed.", ["Не удалось обновить программу: "] = "Could not update the application: ",
         ["Сохранить токен"] = "Save token", ["Удалить токен"] = "Remove token", ["Личные данные"] = "Personal data",
         ["Резервная копия"] = "Backup", ["Открыть папку данных"] = "Open data folder", ["АВТОМАТИЧЕСКИЕ ДАННЫЕ"] = "AUTOMATIC DATA",
         ["Источники данных"] = "Data sources", ["Обнаружено в игре"] = "Detected in game", ["Обновить все источники"] = "Refresh all sources",
@@ -79,6 +94,8 @@ public static class LocalizationService
         ["ЛУЧШЕЕ ЗА БЮДЖЕТ"] = "BEST WITHIN BUDGET", ["ЛУЧШЕЕ БЕЗ ОГРАНИЧЕНИЯ БЮДЖЕТА"] = "BEST WITHOUT BUDGET LIMIT",
         ["ЭНЕРГИЯ, ОХЛАЖДЕНИЕ И КВАНТ"] = "POWER, COOLING, AND QUANTUM",
         ["Маршрут покупки компонентов"] = "Component shopping route", ["Остановки и список покупок"] = "Stops and shopping list",
+        ["МАРШРУТ ПОКУПКИ"] = "SHOPPING ROUTE", ["Маршрут и чек-лист покупок"] = "Route and shopping checklist",
+        ["Отметь после покупки"] = "Check after purchase",
         ["ВЕДЕНИЕ ПО МАРШРУТУ"] = "ROUTE GUIDANCE", ["Назад"] = "Back",
         ["Следующая остановка"] = "Next stop", ["Завершить ведение"] = "Stop guidance",
         ["Остановка переключается автоматически по Game.log. Если журнал не сообщил локацию или сделку, скорректируй шаг вручную."] = "The stop advances automatically from Game.log. If the log does not report the location or transaction, adjust the step manually.",
@@ -98,7 +115,9 @@ public static class LocalizationService
         , ["Подбор сменных деталей по совместимым портам выбранного корабля. Сравниваются измеримые характеристики из текущего каталога игры."] = "Recommends replaceable components for compatible ports on the selected ship using measurable stats from the current game catalog."
         , ["Ракеты и другие системы без проверенной совместимости в расчёт не входят. Орудия турелей требуют экипажа. Общая нагрузка на питание и охлаждение пока не проверяется: перед покупкой проверь сборку в игре."] = "Missiles and systems without verified compatibility are excluded. Turret guns may require crew. Total power and cooling load is not validated, so verify the build in game before buying."
         , ["OCR экрана работает только когда окно Star Citizen находится на переднем плане. Снимок удаляется сразу после распознавания."] = "Screen OCR runs only while Star Citizen is the foreground window. The screenshot is deleted immediately after recognition."
-        , ["Готов к следующему рейсу?"] = "Ready for the next trip?"
+        , ["Готов к следующему рейсу?"] = "Ready for the next trip?", ["Центр уведомлений"] = "Notification center"
+        , ["Последняя игровая сессия"] = "Last game session", ["Сессия ещё не зафиксирована."] = "No session has been recorded yet."
+        , ["Nexus сформирует отчёт после запуска и закрытия Star Citizen."] = "Nexus will build a report after Star Citizen starts and closes."
         , ["Текущая локация"] = "Current location", ["Сервер и регион"] = "Server and region"
         , ["Активная миссия"] = "Active mission"
         , ["Заработано сегодня"] = "Earned today", ["За завершённые рейсы"] = "From completed trips"
@@ -134,6 +153,12 @@ public static class LocalizationService
         , ["Укажи бюджет в aUEC: целое число не меньше нуля."] = "Enter a non-negative whole-number budget in aUEC."
         , ["Загружаю порты корабля, детали и цены…"] = "Loading ship ports, components, and prices…"
         , ["Подбор завершён."] = "Loadout calculation complete.", ["Список деталей скопирован."] = "Component list copied."
+        , ["Лучшее из доступных данных"] = "Best from available data", ["Лучшее за бюджет"] = "Best within budget"
+        , ["Максимум оценки для выбранного профиля среди подтверждённых совместимых деталей."] = "Highest score for the selected profile among verified compatible components."
+        , ["Часть деталей не имеет подтверждённой цены; эту сборку нельзя считать гарантированно покупаемой."] = "Some components have no verified price, so availability of this build is not guaranteed."
+        , ["Нет слотов с доступной ценой или штатной деталью."] = "No slots have a priced or installed component."
+        , ["Максимальная оценка среди деталей с указанной ценой в пределах бюджета. Штатные детали можно оставить бесплатно."] = "Highest score among priced components within the budget. Installed components can be kept at no cost."
+        , ["Щит"] = "Shield", ["Квантовый привод"] = "Quantum drive", ["Генератор"] = "Power plant", ["Орудие"] = "Weapon"
         , ["За SCU"] = "Per SCU", ["Маржа"] = "Margin", ["Вход"] = "Investment", ["Заполнение"] = "Fill"
         , ["Местный"] = "Local", ["Планетарный"] = "Planetary", ["Звёздный"] = "In-system", ["Межзвёздный"] = "Interstellar"
         , ["Бомбардировщик"] = "Bomber", ["Медицинский"] = "Medical", ["Добыча ресурсов"] = "Mining"

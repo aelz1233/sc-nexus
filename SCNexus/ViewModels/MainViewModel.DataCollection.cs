@@ -101,6 +101,7 @@ public partial class MainViewModel
             ? bool.TryParse(runningValue.Value, out var parsedRunning) && parsedRunning
             : IsStarCitizenRunning();
         IsGameRunning = isRunning;
+        UpdateSessionInsights(snapshot, isRunning);
         GameProcessStatus = isRunning ? (IsEnglish ? "Game is running" : "Игра запущена")
             : (IsEnglish ? "Game is not running" : "Игра не запущена");
         if (snapshot.Values.TryGetValue("game.shard", out var shard))
@@ -201,6 +202,8 @@ public partial class MainViewModel
                     IsEnglish ? "Detected automatically from Game.log" : "Обнаружен автоматически из Game.log");
                 await ReloadFlightLogAsync();
                 WorkspaceStatus = IsEnglish ? $"Added detected ship: {vehicle.Name}" : $"Обнаруженный корабль добавлен во флот: {vehicle.Name}";
+                RaiseNotification($"ship:{vehicle.Name}", IsEnglish ? "Ship detected" : "Обнаружен корабль",
+                    vehicle.Name, NexusNotificationKind.Success, TimeSpan.FromHours(1));
             }
             catch (Exception ex) { WorkspaceStatus = ex.Message; }
             finally { _fleetSyncPending.Remove(raw); }

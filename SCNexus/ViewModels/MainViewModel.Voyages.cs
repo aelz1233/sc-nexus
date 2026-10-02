@@ -273,6 +273,11 @@ public partial class MainViewModel
         }
         if (!changed) return;
         RefreshActiveVoyageProperties();
+        RaiseNotification($"voyage:{ActiveVoyageStopIndex}:{ActiveVoyageCompleted}",
+            ActiveVoyageCompleted ? (IsEnglish ? "Route completed" : "Маршрут завершён")
+                : (IsEnglish ? "Next route stop" : "Следующая остановка маршрута"),
+            ActiveVoyageCompleted ? ActiveVoyageStopDisplay : $"{ActiveVoyageStopDisplay}. {ActiveVoyageActionDisplay}",
+            ActiveVoyageCompleted ? NexusNotificationKind.Success : NexusNotificationKind.Info);
         QueueSave();
     }
 

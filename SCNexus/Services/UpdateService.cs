@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Security.Cryptography;
@@ -17,20 +18,26 @@ public sealed class UpdateService
     private const string LatestReleaseUrl = "https://api.github.com/repos/aelz1233/sc-nexus/releases/latest";
     private readonly string _tokenPath;
     private readonly string _latestReleaseUrl;
+    private readonly string _stateDirectory;
+    private readonly string _rollbackMarkerPath;
     private readonly HttpClient _client;
 
     public UpdateService() : this(new HttpClient { Timeout = TimeSpan.FromMinutes(10) },
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SCNexus", "github-token.bin"), LatestReleaseUrl) { }
 
-    public UpdateService(HttpClient client, string tokenPath, string latestReleaseUrl)
+    public UpdateService(HttpClient client, string tokenPath, string latestReleaseUrl, string? stateDirectory = null)
     {
         _client = client;
         _tokenPath = tokenPath;
         _latestReleaseUrl = latestReleaseUrl;
+        _stateDirectory = stateDirectory ?? Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SCNexus", "updates");
+        _rollbackMarkerPath = Path.Combine(_stateDirectory, "pending-rollback.json");
     }
 
     public Version CurrentVersion => Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 0);
     public bool HasToken => File.Exists(_tokenPath);
+    public bool HasPendingRollback => File.Exists(_rollbackMarkerPath);
 
     public void SaveToken(string token)
     {
@@ -152,4 +159,106 @@ public sealed class UpdateService
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
+
+    public void PrepareRollback(Version targetVersion, string databasePath, string databaseBackupPath,
+        string? executablePath = null)
+    {
+        executablePath ??= Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(executablePath) || !File.Exists(executablePath) ||
+            !Path.GetExtension(executablePath).Equals(".exe", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Не удалось сохранить текущую версию программы для отката.");
+        if (!File.Exists(databaseBackupPath))
+            throw new FileNotFoundException("Резервная копия базы перед обновлением не найдена.", databaseBackupPath);
+
+        Directory.CreateDirectory(_stateDirectory);
+        var rollbackExecutable = Path.Combine(_stateDirectory,
+            $"SCNexus-{CurrentVersion.ToString(3)}-rollback.exe");
+        File.Copy(executablePath, rollbackExecutable, true);
+        var state = new RollbackState(Path.GetFullPath(executablePath), rollbackExecutable,
+            Path.GetFullPath(databasePath), Path.GetFullPath(databaseBackupPath),
+            CurrentVersion.ToString(3), targetVersion.ToString(3), DateTimeOffset.UtcNow);
+        File.WriteAllText(_rollbackMarkerPath, JsonSerializer.Serialize(state));
+    }
+
+    public bool MarkStartupHealthy()
+    {
+        var state = ReadRollbackState();
+        if (state is null || !Version.TryParse(state.TargetVersion, out var target) || CurrentVersion < target)
+            return false;
+        TryDelete(_rollbackMarkerPath);
+        TryDelete(state.RollbackExecutablePath);
+        return true;
+    }
+
+    public bool TryScheduleRollback()
+    {
+        var state = ReadRollbackState();
+        if (state is null || !Version.TryParse(state.TargetVersion, out var target) || CurrentVersion < target ||
+            !File.Exists(state.RollbackExecutablePath) || !File.Exists(state.DatabaseBackupPath)) return false;
+        var currentExecutable = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(currentExecutable) ||
+            !Path.GetFullPath(currentExecutable).Equals(Path.GetFullPath(state.InstalledExecutablePath),
+                StringComparison.OrdinalIgnoreCase)) return false;
+
+        Directory.CreateDirectory(_stateDirectory);
+        var scriptPath = Path.Combine(_stateDirectory, "restore-previous-version.ps1");
+        File.WriteAllText(scriptPath, RollbackScript, new UTF8Encoding(false));
+        var startInfo = new ProcessStartInfo("powershell.exe")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden
+        };
+        foreach (var argument in new[]
+        {
+            "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", scriptPath,
+            "-ParentProcessId", Environment.ProcessId.ToString(),
+            "-SourceExecutable", state.RollbackExecutablePath,
+            "-DestinationExecutable", state.InstalledExecutablePath,
+            "-DatabaseBackup", state.DatabaseBackupPath,
+            "-DatabasePath", state.DatabasePath,
+            "-MarkerPath", _rollbackMarkerPath
+        }) startInfo.ArgumentList.Add(argument);
+        Process.Start(startInfo);
+        return true;
+    }
+
+    private RollbackState? ReadRollbackState()
+    {
+        if (!File.Exists(_rollbackMarkerPath)) return null;
+        try { return JsonSerializer.Deserialize<RollbackState>(File.ReadAllText(_rollbackMarkerPath)); }
+        catch (IOException) { return null; }
+        catch (JsonException) { return null; }
+    }
+
+    private static void TryDelete(string path)
+    {
+        try { if (File.Exists(path)) File.Delete(path); }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    private sealed record RollbackState(string InstalledExecutablePath, string RollbackExecutablePath,
+        string DatabasePath, string DatabaseBackupPath, string PreviousVersion, string TargetVersion,
+        DateTimeOffset CreatedAt);
+
+    private const string RollbackScript = """
+param(
+    [int]$ParentProcessId,
+    [string]$SourceExecutable,
+    [string]$DestinationExecutable,
+    [string]$DatabaseBackup,
+    [string]$DatabasePath,
+    [string]$MarkerPath
+)
+$ErrorActionPreference = 'Stop'
+Wait-Process -Id $ParentProcessId -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath ($DatabasePath + '-wal') -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath ($DatabasePath + '-shm') -Force -ErrorAction SilentlyContinue
+Copy-Item -LiteralPath $DatabaseBackup -Destination $DatabasePath -Force
+Copy-Item -LiteralPath $SourceExecutable -Destination $DestinationExecutable -Force
+Remove-Item -LiteralPath $MarkerPath -Force -ErrorAction SilentlyContinue
+Start-Process -FilePath $DestinationExecutable -ArgumentList '--rollback-restored'
+Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
+""";
 }

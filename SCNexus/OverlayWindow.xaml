@@ -4,10 +4,12 @@
         Width="460" SizeToContent="Height" MaxHeight="760"
         WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True"
         Background="Transparent" ShowInTaskbar="False" ShowActivated="False"
-        Topmost="True" Focusable="False" Opacity="{Binding OverlayOpacity}">
-    <Border Background="#F20A121C" BorderBrush="#4B69CFC0" BorderThickness="1"
+        Topmost="True" Focusable="False">
+    <Viewbox x:Name="OverlayScaleHost" Width="460" Stretch="Uniform" StretchDirection="Both"
+             HorizontalAlignment="Left" VerticalAlignment="Top">
+    <Border x:Name="OverlayChrome" Width="460" Background="#F20A121C" BorderBrush="#4B69CFC0" BorderThickness="1"
             CornerRadius="12" Padding="16" SnapsToDevicePixels="True">
-        <StackPanel>
+        <StackPanel x:Name="OverlayContent" Opacity="{Binding OverlayTextOpacity}">
             <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal">
@@ -16,30 +18,38 @@
                 </StackPanel>
                 <TextBlock Grid.Column="1" Text="LIVE" Foreground="#69CFC0" FontWeight="Bold" FontSize="11" />
             </Grid>
-            <TextBlock Text="{Binding OverlayShipDisplay}" Foreground="#DCE7F1" FontSize="13" FontWeight="SemiBold" Margin="0,11,0,0" TextTrimming="CharacterEllipsis" />
-            <TextBlock Text="{Binding OverlayLocationDisplay}" Foreground="#91A5B8" FontSize="11" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding OverlayShipDisplay}" Foreground="#DCE7F1" FontSize="13" FontWeight="SemiBold" Margin="0,11,0,0" TextTrimming="CharacterEllipsis"
+                       Visibility="{Binding OverlayShowShip, Converter={StaticResource BoolVisibility}}" />
+            <TextBlock Text="{Binding OverlayLocationDisplay}" Foreground="#91A5B8" FontSize="11" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"
+                       Visibility="{Binding OverlayShowLocation, Converter={StaticResource BoolVisibility}}" />
             <Border Background="#3D321B" BorderBrush="#9D7140" BorderThickness="1" CornerRadius="6" Padding="9,6" Margin="0,11,0,0"
                     Visibility="{Binding OverlayDanger, Converter={StaticResource BoolVisibility}}">
                 <TextBlock Text="{Binding OverlayDangerDisplay}" Foreground="#FFD09B" FontWeight="Bold" FontSize="11" />
             </Border>
-            <Border Height="1" Background="#293746" Margin="0,12,0,11" />
-            <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding OverlayRouteHeading}" Foreground="#69CFC0" FontWeight="Bold" FontSize="11" />
-                <TextBlock Grid.Column="1" Text="{Binding OverlayProfitDisplay}" Foreground="#83E3D4" FontWeight="Bold" FontSize="15" Margin="12,0,0,0" />
-            </Grid>
-            <TextBlock Text="{Binding OverlayStopDisplay}" Foreground="#F0F6FC" FontWeight="SemiBold" FontSize="14" Margin="0,8,0,0" TextWrapping="Wrap" />
-            <TextBlock Text="{Binding OverlayActionDisplay}" Foreground="#D3DFEA" FontSize="12" Margin="0,7,0,0" TextWrapping="Wrap" MaxHeight="92" />
-            <TextBlock Text="{Binding OverlayCargoDisplay}" Foreground="#91A5B8" FontSize="11" Margin="0,6,0,0" />
+            <StackPanel Visibility="{Binding OverlayShowRoute, Converter={StaticResource BoolVisibility}}">
+                <Border Height="1" Background="#293746" Margin="0,12,0,11" />
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding OverlayRouteHeading}" Foreground="#69CFC0" FontWeight="Bold" FontSize="11" />
+                    <TextBlock Grid.Column="1" Text="{Binding OverlayProfitDisplay}" Foreground="#83E3D4" FontWeight="Bold" FontSize="15" Margin="12,0,0,0" />
+                </Grid>
+                <TextBlock Text="{Binding OverlayStopDisplay}" Foreground="#F0F6FC" FontWeight="SemiBold" FontSize="14" Margin="0,8,0,0" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding OverlayActionDisplay}" Foreground="#D3DFEA" FontSize="12" Margin="0,7,0,0" TextWrapping="Wrap" MaxHeight="92" />
+                <TextBlock Text="{Binding OverlayCargoDisplay}" Foreground="#91A5B8" FontSize="11" Margin="0,6,0,0" />
+            </StackPanel>
             <StackPanel Visibility="{Binding OverlayExpanded, Converter={StaticResource BoolVisibility}}">
-                <TextBlock Text="{Binding OverlayNextDisplay}" Foreground="#AFC1D1" FontSize="11" Margin="0,10,0,0" TextWrapping="Wrap" />
-                <Border Background="#101B27" CornerRadius="6" Padding="10" Margin="0,9,0,0">
+                <TextBlock Text="{Binding OverlayNextDisplay}" Foreground="#AFC1D1" FontSize="11" Margin="0,10,0,0" TextWrapping="Wrap"
+                           Visibility="{Binding OverlayShowRoute, Converter={StaticResource BoolVisibility}}" />
+                <Border Background="#101B27" CornerRadius="6" Padding="10" Margin="0,9,0,0"
+                        Visibility="{Binding OverlayShowMission, Converter={StaticResource BoolVisibility}}">
                     <StackPanel>
                         <TextBlock Text="{Binding OverlayMissionDisplay}" Foreground="#DCE7F1" FontSize="11" TextWrapping="Wrap" />
-                        <TextBlock Text="{Binding OverlayFreshnessDisplay}" Foreground="#72879A" FontSize="10" Margin="0,5,0,0" />
                     </StackPanel>
                 </Border>
+                <TextBlock Text="{Binding OverlayFreshnessDisplay}" Foreground="#72879A" FontSize="10" Margin="0,7,0,0"
+                           Visibility="{Binding OverlayShowFreshness, Converter={StaticResource BoolVisibility}}" />
             </StackPanel>
         </StackPanel>
     </Border>
+    </Viewbox>
 </Window>

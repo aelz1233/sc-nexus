@@ -160,4 +160,29 @@ public class SettingsServiceTests
             if (Directory.Exists(directory)) Directory.Delete(directory, true);
         }
     }
+
+    [Fact]
+    public async Task PreUpdateBackupContainsCurrentSettings()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(directory, "nexus.db");
+        try
+        {
+            var service = new SettingsService(path);
+            await service.LoadAsync();
+            await service.SaveAsync(new PersonalSettings { Balance = 7_654_321, CurrentShip = "C2 Hercules" });
+
+            var backup = await service.CreatePreUpdateBackupAsync(new Version(0, 5, 0));
+
+            Assert.Contains("before-v0.5.0", Path.GetFileName(backup));
+            var restored = await new SettingsService(backup).LoadAsync();
+            Assert.Equal(7_654_321, restored.Balance);
+            Assert.Equal("C2 Hercules", restored.CurrentShip);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (Directory.Exists(directory)) Directory.Delete(directory, true);
+        }
+    }
 }

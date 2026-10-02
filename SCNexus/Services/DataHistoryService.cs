@@ -10,6 +10,7 @@ public sealed class DataHistoryService(SettingsService settingsService)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private DateOnly? _lastPruneDay;
 
     public async Task SaveAsync(IEnumerable<ValueObservation> values, IEnumerable<TypedObservation> records,
         CancellationToken token = default)
@@ -45,8 +46,28 @@ public sealed class DataHistoryService(SettingsService settingsService)
                 existing[(row.Kind, row.RecordKey)] = row;
             }
             await db.SaveChangesAsync(token);
+            if (_lastPruneDay != DateOnly.FromDateTime(DateTime.UtcNow))
+            {
+                await PruneAsync(db, token);
+                _lastPruneDay = DateOnly.FromDateTime(DateTime.UtcNow);
+            }
         }
         finally { _gate.Release(); }
+    }
+
+    private static async Task PruneAsync(Data.NexusDbContext db, CancellationToken token)
+    {
+        var recordCutoff = DateTimeOffset.UtcNow.AddDays(-365).ToUnixTimeMilliseconds();
+        await db.DataObservations.Where(x => x.Kind != "value" && x.TimestampUnixMs < recordCutoff)
+            .ExecuteDeleteAsync(token);
+
+        var valueRows = await db.DataObservations.AsNoTracking().Where(x => x.Kind == "value")
+            .OrderByDescending(x => x.TimestampUnixMs)
+            .Select(x => new { x.Id, x.RecordKey }).ToArrayAsync(token);
+        var obsolete = valueRows.GroupBy(x => x.RecordKey, StringComparer.OrdinalIgnoreCase)
+            .SelectMany(x => x.Skip(30)).Select(x => x.Id).ToArray();
+        foreach (var batch in obsolete.Chunk(500))
+            await db.DataObservations.Where(x => batch.Contains(x.Id)).ExecuteDeleteAsync(token);
     }
 
     public async Task<IReadOnlyList<DataObservation>> LoadLatestAsync(int limit = 500,

@@ -71,11 +71,18 @@ public partial class App : System.Windows.Application
             _ = vm.LoadLocationsAsync();
             _ = vm.LoadVehiclesAsync();
             _ = vm.WatchGameLogAsync(_gameLogCancellation.Token);
+            _services.GetRequiredService<UpdateService>().MarkStartupHealthy();
         }
         catch (Exception ex)
         {
             AppLogService.Write("Startup", ex);
-            MessageBox.Show($"Не удалось запустить SC NEXUS:\n{ex.Message}", "SC NEXUS", MessageBoxButton.OK, MessageBoxImage.Error);
+            var rollbackScheduled = false;
+            try { rollbackScheduled = _services?.GetService<UpdateService>()?.TryScheduleRollback() == true; }
+            catch (Exception rollbackError) { AppLogService.Write("Rollback", rollbackError); }
+            var rollbackMessage = rollbackScheduled
+                ? "\n\nПредыдущая версия и база будут восстановлены автоматически."
+                : "";
+            MessageBox.Show($"Не удалось запустить SC NEXUS:\n{ex.Message}{rollbackMessage}", "SC NEXUS", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1);
         }
     }

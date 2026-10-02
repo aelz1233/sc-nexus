@@ -54,6 +54,11 @@ public partial class MainViewModel
                 UpdateStatus = $"Уже установлена актуальная версия {updateService.CurrentVersion.ToString(3)}.";
                 return;
             }
+            RaiseNotification($"update:{release.Version}",
+                IsEnglish ? "Update available" : "Доступно обновление",
+                IsEnglish ? $"SC NEXUS {release.Version.ToString(3)} is ready to download."
+                    : $"SC NEXUS {release.Version.ToString(3)} готов к загрузке.",
+                Models.NexusNotificationKind.Info, TimeSpan.FromMinutes(30));
             if (MessageBox.Show($"Доступна версия {release.Version.ToString(3)}. Скачать и установить обновление?",
                 "SC NEXUS", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             {
@@ -62,6 +67,9 @@ public partial class MainViewModel
             }
             var progress = new Progress<int>(percent => UpdateStatus = $"Скачиваю установщик: {percent}%");
             var installer = await updateService.DownloadInstallerAsync(release, progress);
+            UpdateStatus = "Создаю резервную копию перед обновлением…";
+            var databaseBackup = await settingsService.CreatePreUpdateBackupAsync(release.Version);
+            updateService.PrepareRollback(release.Version, settingsService.DatabasePath, databaseBackup);
             PendingInstallerPath = installer;
             UpdateStatus = "Обновление готово. Закрываю приложение: установка пройдёт в фоне, затем SC NEXUS откроется снова…";
             System.Windows.Application.Current.MainWindow.Close();

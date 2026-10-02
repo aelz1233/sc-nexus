@@ -149,6 +149,43 @@
                                 </StackPanel>
                             </Border>
                         </Grid>
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="16"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource Card}" Margin="0">
+                                <StackPanel>
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding SessionInsightProfit}" Foreground="{StaticResource Accent}" FontSize="18" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding SessionInsightTitle}" Style="{StaticResource SectionTitle}" />
+                                    </DockPanel>
+                                    <TextBlock Text="{Binding SessionInsightSummary}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding SessionInsightDetails}" Style="{StaticResource Hint}" Margin="0,7,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="2" Style="{StaticResource Card}" Margin="0">
+                                <StackPanel>
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Content="Очистить" Command="{Binding ClearNotificationsCommand}" Padding="10,5" />
+                                        <TextBlock Text="Центр уведомлений" Style="{StaticResource SectionTitle}" />
+                                    </DockPanel>
+                                    <TextBlock Text="{Binding NotificationsEmptyText}" Style="{StaticResource Hint}" />
+                                    <ItemsControl ItemsSource="{Binding Notifications}">
+                                        <ItemsControl.ItemTemplate><DataTemplate>
+                                            <Border Background="#0D1824" CornerRadius="7" Padding="10" Margin="0,0,0,6">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="5"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                                    <Border Background="{Binding Accent}" CornerRadius="3" />
+                                                    <StackPanel Grid.Column="1" Margin="9,0,8,0">
+                                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                                                        <TextBlock Text="{Binding Message}" Style="{StaticResource Hint}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="2" Text="{Binding TimeDisplay}" Foreground="{StaticResource Muted}" FontSize="11" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate></ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
                         <Border Style="{StaticResource Card}" Visibility="{Binding HasActiveFlight, Converter={StaticResource BoolVisibility}}">
                             <StackPanel>
                                 <TextBlock Text="Рейс в процессе" Style="{StaticResource SectionTitle}" />
@@ -921,15 +958,41 @@
                                         </Grid>
                                         <TextBlock Text="{Binding OverlayHotkeyStatus}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,6,0,0" />
                                         <TextBlock Text="Можно нажать любую свободную комбинацию клавиатуры. Escape отменяет запись, Delete очищает бинд." Style="{StaticResource Hint}" Margin="0,4,0,0" />
-                                        <Grid Margin="0,10,0,2">
-                                            <TextBlock Text="Прозрачность" Style="{StaticResource FieldLabel}" Margin="0" />
-                                            <TextBlock Text="{Binding OverlayOpacityDisplay}" Style="{StaticResource FieldLabel}" Margin="0" HorizontalAlignment="Right" />
-                                        </Grid>
-                                        <Slider Minimum="0.65" Maximum="1" Value="{Binding OverlayOpacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                         <WrapPanel Margin="0,12,0,0">
                                             <Button Content="{Binding OverlayPreviewButtonText}" Command="{Binding ToggleOverlayPreviewCommand}" Margin="0,0,8,0" />
+                                            <Button Content="{Binding OverlayEditorButtonText}" Command="{Binding ToggleOverlayEditorCommand}" Margin="0,0,8,0" />
                                             <Button Content="{Binding OverlayModeDisplay}" Command="{Binding ToggleOverlayModeCommand}" />
                                         </WrapPanel>
+                                        <Expander Header="Внешний вид и состав" Margin="0,14,0,0">
+                                            <StackPanel Margin="0,12,0,0">
+                                                <TextBlock Text="Положение" Style="{StaticResource FieldLabel}" />
+                                                <ComboBox ItemsSource="{Binding OverlayAnchorOptions}" DisplayMemberPath="Display"
+                                                          SelectedValuePath="Value" SelectedValue="{Binding OverlayAnchor}" />
+                                                <Grid Margin="0,12,0,2">
+                                                    <TextBlock Text="Масштаб" Style="{StaticResource FieldLabel}" Margin="0" />
+                                                    <TextBlock Text="{Binding OverlayScaleDisplay}" Style="{StaticResource FieldLabel}" Margin="0" HorizontalAlignment="Right" />
+                                                </Grid>
+                                                <Slider Minimum="0.75" Maximum="1.5" Value="{Binding OverlayScale, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                <Grid Margin="0,8,0,2">
+                                                    <TextBlock Text="Прозрачность фона" Style="{StaticResource FieldLabel}" Margin="0" />
+                                                    <TextBlock Text="{Binding OverlayOpacityDisplay}" Style="{StaticResource FieldLabel}" Margin="0" HorizontalAlignment="Right" />
+                                                </Grid>
+                                                <Slider Minimum="0.65" Maximum="1" Value="{Binding OverlayOpacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                <Grid Margin="0,8,0,2">
+                                                    <TextBlock Text="Прозрачность текста" Style="{StaticResource FieldLabel}" Margin="0" />
+                                                    <TextBlock Text="{Binding OverlayTextOpacityDisplay}" Style="{StaticResource FieldLabel}" Margin="0" HorizontalAlignment="Right" />
+                                                </Grid>
+                                                <Slider Minimum="0.65" Maximum="1" Value="{Binding OverlayTextOpacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                <WrapPanel Margin="0,9,0,0">
+                                                    <CheckBox IsChecked="{Binding OverlayShowShip}" Content="Корабль" Margin="0,7,18,7" />
+                                                    <CheckBox IsChecked="{Binding OverlayShowLocation}" Content="Локация" Margin="0,7,18,7" />
+                                                    <CheckBox IsChecked="{Binding OverlayShowRoute}" Content="Маршрут" Margin="0,7,18,7" />
+                                                    <CheckBox IsChecked="{Binding OverlayShowMission}" Content="Миссия" Margin="0,7,18,7" />
+                                                    <CheckBox IsChecked="{Binding OverlayShowFreshness}" Content="Свежесть данных" />
+                                                </WrapPanel>
+                                                <Button Content="Вернуть справа снизу" Command="{Binding ResetOverlayPositionCommand}" HorizontalAlignment="Left" Margin="0,9,0,0" />
+                                            </StackPanel>
+                                        </Expander>
                                         <TextBlock Text="Оверлей — отдельное окно только для чтения. Можно назначить любое свободное сочетание; по умолчанию бинда нет. Nexus не внедряется в Star Citizen и не перехватывает управление." Style="{StaticResource Hint}" Margin="0,9,0,0" />
                                     </StackPanel>
                                 </Border>

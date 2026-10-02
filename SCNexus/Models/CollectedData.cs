@@ -156,6 +156,8 @@ public sealed class DataSourceInfo
             if (CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en") return Status;
             if (Status == "Waiting") return "Ожидание";
             if (Status == "Updating") return "Обновление";
+            if (Status == "Paused") return "Приостановлено";
+            if (Status == "Timed out") return "Источник не ответил вовремя";
             if (Status == "Disabled") return "Выключен";
             if (Status == "Game is running") return "Игра запущена";
             if (Status == "Game is not running") return "Игра не запущена";

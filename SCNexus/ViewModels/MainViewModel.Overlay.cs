@@ -9,9 +9,20 @@ public partial class MainViewModel
     [ObservableProperty] private bool overlayEnabled = true;
     [ObservableProperty] private bool overlayExpanded;
     [ObservableProperty] private double overlayOpacity = 0.92;
+    [ObservableProperty] private double overlayTextOpacity = 1;
+    [ObservableProperty] private double overlayScale = 1;
+    [ObservableProperty] private string overlayAnchor = "BottomRight";
+    [ObservableProperty] private double overlayCustomLeft = -1;
+    [ObservableProperty] private double overlayCustomTop = -1;
+    [ObservableProperty] private bool overlayShowShip = true;
+    [ObservableProperty] private bool overlayShowLocation = true;
+    [ObservableProperty] private bool overlayShowRoute = true;
+    [ObservableProperty] private bool overlayShowMission = true;
+    [ObservableProperty] private bool overlayShowFreshness = true;
     [ObservableProperty] private string overlayHotkey = "";
     [ObservableProperty] private bool isOverlayHotkeyCapturing;
     [ObservableProperty] private bool overlayPreview;
+    [ObservableProperty] private bool overlayEditMode;
     [ObservableProperty] private bool isGameRunning;
     private bool _overlayHotkeyVisible;
     private bool _overlaySuppressed;
@@ -23,6 +34,16 @@ public partial class MainViewModel
             ? (IsEnglish ? "Click to assign" : "Нажми, чтобы назначить")
             : OverlayHotkey;
     public string OverlayOpacityDisplay => $"{Math.Round(OverlayOpacity * 100):N0}%";
+    public string OverlayTextOpacityDisplay => $"{Math.Round(OverlayTextOpacity * 100):N0}%";
+    public string OverlayScaleDisplay => $"{Math.Round(OverlayScale * 100):N0}%";
+    public IReadOnlyList<OverlayAnchorOption> OverlayAnchorOptions =>
+    [
+        new("TopLeft", IsEnglish ? "Top left" : "Слева сверху"),
+        new("TopRight", IsEnglish ? "Top right" : "Справа сверху"),
+        new("BottomLeft", IsEnglish ? "Bottom left" : "Слева снизу"),
+        new("BottomRight", IsEnglish ? "Bottom right" : "Справа снизу"),
+        new("Custom", IsEnglish ? "Custom position" : "Своя позиция")
+    ];
     public string OverlayHotkeyStatus => _overlayHotkeyRegistrationState switch
     {
         "active" => IsEnglish
@@ -47,6 +68,9 @@ public partial class MainViewModel
     public string OverlayPreviewButtonText => OverlayPreview
         ? (IsEnglish ? "Hide preview" : "Скрыть пример")
         : (IsEnglish ? "Show preview" : "Показать пример");
+    public string OverlayEditorButtonText => OverlayEditMode
+        ? (IsEnglish ? "Finish positioning" : "Завершить размещение")
+        : (IsEnglish ? "Move on screen" : "Разместить на экране");
     public string OverlayShipDisplay
     {
         get
@@ -114,6 +138,28 @@ public partial class MainViewModel
     [RelayCommand]
     private void ToggleOverlayMode() => OverlayExpanded = !OverlayExpanded;
 
+    [RelayCommand]
+    private void ToggleOverlayEditor()
+    {
+        OverlayEditMode = !OverlayEditMode;
+        OverlayPreview = OverlayEditMode;
+    }
+
+    [RelayCommand]
+    private void ResetOverlayPosition()
+    {
+        OverlayAnchor = "BottomRight";
+        OverlayCustomLeft = -1;
+        OverlayCustomTop = -1;
+    }
+
+    internal void SetOverlayCustomPosition(double left, double top)
+    {
+        OverlayCustomLeft = left;
+        OverlayCustomTop = top;
+        OverlayAnchor = "Custom";
+    }
+
     internal void ToggleOverlayFromHotkey()
     {
         var automaticVisible = OverlayEnabled && IsGameRunning;
@@ -150,6 +196,24 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(OverlayOpacityDisplay));
         QueueSave();
     }
+    partial void OnOverlayTextOpacityChanged(double value)
+    {
+        OnPropertyChanged(nameof(OverlayTextOpacityDisplay));
+        QueueSave();
+    }
+    partial void OnOverlayScaleChanged(double value)
+    {
+        OnPropertyChanged(nameof(OverlayScaleDisplay));
+        QueueSave();
+    }
+    partial void OnOverlayAnchorChanged(string value) => QueueSave();
+    partial void OnOverlayCustomLeftChanged(double value) => QueueSave();
+    partial void OnOverlayCustomTopChanged(double value) => QueueSave();
+    partial void OnOverlayShowShipChanged(bool value) => QueueSave();
+    partial void OnOverlayShowLocationChanged(bool value) => QueueSave();
+    partial void OnOverlayShowRouteChanged(bool value) => QueueSave();
+    partial void OnOverlayShowMissionChanged(bool value) => QueueSave();
+    partial void OnOverlayShowFreshnessChanged(bool value) => QueueSave();
     partial void OnOverlayPreviewChanged(bool value) => OnPropertyChanged(nameof(OverlayPreviewButtonText));
     partial void OnOverlayHotkeyChanged(string value)
     {
@@ -158,6 +222,8 @@ public partial class MainViewModel
     }
     partial void OnIsOverlayHotkeyCapturingChanged(bool value) =>
         OnPropertyChanged(nameof(OverlayHotkeyCaptureText));
+    partial void OnOverlayEditModeChanged(bool value) =>
+        OnPropertyChanged(nameof(OverlayEditorButtonText));
 
     partial void OnIsGameRunningChanged(bool value)
     {
@@ -182,5 +248,10 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(OverlayFreshnessDisplay));
         OnPropertyChanged(nameof(OverlayDanger));
         OnPropertyChanged(nameof(OverlayDangerDisplay));
+    }
+
+    public sealed record OverlayAnchorOption(string Value, string Display)
+    {
+        public override string ToString() => Display;
     }
 }

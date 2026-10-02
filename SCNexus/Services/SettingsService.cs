@@ -34,10 +34,21 @@ public sealed class SettingsService
         await AddMissingColumnsAsync(db);
         await EnsureFlightTablesAsync(db);
         await EnsureDataCollectionTablesAsync(db);
+        await ConfigureDatabaseAsync(db);
         return await db.PersonalSettings.AsNoTracking().SingleOrDefaultAsync(x => x.Id == 1) ?? new();
     }
 
     public NexusDbContext CreateDbContext() => new(_options);
+
+    private static async Task ConfigureDatabaseAsync(NexusDbContext db)
+    {
+        await db.Database.ExecuteSqlRawAsync("PRAGMA busy_timeout=5000");
+        await db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL");
+        await db.Database.ExecuteSqlRawAsync("PRAGMA synchronous=NORMAL");
+        await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_FlightRecords_StartedAtUtc ON FlightRecords (StartedAtUtc)");
+        await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_FlightRecords_EndedAtUtc ON FlightRecords (EndedAtUtc)");
+        await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_PersonalShips_Name ON PersonalShips (Name)");
+    }
 
     private async Task VerifyDatabaseAsync(NexusDbContext db)
     {
@@ -133,8 +144,20 @@ public sealed class SettingsService
                 current.OverlayEnabled = snapshot.OverlayEnabled;
                 current.OverlayExpanded = snapshot.OverlayExpanded;
                 current.OverlayOpacity = snapshot.OverlayOpacity;
+                current.OverlayTextOpacity = snapshot.OverlayTextOpacity;
+                current.OverlayScale = snapshot.OverlayScale;
+                current.OverlayAnchor = snapshot.OverlayAnchor;
+                current.OverlayCustomLeft = snapshot.OverlayCustomLeft;
+                current.OverlayCustomTop = snapshot.OverlayCustomTop;
+                current.OverlayShowShip = snapshot.OverlayShowShip;
+                current.OverlayShowLocation = snapshot.OverlayShowLocation;
+                current.OverlayShowRoute = snapshot.OverlayShowRoute;
+                current.OverlayShowMission = snapshot.OverlayShowMission;
+                current.OverlayShowFreshness = snapshot.OverlayShowFreshness;
                 current.OverlayHotkey = snapshot.OverlayHotkey;
                 current.ActiveVoyageJson = snapshot.ActiveVoyageJson;
+                current.LastSessionSummary = snapshot.LastSessionSummary;
+                current.LastSessionEndedAt = snapshot.LastSessionEndedAt;
             }
             await db.SaveChangesAsync();
         }
@@ -168,8 +191,20 @@ public sealed class SettingsService
             if (!names.Contains("OverlayEnabled")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayEnabled INTEGER NOT NULL DEFAULT 1");
             if (!names.Contains("OverlayExpanded")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayExpanded INTEGER NOT NULL DEFAULT 0");
             if (!names.Contains("OverlayOpacity")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayOpacity REAL NOT NULL DEFAULT 0.92");
+            if (!names.Contains("OverlayTextOpacity")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayTextOpacity REAL NOT NULL DEFAULT 1");
+            if (!names.Contains("OverlayScale")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayScale REAL NOT NULL DEFAULT 1");
+            if (!names.Contains("OverlayAnchor")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayAnchor TEXT NOT NULL DEFAULT 'BottomRight'");
+            if (!names.Contains("OverlayCustomLeft")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayCustomLeft REAL NOT NULL DEFAULT -1");
+            if (!names.Contains("OverlayCustomTop")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayCustomTop REAL NOT NULL DEFAULT -1");
+            if (!names.Contains("OverlayShowShip")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayShowShip INTEGER NOT NULL DEFAULT 1");
+            if (!names.Contains("OverlayShowLocation")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayShowLocation INTEGER NOT NULL DEFAULT 1");
+            if (!names.Contains("OverlayShowRoute")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayShowRoute INTEGER NOT NULL DEFAULT 1");
+            if (!names.Contains("OverlayShowMission")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayShowMission INTEGER NOT NULL DEFAULT 1");
+            if (!names.Contains("OverlayShowFreshness")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayShowFreshness INTEGER NOT NULL DEFAULT 1");
             if (!names.Contains("OverlayHotkey")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayHotkey TEXT NOT NULL DEFAULT ''");
             if (!names.Contains("ActiveVoyageJson")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN ActiveVoyageJson TEXT NOT NULL DEFAULT ''");
+            if (!names.Contains("LastSessionSummary")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN LastSessionSummary TEXT NOT NULL DEFAULT ''");
+            if (!names.Contains("LastSessionEndedAt")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN LastSessionEndedAt TEXT NULL");
         }
         finally { await connection.CloseAsync(); }
     }
@@ -192,6 +227,24 @@ public sealed class SettingsService
                 throw new InvalidDataException("Созданная резервная копия не прошла проверку целостности.");
         }
         finally { _gate.Release(); }
+    }
+
+    public async Task<string> CreatePreUpdateBackupAsync(Version targetVersion)
+    {
+        Directory.CreateDirectory(BackupDirectory);
+        var version = targetVersion.ToString(3);
+        var destination = Path.Combine(BackupDirectory,
+            $"{Path.GetFileNameWithoutExtension(DatabasePath)}-before-v{version}-{DateTime.Now:yyyyMMdd-HHmmss}.db");
+        await BackupAsync(destination);
+        foreach (var old in Directory.EnumerateFiles(BackupDirectory,
+                     $"{Path.GetFileNameWithoutExtension(DatabasePath)}-before-v*.db")
+                 .OrderByDescending(File.GetLastWriteTimeUtc).Skip(5))
+        {
+            try { File.Delete(old); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+        return destination;
     }
 
     private async Task CreateAutomaticBackupAsync()

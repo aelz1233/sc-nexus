@@ -31,6 +31,8 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
         var directory = context.GameDirectory ?? gameLogService.ResolveGameDirectory();
         if (directory is null) return new DataProviderResult { Status = "Star Citizen installation not found" };
         var paths = EnumerateLogs(directory).ToArray();
+        var currentPaths = paths.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var stale in _cursors.Keys.Where(x => !currentPaths.Contains(x)).ToArray()) _cursors.Remove(stale);
         var values = new List<ValueObservation>();
         var records = new List<TypedObservation>();
         var readLines = 0;
@@ -49,11 +51,22 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
         }
+        PruneParserState();
         return new DataProviderResult
         {
             Values = values, Records = records,
             Status = readLines == 0 ? "Watching for new lines" : $"Processed {readLines} new lines"
         };
+    }
+
+    private void PruneParserState()
+    {
+        if (_missions.Count > 500)
+            foreach (var key in _missions.OrderByDescending(x => x.Value.Status.Timestamp).Skip(500).Select(x => x.Key).ToArray())
+                _missions.Remove(key);
+        if (_sessions.Count > 100)
+            foreach (var key in _sessions.OrderByDescending(x => x.Value.StartedAt.Timestamp).Skip(100).Select(x => x.Key).ToArray())
+                _sessions.Remove(key);
     }
 
     private IEnumerable<string> EnumerateLogs(string directory)

@@ -22,6 +22,18 @@ public sealed class PersonalSettings
     public bool OverlayEnabled { get; set; } = true;
     public bool OverlayExpanded { get; set; }
     public double OverlayOpacity { get; set; } = 0.92;
+    public double OverlayTextOpacity { get; set; } = 1;
+    public double OverlayScale { get; set; } = 1;
+    public string OverlayAnchor { get; set; } = "BottomRight";
+    public double OverlayCustomLeft { get; set; } = -1;
+    public double OverlayCustomTop { get; set; } = -1;
+    public bool OverlayShowShip { get; set; } = true;
+    public bool OverlayShowLocation { get; set; } = true;
+    public bool OverlayShowRoute { get; set; } = true;
+    public bool OverlayShowMission { get; set; } = true;
+    public bool OverlayShowFreshness { get; set; } = true;
     public string OverlayHotkey { get; set; } = "";
     public string ActiveVoyageJson { get; set; } = "";
+    public string LastSessionSummary { get; set; } = "";
+    public DateTimeOffset? LastSessionEndedAt { get; set; }
 }

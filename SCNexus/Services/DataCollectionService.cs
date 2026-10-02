@@ -18,9 +18,9 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
     public DataCollectionSnapshot Current { get; private set; } = new();
     public event EventHandler<DataCollectionSnapshot>? SnapshotUpdated;
 
-    public async Task WatchAsync(Func<bool> ocrEnabled, CancellationToken token)
+    public async Task WatchAsync(Func<bool> monitoringEnabled, Func<bool> ocrEnabled, CancellationToken token)
     {
-        var tasks = _providers.Select(provider => WatchProviderAsync(provider, ocrEnabled, token)).ToArray();
+        var tasks = _providers.Select(provider => WatchProviderAsync(provider, monitoringEnabled, ocrEnabled, token)).ToArray();
         try { await Task.WhenAll(tasks); }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
     }
@@ -28,10 +28,18 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
     public async Task RefreshAsync(bool ocrEnabled, CancellationToken token = default) =>
         await Task.WhenAll(_providers.Select(x => CollectProviderAsync(x, ocrEnabled, token, true)));
 
-    private async Task WatchProviderAsync(IDataProvider provider, Func<bool> ocrEnabled, CancellationToken token)
+    private async Task WatchProviderAsync(IDataProvider provider, Func<bool> monitoringEnabled,
+        Func<bool> ocrEnabled, CancellationToken token)
     {
         while (!token.IsCancellationRequested)
         {
+            if (!monitoringEnabled())
+            {
+                PublishPaused(provider);
+                try { await Task.Delay(TimeSpan.FromSeconds(2), token); }
+                catch (OperationCanceledException) { break; }
+                continue;
+            }
             await CollectProviderAsync(provider, ocrEnabled(), token);
             try { await Task.Delay(provider.RefreshInterval, token); }
             catch (OperationCanceledException) { break; }
@@ -62,16 +70,39 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
             }
             try
             {
-                var result = await provider.CollectAsync(context, token);
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+                timeout.CancelAfter(ProviderTimeout(provider));
+                var result = await provider.CollectAsync(context, timeout.Token);
                 await history.SaveAsync(result.Values.Where(x => x.Source != DataSourceKind.NexusHistory),
-                    result.Records.Where(x => x.Source != DataSourceKind.NexusHistory), token);
+                    result.Records.Where(x => x.Source != DataSourceKind.NexusHistory), timeout.Token);
                 Publish(provider, now, true, result.Status, result.Values, result.Records, known?.LastSuccess, known);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+            catch (OperationCanceledException)
+            {
+                Publish(provider, now, false, "Timed out", [], [], known?.LastSuccess, known);
+            }
             catch (Exception ex) { Publish(provider, now, false, FriendlyError(ex), [], [], known?.LastSuccess); }
         }
         finally { gate.Release(); }
     }
+
+    private void PublishPaused(IDataProvider provider)
+    {
+        DataCollectionSnapshot? snapshot = null;
+        lock (_stateGate)
+        {
+            _providerStates.TryGetValue(provider.Name, out var previous);
+            if (previous?.Status == "Paused") return;
+            _providerStates[provider.Name] = new ProviderState(DateTimeOffset.UtcNow,
+                previous?.LastSuccess, false, "Paused");
+            Current = snapshot = BuildSnapshot();
+        }
+        SnapshotUpdated?.Invoke(this, snapshot);
+    }
+
+    private static TimeSpan ProviderTimeout(IDataProvider provider) => TimeSpan.FromSeconds(
+        Math.Clamp(provider.RefreshInterval.TotalSeconds * 2, 15, 120));
 
     private void Publish(IDataProvider provider, DateTimeOffset attempt, bool available, string status,
         IReadOnlyList<ValueObservation> values, IReadOnlyList<TypedObservation> records,

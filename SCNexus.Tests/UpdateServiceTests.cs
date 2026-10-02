@@ -115,4 +115,30 @@ public class UpdateServiceTests
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
     }
+
+    [Fact]
+    public void PreparedRollbackIsClearedOnlyAfterTargetVersionStartsSuccessfully()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var executable = Path.Combine(root, "SCNexus.exe");
+        var database = Path.Combine(root, "nexus.db");
+        var databaseBackup = Path.Combine(root, "nexus-before-update.db");
+        File.WriteAllText(executable, "old executable");
+        File.WriteAllText(database, "database");
+        File.WriteAllText(databaseBackup, "backup");
+        using var client = new HttpClient(new Handler(_ => new HttpResponseMessage(HttpStatusCode.OK)));
+        try
+        {
+            var service = new UpdateService(client, Path.Combine(root, "token.bin"),
+                "https://api.github.test/latest", Path.Combine(root, "updates"));
+            service.PrepareRollback(new Version(0, 0, 0), database, databaseBackup, executable);
+
+            Assert.True(service.HasPendingRollback);
+            Assert.True(service.MarkStartupHealthy());
+            Assert.False(service.HasPendingRollback);
+            Assert.True(File.Exists(databaseBackup));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
 }

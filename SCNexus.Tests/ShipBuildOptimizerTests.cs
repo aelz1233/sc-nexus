@@ -144,6 +144,72 @@ public class ShipBuildOptimizerTests
         Assert.Equal("Orison", Assert.Single(best.ShoppingStops).Location);
     }
 
+    [Fact]
+    public void ShoppingPlansSeparateFastestBalancedAndCheapestRoutes()
+    {
+        var first = new ShipComponentSlot("/shield#1", "Shield", 2, 2, "old-1", "Old 1");
+        var second = new ShipComponentSlot("/shield#2", "Shield", 2, 2, "old-2", "Old 2");
+        var now = DateTimeOffset.UtcNow;
+        var a = Part("a", "Shield A", 200, 100, first.Key) with
+        {
+            Offers =
+            [
+                new(100, "Shop A", "Area18", "", "Stanton", now),
+                new(112, "Central", "Orison", "", "Stanton", now)
+            ]
+        };
+        var b = Part("b", "Shield B", 200, 100, second.Key) with
+        {
+            Offers =
+            [
+                new(100, "Shop B", "Lorville", "", "Stanton", now),
+                new(112, "Central", "Orison", "", "Stanton", now)
+            ]
+        };
+        var catalog = new ShipComponentCatalog("Test", "4.10", now, [first, second], [a, b]);
+
+        var (_, best) = ShipBuildOptimizer.Build(catalog, 1_000, ShipBuildProfile.Combat, "Stanton");
+
+        Assert.Equal(3, best.ShoppingPlans.Count);
+        Assert.Equal(2, best.ShoppingPlans.Single(x => x.Kind == "Balanced").Stops.Count);
+        Assert.Single(best.ShoppingPlans.Single(x => x.Kind == "Fastest").Stops);
+        Assert.Equal(2, best.ShoppingPlans.Single(x => x.Kind == "Cheapest").Stops.Count);
+    }
+
+    [Fact]
+    public void ShoppingPlansRespectPyroAndRiskFiltersAndCompareWithInstalledBuild()
+    {
+        var slot = new ShipComponentSlot("/shield", "Shield", 2, 2, "stock", "Stock");
+        var now = DateTimeOffset.UtcNow;
+        var stock = Part("stock", "Stock", 100, null, slot.Key) with
+        {
+            PowerDraw = 5
+        };
+        var upgrade = Part("upgrade", "Upgrade", 200, 100, slot.Key) with
+        {
+            PowerDraw = 8,
+            Offers =
+            [
+                new(80, "Pyro Store", "Ruin Station", "", "Pyro", now),
+                new(90, "NQA Terminal", "Brio's Breaker Yard", "", "Stanton", now),
+                new(100, "Safe Store", "Area18", "", "Stanton", now)
+            ]
+        };
+        var catalog = new ShipComponentCatalog("Test", "4.10", now, [slot], [stock, upgrade]);
+
+        var (_, best) = ShipBuildOptimizer.Build(catalog, 1_000, ShipBuildProfile.Combat,
+            "Stanton", null, avoidPyro: true, allowRisky: false);
+
+        Assert.All(best.ShoppingPlans.SelectMany(x => x.Stops), stop =>
+        {
+            Assert.NotEqual("Pyro", stop.System);
+            Assert.DoesNotContain("NQA", stop.Shop, StringComparison.OrdinalIgnoreCase);
+        });
+        Assert.Equal("Safe Store", Assert.Single(best.ShoppingStops).Shop);
+        Assert.True(best.Score > best.CurrentScore);
+        Assert.Contains("Stock", Assert.Single(best.Lines).ChangeDisplay);
+    }
+
     private static ShipComponent Part(string uuid, string name, double health, decimal? price, string slotKey) =>
         new(uuid, name, "Shield", 2, price, "Магазин", DateTimeOffset.UtcNow, "4.10", health, 0,
             "Прочность щита / восстановление")

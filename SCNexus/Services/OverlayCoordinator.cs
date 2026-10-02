@@ -59,8 +59,18 @@ public sealed class OverlayCoordinator : IDisposable
             or nameof(MainViewModel.IsGameRunning) or nameof(MainViewModel.OverlayHotkeyVisible)
             or nameof(MainViewModel.OverlaySuppressed)) Reevaluate();
         else if (e.PropertyName == nameof(MainViewModel.OverlayHotkey)) RegisterSelectedHotkey();
-        else if (e.PropertyName is nameof(MainViewModel.OverlayExpanded) && _window?.IsVisible == true)
-            _window.Dispatcher.BeginInvoke(_window.PositionAtWorkAreaEdge);
+        else if (e.PropertyName is nameof(MainViewModel.OverlayExpanded) or nameof(MainViewModel.OverlayOpacity)
+                 or nameof(MainViewModel.OverlayTextOpacity) or nameof(MainViewModel.OverlayScale)
+                 or nameof(MainViewModel.OverlayAnchor) or nameof(MainViewModel.OverlayCustomLeft)
+                 or nameof(MainViewModel.OverlayCustomTop) or nameof(MainViewModel.OverlayEditMode)
+                 or nameof(MainViewModel.OverlayShowShip) or nameof(MainViewModel.OverlayShowLocation)
+                 or nameof(MainViewModel.OverlayShowRoute) or nameof(MainViewModel.OverlayShowMission)
+                 or nameof(MainViewModel.OverlayShowFreshness))
+        {
+            if (_window is not null && _viewModel is not null)
+                _window.Dispatcher.BeginInvoke(() => _window.ApplySettings(_viewModel));
+            Reevaluate();
+        }
     }
 
     private void RegisterSelectedHotkey()
@@ -157,7 +167,7 @@ public sealed class OverlayCoordinator : IDisposable
             System.Windows.Application.Current.Dispatcher.BeginInvoke(Reevaluate);
             return;
         }
-        var visible = _viewModel.OverlayPreview || _viewModel.OverlayHotkeyVisible ||
+        var visible = _viewModel.OverlayPreview || _viewModel.OverlayEditMode || _viewModel.OverlayHotkeyVisible ||
             (_viewModel.OverlayEnabled && _viewModel.IsGameRunning && !_viewModel.OverlaySuppressed);
         if (!visible)
         {
@@ -165,6 +175,7 @@ public sealed class OverlayCoordinator : IDisposable
             return;
         }
         _window ??= new OverlayWindow { DataContext = _viewModel };
+        _window.ApplySettings(_viewModel);
         if (!_window.IsVisible) _window.Show();
         _window.PositionAtWorkAreaEdge();
     }

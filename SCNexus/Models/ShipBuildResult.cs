@@ -14,7 +14,7 @@ public sealed record ShipBuildLine(
     bool IsInstalled,
     decimal? PurchasePrice)
 {
-    public string SlotDisplay => Slot.Type switch
+    public string SlotDisplay => LocalizationService.T(Slot.Type switch
     {
         "Shield" => "Щит",
         "QuantumDrive" => "Квантовый привод",
@@ -22,15 +22,18 @@ public sealed record ShipBuildLine(
         "Cooler" => "Охлаждение",
         "WeaponGun" => "Орудие",
         _ => Slot.Type
-    };
+    });
 
     public string NameDisplay => $"{Component.Name} · S{Component.Size}";
-    public string PriceDisplay => IsInstalled ? "Уже установлен" : PurchasePrice is { } price
-        ? $"{price:N0} aUEC" : "Цена неизвестна";
-    public string ShopDisplay => IsInstalled ? "" : Component.Shop ?? "Магазин не указан";
+    public string ChangeDisplay => IsInstalled
+        ? (LocalizationService.IsEnglish ? "Keep installed" : "Оставить установленным")
+        : $"{(string.IsNullOrWhiteSpace(Slot.InstalledName) ? (LocalizationService.IsEnglish ? "Stock component" : "Штатный компонент") : Slot.InstalledName)} → {Component.Name}";
+    public string PriceDisplay => LocalizationService.T(IsInstalled ? "Уже установлен" : PurchasePrice is { } price
+        ? $"{price:N0} aUEC" : "Цена неизвестна");
+    public string ShopDisplay => IsInstalled ? "" : LocalizationService.T(Component.Shop ?? "Магазин не указан");
     public string UpdatedDisplay => Component.PriceUpdated is { } date
-        ? $"Цена от {date.ToLocalTime():dd.MM.yyyy}" : "";
-    public string MetricDisplay => Component.PrimaryMetric <= 0 && Component.SecondaryMetric <= 0
+        ? LocalizationService.T($"Цена от {date.ToLocalTime():dd.MM.yyyy}") : "";
+    public string MetricDisplay => LocalizationService.T(Component.PrimaryMetric <= 0 && Component.SecondaryMetric <= 0
         ? "Характеристики не загружены"
         : Slot.Type switch
     {
@@ -42,7 +45,7 @@ public sealed record ShipBuildLine(
         "Cooler" => $"Охлаждение {Component.PrimaryMetric:N0} сегм. · прочность {Component.SecondaryMetric:N0}",
         "WeaponGun" => $"Устойчивый DPS (60 с): {Component.PrimaryMetric:N0} · пиковый DPS: {Component.SecondaryMetric:N0}",
         _ => Component.MetricDescription ?? "Характеристики не указаны"
-    };
+    });
 }
 
 public sealed record ComponentShoppingItem(string Name, int Quantity, decimal UnitPrice)
@@ -66,6 +69,37 @@ public sealed record ComponentShoppingStop(
     public string CostDisplay => LocalizationService.T($"На этой остановке: {Cost:N0} aUEC");
 }
 
+public sealed record ComponentShoppingPlan(
+    string Kind,
+    IReadOnlyList<ComponentShoppingStop> Stops,
+    decimal Cost,
+    decimal MinimumCost,
+    double TravelScore)
+{
+    public string NameDisplay => Kind switch
+    {
+        "Cheapest" => LocalizationService.IsEnglish ? "Lowest price" : "Минимальная цена",
+        "Fastest" => LocalizationService.IsEnglish ? "Fewer flights" : "Меньше перелётов",
+        _ => LocalizationService.IsEnglish ? "Balanced" : "Сбалансированный"
+    };
+    public decimal PremiumPercent => MinimumCost <= 0 ? 0 : 100 * (Cost - MinimumCost) / MinimumCost;
+    public string SummaryDisplay => LocalizationService.IsEnglish
+        ? $"{Stops.Count} stops · {Cost:N0} aUEC" + (PremiumPercent > .05m ? $" · +{PremiumPercent:N1}%" : " · minimum total")
+        : $"Остановок: {Stops.Count} · {Cost:N0} aUEC" + (PremiumPercent > .05m ? $" · +{PremiumPercent:N1}%" : " · минимальная сумма");
+    public string LogicDisplay => Kind switch
+    {
+        "Cheapest" => LocalizationService.IsEnglish
+            ? "Chooses the lowest confirmed price for each component. It may require more stops."
+            : "Для каждой детали выбирается минимальная подтверждённая цена. Остановок может быть больше.",
+        "Fastest" => LocalizationService.IsEnglish
+            ? "Reduces stores and system changes. Prices up to 15% above the minimum may be used."
+            : "Сокращает магазины и переходы между системами. Допускается цена до 15% выше минимальной.",
+        _ => LocalizationService.IsEnglish
+            ? "Balances price, stop count, current position, and safe locations."
+            : "Учитывает цену, число остановок, текущую позицию и безопасность точек."
+    };
+}
+
 public sealed record ShipBuildResult(
     string Title,
     IReadOnlyList<ShipBuildLine> Lines,
@@ -75,7 +109,16 @@ public sealed record ShipBuildResult(
     int UnsupportedSlots,
     string Status)
 {
+    public string TitleDisplay => LocalizationService.T(Title);
+    public string StatusDisplay => LocalizationService.T(Status);
     public IReadOnlyList<ComponentShoppingStop> ShoppingStops { get; init; } = [];
+    public IReadOnlyList<ComponentShoppingPlan> ShoppingPlans { get; init; } = [];
+    public double CurrentScore { get; init; }
+    public double CurrentPowerSupply { get; init; }
+    public double CurrentPowerDemand { get; init; }
+    public double CurrentCoolantSupply { get; init; }
+    public double CurrentCoolantDemand { get; init; }
+    public double CurrentQuantumSpeed { get; init; }
     public double PowerSupply { get; init; }
     public double PowerDemand { get; init; }
     public double CoolantSupply { get; init; }
@@ -85,13 +128,24 @@ public sealed record ShipBuildResult(
     public double QuantumFuelConsumption { get; init; }
     public decimal ShoppingMinimumCost { get; init; }
     public decimal ShoppingRouteCost { get; init; }
-    public string CostDisplay => UnpricedCount == 0
+    public string CostDisplay => LocalizationService.T(UnpricedCount == 0
         ? $"Стоимость замены: {KnownCost:N0} aUEC"
-        : $"Известная стоимость: {KnownCost:N0} aUEC · без цены: {UnpricedCount}";
-    public string CoverageDisplay => UnsupportedSlots == 0
+        : $"Известная стоимость: {KnownCost:N0} aUEC · без цены: {UnpricedCount}");
+    public string CoverageDisplay => LocalizationService.T(UnsupportedSlots == 0
         ? "Подтверждённые слоты компонентов рассчитаны"
-        : $"Не удалось подобрать для {UnsupportedSlots} слотов";
-    public string ChangesDisplay => $"Заменить компонентов: {Lines.Count(x => !x.IsInstalled)} · оставить штатными: {Lines.Count(x => x.IsInstalled)}";
+        : $"Не удалось подобрать для {UnsupportedSlots} слотов");
+    public string ChangesDisplay => LocalizationService.T($"Заменить компонентов: {Lines.Count(x => !x.IsInstalled)} · оставить штатными: {Lines.Count(x => x.IsInstalled)}");
+    public double ScoreGainPercent => CurrentScore <= .000001 ? 0 : 100 * (Score - CurrentScore) / CurrentScore;
+    public string ComparisonDisplay => LocalizationService.IsEnglish
+        ? $"Build rating: {CurrentScore:N1} → {Score:N1}" + (CurrentScore > 0 ? $" ({ScoreGainPercent:+0.#;-0.#;0}%)" : "")
+        : $"Оценка сборки: {CurrentScore:N1} → {Score:N1}" + (CurrentScore > 0 ? $" ({ScoreGainPercent:+0.#;-0.#;0}%)" : "");
+    public string EngineeringComparisonDisplay => LocalizationService.IsEnglish
+        ? $"Power reserve: {CurrentPowerSupply - CurrentPowerDemand:+0.0;-0.0;0.0} → {PowerSupply - PowerDemand:+0.0;-0.0;0.0} · " +
+          $"cooling reserve: {CurrentCoolantSupply - CurrentCoolantDemand:+0.0;-0.0;0.0} → {CoolantSupply - CoolantDemand:+0.0;-0.0;0.0}" +
+          (CurrentQuantumSpeed > 0 || QuantumSpeed > 0 ? $" · quantum: {CurrentQuantumSpeed / 1_000_000:N0} → {QuantumSpeed / 1_000_000:N0} Mm/s" : "")
+        : $"Резерв энергии: {CurrentPowerSupply - CurrentPowerDemand:+0.0;-0.0;0.0} → {PowerSupply - PowerDemand:+0.0;-0.0;0.0} · " +
+          $"резерв охлаждения: {CurrentCoolantSupply - CurrentCoolantDemand:+0.0;-0.0;0.0} → {CoolantSupply - CoolantDemand:+0.0;-0.0;0.0}" +
+          (CurrentQuantumSpeed > 0 || QuantumSpeed > 0 ? $" · квант: {CurrentQuantumSpeed / 1_000_000:N0} → {QuantumSpeed / 1_000_000:N0} Мм/с" : "");
     public string EngineeringDisplay
     {
         get
@@ -101,21 +155,21 @@ public sealed record ShipBuildResult(
                 parts.Add($"Энергия: {PowerDemand:N1} из {PowerSupply:N1} сегм. · резерв {PowerSupply - PowerDemand:+0.0;-0.0;0.0}");
             if (CoolantSupply > 0 || CoolantDemand > 0)
                 parts.Add($"Охлаждение: {CoolantDemand:N1} из {CoolantSupply:N1} сегм. · резерв {CoolantSupply - CoolantDemand:+0.0;-0.0;0.0}");
-            return parts.Count == 0 ? "Энергия и охлаждение: данных недостаточно" : string.Join(Environment.NewLine, parts);
+            return LocalizationService.T(parts.Count == 0 ? "Энергия и охлаждение: данных недостаточно" : string.Join(Environment.NewLine, parts));
         }
     }
 
-    public string EngineeringStatus => PowerSupply > 0 && PowerDemand > PowerSupply
+    public string EngineeringStatus => LocalizationService.T(PowerSupply > 0 && PowerDemand > PowerSupply
         ? "⚠ Расчётная нагрузка превышает выработку энергии."
         : CoolantSupply > 0 && CoolantDemand > CoolantSupply
             ? "⚠ Расчётная нагрузка превышает возможности охлаждения."
-            : "Нагрузка рассчитана для сравниваемых сменных слотов; неподдерживаемые системы корабля не включены.";
+            : "Нагрузка рассчитана для сравниваемых сменных слотов; неподдерживаемые системы корабля не включены.");
 
-    public string QuantumDisplay => QuantumSpeed <= 0 && QuantumRangeGm <= 0
+    public string QuantumDisplay => LocalizationService.T(QuantumSpeed <= 0 && QuantumRangeGm <= 0
         ? "Квантовый привод: данных недостаточно"
         : $"Квант: {(QuantumSpeed > 0 ? $"{QuantumSpeed / 1_000_000:N0} Мм/с" : "скорость неизвестна")}" +
           (QuantumRangeGm > 0 ? $" · расчётная дальность {QuantumRangeGm:N0} Гм" : "") +
-          (QuantumFuelConsumption > 0 ? $" · расход {QuantumFuelConsumption:N3} SCU/Гм" : "");
+          (QuantumFuelConsumption > 0 ? $" · расход {QuantumFuelConsumption:N3} SCU/Гм" : ""));
 
     public decimal ShoppingPremiumPercent => ShoppingMinimumCost <= 0 ? 0
         : 100 * (ShoppingRouteCost - ShoppingMinimumCost) / ShoppingMinimumCost;

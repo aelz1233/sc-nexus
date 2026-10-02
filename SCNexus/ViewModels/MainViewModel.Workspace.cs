@@ -46,7 +46,20 @@ public partial class MainViewModel
     partial void OnMonitorIntervalSecondsChanged(int value) => QueueSave();
     partial void OnShowRouteDetailsChanged(bool value) => QueueSave();
     partial void OnIsMarketLoadingChanged(bool value) => OnPropertyChanged(nameof(HasNoHaulingRoutes));
-    partial void OnCatalogQueryChanged(string value) => RefreshCatalog();
+    partial void OnCatalogQueryChanged(string value) => ScheduleCatalogRefresh();
+
+    private async void ScheduleCatalogRefresh()
+    {
+        _catalogSearchCancellation?.Cancel();
+        var cancellation = _catalogSearchCancellation = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(160, cancellation.Token);
+            if (!cancellation.IsCancellationRequested) RefreshCatalog();
+        }
+        catch (OperationCanceledException) { }
+        finally { if (ReferenceEquals(_catalogSearchCancellation, cancellation)) _catalogSearchCancellation = null; cancellation.Dispose(); }
+    }
 
     private void Navigate(string page)
     {

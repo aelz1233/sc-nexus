@@ -202,6 +202,31 @@ public class DataCollectionTests
         finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); Directory.Delete(directory, true); }
     }
 
+    [Fact]
+    public async Task DisabledMonitoringPublishesPausedStateWithoutPollingProvider()
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var settings = new SettingsService(Path.Combine(directory, "nexus.db"));
+            await settings.LoadAsync();
+            var provider = new CountingProvider();
+            var collection = new DataCollectionService([provider], new DataHistoryService(settings),
+                new GameLogService(directory));
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+
+            var watching = collection.WatchAsync(() => false, () => false, cancellation.Token);
+            while (collection.Current.Sources.All(x => x.Status != "Paused") && !cancellation.IsCancellationRequested)
+                await Task.Delay(10);
+            cancellation.Cancel();
+            await watching;
+
+            Assert.Equal(0, provider.CallCount);
+            Assert.Equal("Paused", Assert.Single(collection.Current.Sources).Status);
+        }
+        finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); Directory.Delete(directory, true); }
+    }
+
     private static string TempDirectory()
     {
         var path = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
@@ -221,5 +246,19 @@ public class DataCollectionTests
             {
                 Values = [new ValueObservation("player.ship", value, source, timestamp ?? DateTimeOffset.UtcNow, confidence)]
             });
+    }
+
+    private sealed class CountingProvider : IDataProvider
+    {
+        public int CallCount { get; private set; }
+        public string Name => "counter";
+        public DataSourceKind Source => DataSourceKind.LocalGameData;
+        public int Priority => 2;
+        public TimeSpan RefreshInterval => TimeSpan.FromMilliseconds(10);
+        public Task<DataProviderResult> CollectAsync(DataProviderContext context, CancellationToken token)
+        {
+            CallCount++;
+            return Task.FromResult(new DataProviderResult());
+        }
     }
 }

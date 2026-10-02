@@ -72,7 +72,8 @@ public partial class ShipConfiguratorView : System.Windows.Controls.UserControl
             var catalog = await _catalogService.LoadAsync(ship.Name);
             var profile = ProfilePicker.SelectedIndex == 1 ? ShipBuildProfile.Travel : ShipBuildProfile.Combat;
             var builds = await Task.Run(() => ShipBuildOptimizer.Build(catalog, budget, profile,
-                _main?.CurrentSystem, _main?.CurrentLocation));
+                _main?.CurrentSystem, _main?.CurrentLocation,
+                _main?.AvoidPyro ?? false, _main?.AllowRisky ?? true));
             BudgetCard.DataContext = builds.Budget;
             BestCard.DataContext = builds.Best;
             BudgetCard.Visibility = Visibility.Visible;
