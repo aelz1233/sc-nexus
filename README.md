@@ -1,133 +1,164 @@
-# SC NEXUS
+<p align="center">
+  <img src="SCNexus/Assets/sc-nexus.png" width="88" alt="SC Nexus logo">
+</p>
 
-[English](#english) · [Русский](#русский)
+<h1 align="center">SC Nexus</h1>
 
-## English
+<p align="center">
+  <strong>Your Star Citizen companion — ships, economy, analytics and game data in one place.</strong>
+</p>
 
-SC NEXUS is a Windows 10/11 companion for Star Citizen. It tracks the game without modifying its process, recommends trade routes and ship loadouts, keeps a fleet and trip history, and minimizes manual input.
+<p align="center">
+  <a href="https://github.com/aelz1233/sc-nexus/releases/latest"><img src="https://img.shields.io/github/v/release/aelz1233/sc-nexus?display_name=tag&sort=semver&color=50bfae" alt="Latest release"></a>
+  <a href="https://github.com/aelz1233/sc-nexus/actions/workflows/windows-build.yml"><img src="https://img.shields.io/github/actions/workflow/status/aelz1233/sc-nexus/windows-build.yml?branch=main&label=build" alt="Windows build"></a>
+  <img src="https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4" alt="Windows 10 and 11">
+  <img src="https://img.shields.io/badge/.NET-10.0-512BD4" alt=".NET 10">
+</p>
 
-### Install
+<p align="center">
+  <a href="#features">Features</a> ·
+  <a href="#install">Install</a> ·
+  <a href="#data-sources">Data sources</a> ·
+  <a href="#roadmap">Roadmap</a> ·
+  <a href="README_RU.md">Русский</a>
+</p>
 
-Download the [latest release](https://github.com/aelz1233/sc-nexus/releases/latest):
+SC Nexus is a Windows companion application for **Star Citizen**. It collects available game data without modifying the game process, combines it with market and component data, and keeps trading, fleet, sessions, and game events in one local workspace.
 
-- **SCNexus-Setup-…exe** — regular installer with a selectable installation folder;
-- **SCNexus-…win-x64.zip** — portable build.
+The guiding principle is simple: use automatic data first and ask the player for manual input only when a reliable source is unavailable.
 
-.NET is bundled. Updates preserve the fleet, balance, settings, and trip history in `%LOCALAPPDATA%\SCNexus`.
+> There are no application screenshots committed to this repository yet. The project logo above is the only current image asset; screenshots will be added only after they are captured from the released application.
 
-### Automatic data collection
+## Features
 
-Every collected value includes its source, timestamp, and confidence. Providers are evaluated in this order:
+| Area | What SC Nexus does |
+| --- | --- |
+| **Dashboard and player state** | Shows the current or last session, detected ship and location, active mission, game build, server details, notifications, and personal trading metrics. |
+| **Trade routes** | Uses UEX market quotes, stock, demand, cargo capacity, budget, safety rules, and system filters to find direct routes, chains, and multi-stop cargo collection plans. Pyro is explicitly marked as dangerous. |
+| **Fleet and loadouts** | Maintains a personal fleet from the UEX vehicle catalog or reliable detections. The loadout planner reads compatible ports and component data, compares builds, and creates purchase checklists. |
+| **Game data collection** | Reads new `Game.log` lines incrementally, checks local game files in read-only mode, tracks sessions, movement, missions, deaths, trade events, and supported values. |
+| **Overlay and tray** | Provides an optional read-only overlay, configurable hotkey, system-tray controls, and a notification center. It does not inject into Star Citizen or intercept its input. |
+| **Local history and safety** | Stores settings, flights, and collected history locally in SQLite; creates rotating backups and can restore the previous app/database state after a failed update. |
 
-1. `Game.log` and `logbackups` using an incremental real-time tail;
-2. local Star Citizen files in read-only mode;
+## Install
+
+Download the latest release from [GitHub Releases](https://github.com/aelz1233/sc-nexus/releases/latest).
+
+- `SCNexus-Setup-…-win-x64.exe` — installer with a selectable installation folder.
+- `SCNexus-…-win-x64.zip` — portable single-file build.
+
+The published builds are self-contained. Existing settings, fleet, balance, history, and caches live outside the installation folder in `%LOCALAPPDATA%\SCNexus`, so they survive upgrades and reinstallations.
+
+### Requirements
+
+| Requirement | Details |
+| --- | --- |
+| Operating system | Windows 10 version 1809 or later, or Windows 11 |
+| Architecture | x64-compatible CPU |
+| Game integration | A local LIVE, PTU, or EPTU installation is detected automatically when available |
+| Network | Needed only for UEX, Star Citizen Wiki, GitHub updates, and optional data refreshes |
+
+## Run from source
+
+The repository targets .NET 10 and WPF.
+
+```powershell
+dotnet run --project SCNexus/SCNexus.csproj
+```
+
+Run the automated test suite with:
+
+```powershell
+dotnet test SCNexus.slnx -c Release
+```
+
+<details>
+<summary><strong>Build a self-contained Windows executable</strong></summary>
+
+```powershell
+dotnet publish SCNexus/SCNexus.csproj -c Release -r win-x64 --self-contained true `
+  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+```
+
+The GitHub Actions workflow runs tests, builds this executable, builds the Inno Setup installer, verifies install/upgrade/uninstall behavior, and publishes release assets.
+</details>
+
+## Automatic data collection
+
+Every collected value carries its source, timestamp, and confidence. Providers are evaluated by priority:
+
+1. `Game.log` and `logbackups`, following only new lines after the initial tail;
+2. local Star Citizen installation files, read-only;
 3. UEX and Star Citizen Wiki APIs;
 4. optional OCR of the foreground Star Citizen window;
-5. saved Nexus history;
-6. manual values only when no automatic source is available.
+5. previously saved Nexus history;
+6. manual values when no automatic source is available.
 
-The app automatically finds LIVE, PTU, or EPTU on first launch. Manual folder selection appears only if detection fails. The Tools page shows values in a form such as `Orison • Game.log • just now`, reports the status and last successful update of every provider, and marks stale values as last known.
+The app detects LIVE, PTU, and EPTU folders on first launch. Manual selection is available when automatic discovery cannot find the game.
 
-Depending on what the current game build exposes, SC NEXUS records the game build and environment, sessions and shard, locations, structured mission/objective changes, trade requests, balance lines, detected ships, movement history, market freshness, and component catalog coverage. Reliable detections are saved to the local SQLite history. A detected ship is added to the fleet only after an exact match with the UEX catalog.
+## Data sources
 
-OCR is disabled by default. When enabled, it captures only the foreground Star Citizen client, keeps the image in memory while extracting supported values, and releases it immediately after recognition.
+| Source | Used for | Notes |
+| --- | --- | --- |
+| [UEX Corp](https://uexcorp.space/) | Commodity prices, terminal availability, vehicle catalog, and component shop offers | Community-supplied economy data; confirm live terminal values before buying. |
+| [Star Citizen Wiki API](https://api.star-citizen.wiki/developers) | Ship ports, supported component types, item stats, and game-version metadata | Used by the loadout catalog. |
+| Local Star Citizen files | Build, environment, logs, session hints, and supported game events | Read-only. No files are modified. |
+| GitHub Releases | Application update metadata and verified release assets | A token is only needed if this repository becomes private. |
 
-SC NEXUS never uses DLL injection, process memory reading, hooks, packet interception, or changes to Star Citizen files.
+## Privacy and game safety
 
-### Features
+SC Nexus is an external, read-only helper. It does **not** use DLL injection, memory reading, process hooks, packet interception, or modifications to Star Citizen files.
 
-**Trade routes.** Select a ship and budget, or let automatic data fill what is available. The origin can now be limited to an entire star system without choosing a specific terminal. Direct routes, trade chains, and multi-stop cargo collection use current UEX prices, stock, and demand. Pyro routes are marked dangerous. When a multi-stop plan is selected, route guidance advances from detected locations and matching trade events in `Game.log`, persists across restarts, and still allows a manual step correction when the log is incomplete. Completed trips add personal travel time and estimated profit per hour to matching route cards.
+OCR is disabled by default. When enabled, it only processes the foreground Star Citizen window and releases the captured image after recognition. Application data is stored locally under `%LOCALAPPDATA%\SCNexus`.
 
-**Fleet and loadouts.** Add ships from the UEX catalog or let reliable detections add them. The compact loadout planner is embedded in the Ships page and uses compatible ports and component stats from Star Citizen Wiki plus store prices from UEX. Budget and unrestricted builds are shown in separate tabs; technical details and component lists stay collapsed until needed. Component shopping has three explained plans: balanced, fewer flights, and lowest price. Each plan follows the current Pyro/NQA safety filters and includes a collapsible shopping checklist.
+## Project structure
 
-**Interface.** The application uses one refreshed visual system across the dashboard, routes, fleet, journal, tools, settings, and configurator: a clearer sidebar and page header, consistent rounded inputs and cards, compact spacing, readable tabs, and predictable expandable sections. Russian and English remain available from Settings.
-
-**External game overlay.** An optional compact or expanded click-through window shows the detected ship and location, active route stop, cargo, expected profit, mission, data freshness, and Pyro/NQA warnings. Its editor can move the overlay, select a screen corner, change scale, background and text opacity, and hide individual blocks. Click the shortcut field and press any available keyboard combination; none is assigned by default. It does not inject into the game or add Windows startup entries.
-
-**Session reports and notifications.** The dashboard summarizes the current or last game session, including duration, trips, missions, deaths, purchases, sales, and movement events. A local notification center reports session changes, detected ships, provider failures and recovery, route progress, and available updates.
-
-**Notification area.** Closing the main window keeps monitoring active and minimizes SC NEXUS to the system tray. Its menu shows game, location, and route status and provides overlay, monitoring, update, open, and exit actions.
-
-**Journal and history.** Missions, deaths, movement, and trade requests detected in `Game.log` appear in one journal. Trade requests can fill actual purchase and sale amounts. Manual correction remains available. Statistics can be filtered by time and exported to CSV.
-
-**Diagnostics and data safety.** The read-only PC check reports the game executable, build, GPU and VRAM from `Game.log`, memory, page file, disk space, launcher state, caches, and known recent crash signatures. Local application errors are written to a rotating log. Nexus creates one verified database backup per day and keeps the latest seven copies.
-
-**Updates.** Settings → Check for updates downloads, verifies, and silently installs the latest GitHub release. Before installation Nexus creates a verified database backup and preserves the previous executable. If the updated build cannot finish startup, the previous executable and database are restored automatically. Public releases need no GitHub token.
-
-### Objective limitations
-
-Star Citizen does not reliably expose the complete account fleet, current installed loadout, personal inventory, blueprints, exact wallet balance, or every mission/death/location event in public local logs. SC NEXUS records these only when a reliable log event, supported API value, or enabled OCR result exists. It does not invent missing values. UEX data is community supplied, so verify price, stock, and demand at the in-game terminal before buying.
-
-### Build from source
-
-Windows and the .NET 10 SDK are required:
-
-```powershell
-dotnet run --project SCNexus/SCNexus.csproj
-dotnet test SCNexus.slnx -c Release
+```text
+SC-Nexus/
+├── SCNexus/                 WPF application
+│   ├── Assets/              Application logo and icons
+│   ├── Controls/            Reusable UI controls and loadout view
+│   ├── Data/                Entity Framework SQLite context
+│   ├── Models/              Game, trade, fleet, and collected-data models
+│   ├── Services/            Providers, parsing, routes, updates, and persistence
+│   └── ViewModels/          Application state and UI commands
+├── SCNexus.Tests/           xUnit regression and smoke tests
+├── installer/               Inno Setup installer definition
+├── scripts/                 Release and installer helpers
+├── docs/                    Versioned release notes
+├── .github/                 CI workflow and collaboration templates
+└── VERSION                  Release version used by CI
 ```
 
-## Русский
+## Development status
 
-SC NEXUS — компаньон Star Citizen для Windows 10/11. Он следит за игрой без вмешательства в её процесс, подбирает торговые маршруты и конфигурации кораблей, ведёт флот и историю рейсов и сводит ручной ввод к минимуму.
+SC Nexus is actively developed as a personal companion application. The current release includes a production Windows installer and automated CI checks, while Star Citizen log coverage and provider quality continue to evolve with game builds.
 
-### Установка
+## Roadmap
 
-Скачайте [последнюю версию](https://github.com/aelz1233/sc-nexus/releases/latest):
+- ✅ Windows WPF companion, local SQLite storage, installer, portable build, and GitHub release automation
+- ✅ Fleet management, trade recommendations, chains, cargo collection, loadout planning, overlay, tray controls, and bilingual UI
+- ✅ Provider-based automatic data collection with `Game.log`, local game files, UEX, Star Citizen Wiki, OCR, and local-history fallbacks
+- 🚧 Broader parsing coverage for new or changed Star Citizen log events
+- 🚧 More resilient provider diagnostics and data-quality reporting across game patches
+- 📋 Additional data providers using the existing `IDataProvider` extension point
+- 📋 Official interface screenshots captured from released builds
 
-- **SCNexus-Setup-…exe** — обычная установка с выбором папки;
-- **SCNexus-…win-x64.zip** — запуск без установки.
+## Known limitations
 
-.NET уже включён. При обновлении флот, баланс, настройки и история рейсов сохраняются в `%LOCALAPPDATA%\SCNexus`.
+- Public local game data does not reliably expose a complete account fleet, current installed loadout, personal inventory, blueprints, exact wallet balance, or every mission, death, and location event.
+- The application stores and displays a value only when a supported provider, log event, or enabled OCR result can supply it. It does not invent missing game data.
+- UEX availability, stock, demand, and prices can change in game. Verify a terminal before making a large purchase.
+- The overlay remains external and read-only, so it cannot access information unavailable to the configured providers.
 
-### Автоматический сбор данных
+## Contributing
 
-Для каждого значения сохраняются источник, время и уверенность. Источники используются по приоритету:
+Bug reports, improvement ideas, and focused pull requests are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), use the supplied issue templates, and keep changes small enough to test independently.
 
-1. `Game.log` и `logbackups` с инкрементальным отслеживанием новых строк;
-2. локальные файлы Star Citizen только в режиме чтения;
-3. API UEX и Star Citizen Wiki;
-4. необязательный OCR окна Star Citizen;
-5. накопленная история Nexus;
-6. ручные значения, только когда автоматического источника нет.
+## License
 
-При первом запуске программа сама ищет LIVE, PTU или EPTU. Ручной выбор папки появляется только при неудачном поиске. В «Инструментах» значения показаны в формате `Orison • Game.log • только что`, рядом видны состояние и время последнего успешного обновления каждого источника. Устаревшие значения помечаются как последние известные.
+No open-source license has been selected for this repository yet. Until one is added, the project remains under the copyright of its owner and contributions should be discussed in an issue before substantial work begins.
 
-В зависимости от данных текущей версии игры SC NEXUS сохраняет build и контур игры, сессии и shard, локации, структурированные изменения миссий и objectives, торговые запросы, строки баланса, обнаруженные корабли, историю перемещений, свежесть рынка и покрытие каталога компонентов. Надёжные результаты сохраняются в локальную SQLite-базу. Обнаруженный корабль добавляется во флот только после точного совпадения с каталогом UEX.
+## Acknowledgements
 
-OCR по умолчанию выключен. После включения он снимает только находящееся на переднем плане окно Star Citizen, держит изображение в памяти во время распознавания и сразу освобождает его. Временный файл на диске не создаётся.
-
-SC NEXUS не использует DLL injection, чтение памяти процесса, hooks, перехват пакетов и не изменяет файлы Star Citizen.
-
-### Возможности
-
-**Торговые маршруты.** Выберите корабль и бюджет либо используйте автоматически найденные значения. Начало маршрута теперь можно ограничить целой звёздной системой без выбора конкретного терминала. Прямые рейсы, цепочки и сбор груза с нескольких остановок используют цены, stock и demand UEX. Маршруты через Pyro помечаются опасными. После выбора многоэтапного плана ведение само переключает остановки по обнаруженной локации и подходящим торговым событиям `Game.log`, сохраняется между запусками и допускает ручную коррекцию шага, если журнал не дал нужного события. Завершённые рейсы добавляют в карточки личное время перелёта и расчёт прибыли в час.
-
-**Корабли и конфигуратор.** Добавляйте корабли из каталога UEX или используйте надёжное автоопределение. Компактный конфигуратор встроен в экран кораблей, получает совместимые порты и характеристики из Star Citizen Wiki, а цены магазинов — из UEX. Сборки за бюджет и без ограничения суммы разделены по вкладкам; технические подробности и полный список компонентов раскрываются только при необходимости. Для покупки предлагаются три объяснённых плана: сбалансированный, с минимумом перелётов и с минимальной ценой. Каждый учитывает выбранные фильтры Pyro/NQA и содержит сворачиваемый чек-лист покупок.
-
-**Интерфейс.** Главный экран, маршруты, флот, журнал, инструменты, настройки и конфигуратор приведены к единой обновлённой системе: более ясная боковая панель и шапка, одинаковые скруглённые поля и карточки, компактные отступы, читаемые вкладки и предсказуемые раскрывающиеся блоки. Русский и английский переключаются в настройках.
-
-**Внешний игровой оверлей.** Необязательное компактное или расширенное окно показывает обнаруженный корабль и локацию, текущую остановку маршрута, груз, ожидаемую прибыль, миссию, свежесть данных и предупреждения Pyro/NQA. В редакторе можно перетащить оверлей, выбрать угол экрана, масштаб, прозрачность фона и текста и скрыть отдельные блоки. Нажмите поле бинда и введите любое свободное сочетание клавиш; по умолчанию оно не назначено. Оверлей не внедряется в игру и не добавляет приложение в автозапуск Windows.
-
-**Отчёты и уведомления.** На главном экране показана текущая или последняя игровая сессия: длительность, рейсы, миссии, смерти, покупки, продажи и перемещения. Локальный центр уведомлений сообщает о сессиях, обнаруженных кораблях, сбоях и восстановлении источников, ходе маршрута и новых версиях.
-
-**Системный трей.** Крестик сохраняет мониторинг и сворачивает SC NEXUS в область уведомлений. Меню значка показывает состояние игры, локацию и маршрут и позволяет управлять оверлеем, мониторингом и обновлением, открыть приложение или полностью выйти.
-
-**Журнал и история.** Миссии, смерти, перемещения и торговые запросы из `Game.log` собраны на одном экране. Торговые запросы могут автоматически заполнить фактические покупки и продажи. Поля разрешено исправлять вручную. Статистика фильтруется по времени и экспортируется в CSV.
-
-**Диагностика и защита данных.** Проверка компьютера только читает сведения об исполняемом файле и build игры, GPU и VRAM из `Game.log`, памяти, файле подкачки, свободном месте, лаунчере, кэшах и известных свежих сигнатурах вылетов. Необработанные ошибки Nexus записываются в локальный циклический журнал. Раз в день создаётся проверенная копия базы; хранятся последние семь копий.
-
-**Обновление.** Настройки → «Проверить обновление» скачивает, проверяет и тихо устанавливает последний GitHub-релиз. Перед установкой Nexus создаёт проверенную копию базы и сохраняет предыдущий EXE. Если новая версия не завершит запуск, прежняя программа и база восстановятся автоматически. Для открытого репозитория токен не нужен.
-
-### Объективные ограничения
-
-Star Citizen не предоставляет в открытых локальных данных надёжный полный список кораблей аккаунта, фактически установленный loadout, личный инвентарь, blueprints, точный баланс и каждое событие миссии, смерти или перемещения. SC NEXUS записывает их только при наличии надёжной строки журнала, поддерживаемого значения API или результата включённого OCR. Отсутствующие данные не выдумываются. Данные UEX заполняются сообществом, поэтому перед закупкой проверяйте цену, запас и спрос в игровом терминале.
-
-### Сборка из исходников
-
-Нужны Windows и .NET 10 SDK:
-
-```powershell
-dotnet run --project SCNexus/SCNexus.csproj
-dotnet test SCNexus.slnx -c Release
-```
+SC Nexus is an unofficial fan-made companion. Star Citizen and related marks belong to Cloud Imperium Games. UEX and Star Citizen Wiki are independent community data sources.
