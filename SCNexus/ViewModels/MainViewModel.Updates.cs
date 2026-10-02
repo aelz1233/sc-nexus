@@ -9,7 +9,9 @@ public partial class MainViewModel
     [ObservableProperty] private bool isUpdateBusy;
     [ObservableProperty] private string updateStatus = "Нажми кнопку, чтобы проверить новую версию.";
     public string CurrentAppVersion => $"Установлена версия {updateService.CurrentVersion.ToString(3)}";
-    public string GithubTokenStatus => updateService.HasToken ? "Доступ к закрытому репозиторию сохранён." : "Для закрытого репозитория нужен токен GitHub с правом Contents: Read.";
+    public string GithubTokenStatus => updateService.HasToken
+        ? "Токен сохранён для доступа к закрытому репозиторию."
+        : "Токен не сохранён. Для открытого репозитория он не нужен.";
     public string? PendingInstallerPath { get; private set; }
 
     partial void OnIsUpdateBusyChanged(bool value) => CheckForUpdatesCommand.NotifyCanExecuteChanged();

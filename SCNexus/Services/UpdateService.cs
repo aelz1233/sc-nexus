@@ -66,8 +66,8 @@ public sealed class UpdateService
         if (response.IsSuccessStatusCode) return;
         if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
             throw new InvalidOperationException(hasToken
-                ? "GitHub не открыл закрытый репозиторий. Проверь токен и право Contents: Read."
-                : "Репозиторий закрытый. Сохрани токен GitHub с правом Contents: Read в настройках.");
+                ? "GitHub не открыл релиз. Проверь токен и право Contents: Read."
+                : "GitHub не открыл релиз. Проверь доступность репозитория; для закрытого репозитория нужен токен с правом Contents: Read.");
         throw new HttpRequestException($"GitHub ответил кодом {(int)response.StatusCode}.");
     }
 

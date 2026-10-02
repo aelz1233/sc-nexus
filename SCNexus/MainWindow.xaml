@@ -792,13 +792,17 @@
                                         <TextBlock Text="{Binding CurrentAppVersion}" Foreground="{StaticResource Muted}" Margin="0,0,0,10" />
                                         <Button Content="Проверить обновление" Command="{Binding CheckForUpdatesCommand}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left" />
                                         <TextBlock Text="{Binding UpdateStatus}" Style="{StaticResource Hint}" Margin="0,10,0,0" />
-                                        <TextBlock Text="Доступ к закрытому репозиторию" Style="{StaticResource FieldLabel}" Margin="0,18,0,6" />
-                                        <PasswordBox x:Name="GithubTokenBox" MinHeight="38" Padding="10,7" Background="#0F1825" Foreground="White" BorderBrush="#324052" ToolTip="Токен GitHub с доступом Contents: Read только к этому репозиторию" />
-                                        <WrapPanel Margin="0,9,0,0">
-                                            <Button Content="Сохранить токен" Click="SaveGithubToken_Click" Margin="0,0,8,0" />
-                                            <Button Content="Удалить токен" Command="{Binding ClearGithubTokenCommand}" />
-                                        </WrapPanel>
-                                        <TextBlock Text="{Binding GithubTokenStatus}" Style="{StaticResource Hint}" Margin="0,8,0,0" />
+                                        <Expander Header="Токен для закрытого репозитория" Margin="0,16,0,0">
+                                            <StackPanel Margin="0,10,0,0">
+                                                <TextBlock Text="Для открытого репозитория токен не нужен. Если доступ к нему будет закрыт, добавь токен GitHub с правом Contents: Read." Style="{StaticResource Hint}" Margin="0,0,0,9" />
+                                                <PasswordBox x:Name="GithubTokenBox" MinHeight="38" Padding="10,7" Background="#0F1825" Foreground="White" BorderBrush="#324052" ToolTip="Токен GitHub с доступом Contents: Read только к этому репозиторию" />
+                                                <WrapPanel Margin="0,9,0,0">
+                                                    <Button Content="Сохранить токен" Click="SaveGithubToken_Click" Margin="0,0,8,0" />
+                                                    <Button Content="Удалить токен" Command="{Binding ClearGithubTokenCommand}" />
+                                                </WrapPanel>
+                                                <TextBlock Text="{Binding GithubTokenStatus}" Style="{StaticResource Hint}" Margin="0,8,0,0" />
+                                            </StackPanel>
+                                        </Expander>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
