@@ -12,6 +12,10 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
     private const long InitialTailBytes = 4 * 1024 * 1024;
     private readonly Dictionary<string, Cursor> _cursors = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, MissionState> _missions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, GameSession> _sessions = new(StringComparer.OrdinalIgnoreCase);
+    private string? _cachedLogDirectory;
+    private string[] _cachedBackupLogs = [];
+    private DateTimeOffset _lastBackupScan;
     private string? _lastLocation;
 
     public string Name => "Game.log + logbackups";
@@ -35,10 +39,11 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
             token.ThrowIfCancellationRequested();
             try
             {
-                foreach (var line in ReadNewLines(path, path.EndsWith("Game.log", StringComparison.OrdinalIgnoreCase)))
+                foreach (var entry in ReadNewLines(path, path.EndsWith("Game.log", StringComparison.OrdinalIgnoreCase)))
                 {
                     readLines++;
-                    ParseLine(line, values, records);
+                    var logIdentity = $"{Path.GetFileName(path)}:{File.GetCreationTimeUtc(path).Ticks}:{entry.Generation}";
+                    ParseLine(entry.Line, logIdentity, values, records);
                 }
             }
             catch (IOException) { }
@@ -51,18 +56,26 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
         };
     }
 
-    private static IEnumerable<string> EnumerateLogs(string directory)
+    private IEnumerable<string> EnumerateLogs(string directory)
     {
         var active = Path.Combine(directory, "Game.log");
         if (File.Exists(active)) yield return active;
         var backups = Path.Combine(directory, "logbackups");
         if (!Directory.Exists(backups)) yield break;
-        foreach (var path in Directory.EnumerateFiles(backups, "*.log")
-                     .OrderByDescending(File.GetLastWriteTimeUtc).Take(20))
+        var now = DateTimeOffset.UtcNow;
+        if (!string.Equals(_cachedLogDirectory, directory, StringComparison.OrdinalIgnoreCase) ||
+            now - _lastBackupScan >= TimeSpan.FromMinutes(1))
+        {
+            _cachedLogDirectory = directory;
+            _lastBackupScan = now;
+            _cachedBackupLogs = Directory.EnumerateFiles(backups, "*.log")
+                .OrderByDescending(File.GetLastWriteTimeUtc).Take(20).ToArray();
+        }
+        foreach (var path in _cachedBackupLogs)
             yield return path;
     }
 
-    private IEnumerable<string> ReadNewLines(string path, bool active)
+    private IEnumerable<LogLine> ReadNewLines(string path, bool active)
     {
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read,
             FileShare.ReadWrite | FileShare.Delete);
@@ -71,11 +84,12 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
         if (!_cursors.TryGetValue(path, out var cursor))
         {
             var start = Math.Max(0, stream.Length - InitialTailBytes);
-            cursor = new Cursor(start, "", creation);
+            cursor = new Cursor(start, "", creation, 0);
             _cursors[path] = cursor;
             skipPartialFirstLine = start > 0;
         }
-        if (stream.Length < cursor.Offset || cursor.CreationUtc != creation) cursor = new Cursor(0, "", creation);
+        if (stream.Length < cursor.Offset || cursor.CreationUtc != creation)
+            cursor = new Cursor(0, "", creation, cursor.Generation + 1);
         stream.Position = cursor.Offset;
         using var reader = new StreamReader(stream, Encoding.UTF8, true, 4096, true);
         var chunk = cursor.Partial + reader.ReadToEnd();
@@ -87,13 +101,14 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
         var endsWithLineBreak = chunk.EndsWith('\n') || chunk.EndsWith('\r');
         var lines = chunk.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
         var complete = endsWithLineBreak ? lines.Length : Math.Max(0, lines.Length - 1);
-        for (var i = 0; i < complete; i++) yield return lines[i];
+        for (var i = 0; i < complete; i++) yield return new LogLine(lines[i], cursor.Generation);
         var partial = endsWithLineBreak || lines.Length == 0 ? "" : lines[^1];
-        _cursors[path] = new Cursor(stream.Length, partial, creation);
-        if (!active && string.IsNullOrEmpty(partial)) _cursors[path] = new Cursor(stream.Length, "", creation);
+        _cursors[path] = new Cursor(stream.Length, partial, creation, cursor.Generation);
+        if (!active && string.IsNullOrEmpty(partial)) _cursors[path] = new Cursor(stream.Length, "", creation, cursor.Generation);
     }
 
-    private void ParseLine(string line, List<ValueObservation> values, List<TypedObservation> records)
+    private void ParseLine(string line, string logIdentity, List<ValueObservation> values,
+        List<TypedObservation> records)
     {
         var timestamp = ReadTimestamp(line) ?? DateTimeOffset.UtcNow;
         if (GameLogService.TryParse(line, out var candidate) && candidate is not null)
@@ -123,13 +138,27 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
         if (shard.Success)
         {
             values.Add(new ValueObservation("game.shard", shard.Value, Source, timestamp, .98));
-            var sessionId = Id("session", timestamp.Date, shard.Value);
-            records.Add(new TypedObservation("session", sessionId, new GameSession
+            var sessionId = Id("session", DateTimeOffset.UnixEpoch, logIdentity, shard.Value);
+            if (!_sessions.TryGetValue(sessionId, out var session))
             {
-                Id = sessionId,
-                StartedAt = new ObservedValue<DateTimeOffset>(timestamp, Source, timestamp, .8),
-                Shard = new ObservedValue<string>(shard.Value, Source, timestamp, .98)
-            }, Source, timestamp, .9));
+                session = new GameSession
+                {
+                    Id = sessionId,
+                    StartedAt = new ObservedValue<DateTimeOffset>(timestamp, Source, timestamp, .8),
+                    Shard = new ObservedValue<string>(shard.Value, Source, timestamp, .98)
+                };
+            }
+            else if (timestamp < session.StartedAt.Value)
+            {
+                session = new GameSession
+                {
+                    Id = session.Id,
+                    StartedAt = new ObservedValue<DateTimeOffset>(timestamp, Source, timestamp, .8),
+                    Shard = session.Shard
+                };
+            }
+            _sessions[sessionId] = session;
+            records.Add(new TypedObservation("session", sessionId, session, Source, timestamp, .9));
         }
 
         var location = FirstGroup(LocationPatterns(), line);
@@ -302,7 +331,8 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(raw)))[..24];
     }
 
-    private sealed record Cursor(long Offset, string Partial, DateTime CreationUtc);
+    private sealed record Cursor(long Offset, string Partial, DateTime CreationUtc, int Generation);
+    private sealed record LogLine(string Line, int Generation);
     private static IEnumerable<Regex> LocationPatterns() => [InventoryLocationPattern(), LocationBracketPattern(), ZoneBracketPattern(), LocationJsonPattern()];
     private static IEnumerable<Regex> ShipPatterns() => [VehicleNamePattern(), ShipNamePattern(), VehicleJsonPattern()];
 

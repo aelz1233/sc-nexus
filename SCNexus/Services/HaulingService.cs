@@ -5,7 +5,7 @@ namespace SCNexus.Services;
 public sealed class HaulingService
 {
     public static readonly string[] SortOptions =
-        ["За рейс", "За SCU", "Маржа", "Вход", "Заполнение"];
+        ["За рейс", "За час", "За SCU", "Маржа", "Вход", "Заполнение"];
     public static readonly string[] Categories =
         ["Все маршруты", "Местный", "Планетарный", "Звёздный", "Межзвёздный"];
 

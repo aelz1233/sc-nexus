@@ -11,7 +11,7 @@ public sealed class UexProvider(GameDataService gameDataService) : IDataProvider
 
     public async Task<DataProviderResult> CollectAsync(DataProviderContext context, CancellationToken token)
     {
-        var data = await gameDataService.GetSnapshotAsync(token: token);
+        var data = await gameDataService.GetSnapshotAsync(token: token, forceRefresh: context.ForceRefresh);
         var newest = data.Quotes.Count == 0 ? data.PricesFetchedAt : data.Quotes.Max(x => Epoch(x.DateModified));
         return new DataProviderResult
         {
@@ -48,7 +48,8 @@ public sealed class SCWikiProvider(ShipComponentCatalogService catalogService) :
         };
         return new DataProviderResult
         {
-            Values = [new("ship.components", $"{catalog.Components.Count} components", Source, catalog.FetchedAt, catalog.UsedOldCache ? .65 : .92)],
+            Values = [new("ship.components", $"{catalog.Components.Count} components", Source, catalog.FetchedAt,
+                catalog.UsedOldCache ? .65 : .92, DataVersion: catalog.GameVersion)],
             Records = [new("component-catalog", ship, record, Source, catalog.FetchedAt, catalog.UsedOldCache ? .65 : .92)],
             Status = $"{catalog.Slots.Count} slots for {catalog.ShipName}"
         };
@@ -86,11 +87,11 @@ public sealed class NexusHistoryProvider(DataHistoryService history) : IDataProv
 
     public async Task<DataProviderResult> CollectAsync(DataProviderContext context, CancellationToken token)
     {
-        var rows = await history.LoadLatestAsync(800, token);
+        var rows = await history.LoadRecoverySnapshotAsync(800, token);
         var values = rows.Where(x => x.Kind == "value").GroupBy(x => x.RecordKey)
             .Select(x => x.OrderByDescending(y => y.TimestampUtc).First())
-            .Select(x => DataHistoryService.TryReadValue(x, out var value, out var unit)
-                ? new ValueObservation(x.RecordKey, value, Source, x.TimestampUtc, Math.Min(.6, x.Confidence * .7), unit) : null)
+            .Select(x => DataHistoryService.TryReadValue(x, out var value, out var unit, out var version)
+                ? new ValueObservation(x.RecordKey, value, Source, x.TimestampUtc, Math.Min(.6, x.Confidence * .7), unit, version) : null)
             .Where(x => x is not null).Select(x => x!).ToArray();
         var records = new List<TypedObservation>();
         foreach (var row in rows.Where(x => x.Kind != "value").GroupBy(x => (x.Kind, x.RecordKey)).Select(x => x.First()))

@@ -12,7 +12,7 @@ public interface IDataProvider
 }
 
 public sealed record DataProviderContext(string? GameDirectory, PlayerState CurrentState,
-    DateTimeOffset Now, bool OcrEnabled);
+    DateTimeOffset Now, bool OcrEnabled, bool ForceRefresh = false);
 
 public sealed class DataProviderResult
 {
@@ -22,7 +22,7 @@ public sealed class DataProviderResult
 }
 
 public sealed record ValueObservation(string Key, string Value, DataSourceKind Source,
-    DateTimeOffset Timestamp, double Confidence, string? Unit = null);
+    DateTimeOffset Timestamp, double Confidence, string? Unit = null, string? DataVersion = null);
 
 public sealed record TypedObservation(string Kind, string Key, object Value, DataSourceKind Source,
     DateTimeOffset Timestamp, double Confidence);

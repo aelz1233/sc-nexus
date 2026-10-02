@@ -58,6 +58,8 @@
                 <TextBlock Text="{Binding CostDisplay}" FontSize="18" FontWeight="SemiBold" />
                 <TextBlock Text="{Binding Status}" Style="{StaticResource Hint}" Margin="0,7,0,0" />
                 <TextBlock Text="{Binding CoverageDisplay}" Style="{StaticResource Hint}" Margin="0,5,0,14" />
+                <TextBlock Text="{Binding ChangesDisplay}" Style="{StaticResource Hint}" Margin="0,0,0,6" />
+                <TextBlock Text="{Binding PurchasePlanDisplay}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,0,0,14" />
                 <Button Content="Скопировать список деталей" Click="OnCopyBudgetClick" HorizontalAlignment="Left" Margin="0,0,0,12" />
                 <ItemsControl ItemsSource="{Binding Lines}">
                     <ItemsControl.ItemTemplate>
@@ -89,6 +91,8 @@
                 <TextBlock Text="{Binding CostDisplay}" FontSize="18" FontWeight="SemiBold" />
                 <TextBlock Text="{Binding Status}" Style="{StaticResource Hint}" Margin="0,7,0,0" />
                 <TextBlock Text="{Binding CoverageDisplay}" Style="{StaticResource Hint}" Margin="0,5,0,14" />
+                <TextBlock Text="{Binding ChangesDisplay}" Style="{StaticResource Hint}" Margin="0,0,0,6" />
+                <TextBlock Text="{Binding PurchasePlanDisplay}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,0,0,14" />
                 <Button Content="Скопировать список деталей" Click="OnCopyBestClick" HorizontalAlignment="Left" Margin="0,0,0,12" />
                 <ItemsControl ItemsSource="{Binding Lines}">
                     <ItemsControl.ItemTemplate>

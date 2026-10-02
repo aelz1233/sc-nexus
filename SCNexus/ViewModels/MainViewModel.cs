@@ -36,7 +36,6 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     [ObservableProperty] private string gameDirectoryPath = "";
     [ObservableProperty] private bool isSettingsOpen;
     [ObservableProperty] private bool isFleetOpen;
-    [ObservableProperty] private bool isConfiguratorOpen;
     [ObservableProperty] private bool isHistoryOpen;
     [ObservableProperty] private bool isToolsOpen;
     [ObservableProperty] private bool isHaulingOpen;
@@ -96,7 +95,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     public ObservableCollection<string> Systems { get; } = ["Все системы"];
     public ObservableCollection<LocationOption> FilteredLocations { get; } = [];
     public ObservableCollection<FlightRecord> Flights { get; } = [];
-    public bool IsDashboardOpen => !IsSettingsOpen && !IsFleetOpen && !IsConfiguratorOpen && !IsHistoryOpen && !IsToolsOpen && !IsHaulingOpen;
+    public bool IsDashboardOpen => !IsSettingsOpen && !IsFleetOpen && !IsHistoryOpen && !IsToolsOpen && !IsHaulingOpen;
     public bool HasActiveFlight => ActiveFlight is not null;
     public bool HasHaulingBestRoute => HaulingBestRoute is not null;
     public bool HasMoreHaulingRoutes => _visibleHaulingCount < _allHaulingRoutes.Count;
@@ -218,6 +217,18 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
 
     private async Task RefreshGameInfoAsync(CancellationToken token = default)
     {
+        if (dataCollectionService is not null)
+        {
+            ApplyDataSnapshot(dataCollectionService.Current);
+            var directory = gameLogService.ResolveGameDirectory();
+            var healthSnapshot = await Task.Run(() => GameHealthService.Scan(directory), token);
+            if (!GameHealthFindings.SequenceEqual(healthSnapshot))
+            {
+                GameHealthFindings.Clear();
+                foreach (var finding in healthSnapshot) GameHealthFindings.Add(finding);
+            }
+            return;
+        }
         var snapshot = await gameLogService.ReadRecentAsync(token);
         ResolvedGameDirectory = snapshot.GameDirectory ?? "Игра не найдена — выбери папку вручную";
         var monitor = await Task.Run(() => GameMonitorService.Inspect(snapshot.GameDirectory), token);
@@ -353,7 +364,6 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     }
     partial void OnIsSettingsOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
     partial void OnIsFleetOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
-    partial void OnIsConfiguratorOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
     partial void OnIsHistoryOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
     partial void OnIsToolsOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
     partial void OnIsHaulingOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
@@ -416,7 +426,6 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     [RelayCommand] private void OpenDashboard() => Navigate("Обзор");
     [RelayCommand] private void OpenSettings() => Navigate("Настройки");
     [RelayCommand] private void OpenFleet() => Navigate("Флот");
-    [RelayCommand] private void OpenConfigurator() => Navigate("Конфигуратор");
     [RelayCommand] private void OpenHistory() => Navigate("Рейсы");
     [RelayCommand]
     private async Task OpenToolsAsync()
@@ -478,9 +487,19 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             return;
         }
         var budget = Math.Max(0, Balance - Reserve);
-        _allHaulingRoutes = haulingService.Calculate(_haulingData, SelectedShip.Ship.CargoScu,
+        var calculatedRoutes = haulingService.Calculate(_haulingData, SelectedShip.Ship.CargoScu,
             budget, AllowRisky, HaulingSameSystemOnly, HaulingSortMode, HaulingCategory,
             CurrentLocation, CurrentSystem, AvoidPyro, MinimumFillPercent, MinimumProfit, allowedSystems: AllowedRouteSystems);
+        _allHaulingRoutes = calculatedRoutes.Select(route =>
+        {
+            var matching = Flights.Where(x => x.EndedAtUtc is not null &&
+                x.Origin.Equals(route.BuyAt, StringComparison.OrdinalIgnoreCase) &&
+                x.Destination.Equals(route.SellAt, StringComparison.OrdinalIgnoreCase)).ToArray();
+            return route with { PersonalDurationMinutes = matching.Length == 0 ? null : matching.Average(x => x.DurationHours * 60) };
+        }).ToArray();
+        if (HaulingSortMode == "За час")
+            _allHaulingRoutes = _allHaulingRoutes.OrderByDescending(x => x.PersonalProfitPerHour.HasValue)
+                .ThenByDescending(x => x.PersonalProfitPerHour).ThenByDescending(x => x.Profit).ToArray();
         ShowMoreHaulingRoutes();
         HaulingBestRoute = _allHaulingRoutes.FirstOrDefault();
         var oldQuote = _allHaulingRoutes.Any(x => DateTimeOffset.UtcNow - x.UpdatedAt > TimeSpan.FromHours(24));

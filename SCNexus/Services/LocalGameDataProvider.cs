@@ -7,6 +7,7 @@ namespace SCNexus.Services;
 
 public sealed class LocalGameDataProvider(GameLogService gameLogService) : IDataProvider
 {
+    private readonly Dictionary<string, CachedShard> _shards = new(StringComparer.OrdinalIgnoreCase);
     public string Name => "Local Star Citizen files";
     public DataSourceKind Source => DataSourceKind.LocalGameData;
     public int Priority => 2;
@@ -35,7 +36,7 @@ public sealed class LocalGameDataProvider(GameLogService gameLogService) : IData
             token.ThrowIfCancellationRequested();
             var modified = new DateTimeOffset(File.GetLastWriteTimeUtc(path), TimeSpan.Zero);
             var id = $"{environment}:{Path.GetFileName(path)}";
-            var shard = GameMonitorService.ReadLastShard(path);
+            var shard = ReadShard(path);
             sessions.Add(new TypedObservation("session", id, new GameSession
             {
                 Id = id,
@@ -82,4 +83,16 @@ public sealed class LocalGameDataProvider(GameLogService gameLogService) : IData
         if (!Directory.Exists(backups)) yield break;
         foreach (var path in Directory.EnumerateFiles(backups, "*.log").OrderByDescending(File.GetLastWriteTimeUtc)) yield return path;
     }
+
+    private string ReadShard(string path)
+    {
+        var info = new FileInfo(path);
+        if (_shards.TryGetValue(path, out var cached) && cached.Length == info.Length &&
+            cached.LastWriteUtc == info.LastWriteTimeUtc) return cached.Shard;
+        var shard = GameMonitorService.ReadLastShard(path);
+        _shards[path] = new CachedShard(info.Length, info.LastWriteTimeUtc, shard);
+        return shard;
+    }
+
+    private sealed record CachedShard(long Length, DateTime LastWriteUtc, string Shard);
 }

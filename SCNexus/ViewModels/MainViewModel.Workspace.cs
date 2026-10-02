@@ -30,13 +30,12 @@ public partial class MainViewModel
     public bool HasNoHaulingRoutes => HaulingRoutes.Count == 0 && !IsMarketLoading;
     public string FleetSummary => $"Кораблей во флоте: {Ships.Count} · {Ships.Sum(x => x.Ship.CargoScu):N0} SCU всего";
     public string TradeBudgetHint => Reserve > Balance ? "Резерв больше баланса — денег на закупку нет." : $"На закупку: {Math.Max(0, Balance - Reserve):N0} aUEC";
-    public string PageTitle => LocalizationService.T(ActivePage);
+    public string PageTitle => LocalizationService.T(ActivePage == "Рейсы" ? "Журнал" : ActivePage);
     public string PageDescription => LocalizationService.T(ActivePage switch
     {
         "Маршруты" => "Корабль, бюджет и подходящие торговые рейсы",
         "Флот" => "Твои корабли и каталог моделей",
-        "Конфигуратор" => "Подбор оснащения под бюджет и задачу",
-        "Рейсы" => "Текущий рейс, фактические суммы и история",
+        "Рейсы" => "События игры, текущий рейс и история",
         "Инструменты" => "Состояние игры, проверка файлов и журнал сессий",
         "Настройки" => "Подключение к игре, отображение и сохранение данных",
         _ => "Всё для следующего вылета"
@@ -53,7 +52,6 @@ public partial class MainViewModel
     {
         IsSettingsOpen = page == "Настройки";
         IsFleetOpen = page == "Флот";
-        IsConfiguratorOpen = page == "Конфигуратор";
         IsHistoryOpen = page == "Рейсы";
         IsToolsOpen = page == "Инструменты";
         IsHaulingOpen = page == "Маршруты";

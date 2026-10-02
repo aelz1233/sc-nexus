@@ -131,12 +131,24 @@ public sealed class DataSourceInfo
         DataSourceKind.Uex => "UEX", DataSourceKind.StarCitizenWiki => "SC Wiki",
         DataSourceKind.Ocr => "OCR", DataSourceKind.NexusHistory => "Nexus history", _ => "Manual"
     };
-    public string NameDisplay => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en" ? Name : Source switch
+    public string NameDisplay
     {
-        DataSourceKind.GameLog => "Game.log и резервные журналы", DataSourceKind.LocalGameData => "Локальные файлы Star Citizen",
-        DataSourceKind.Uex => "Рыночные данные UEX", DataSourceKind.StarCitizenWiki => "Star Citizen Wiki",
-        DataSourceKind.Ocr => "OCR экрана", DataSourceKind.NexusHistory => "История Nexus", _ => "Сохранённые ручные значения"
-    };
+        get
+        {
+            if (CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en") return Name;
+            if (Name == "Star Citizen process") return "Процесс Star Citizen";
+            return Source switch
+            {
+                DataSourceKind.GameLog => "Game.log и резервные журналы",
+                DataSourceKind.LocalGameData => "Локальные файлы Star Citizen",
+                DataSourceKind.Uex => "Рыночные данные UEX",
+                DataSourceKind.StarCitizenWiki => "Star Citizen Wiki",
+                DataSourceKind.Ocr => "OCR экрана",
+                DataSourceKind.NexusHistory => "История Nexus",
+                _ => "Сохранённые ручные значения"
+            };
+        }
+    }
     public string StatusDisplay
     {
         get
@@ -145,20 +157,41 @@ public sealed class DataSourceInfo
             if (Status == "Waiting") return "Ожидание";
             if (Status == "Updating") return "Обновление";
             if (Status == "Disabled") return "Выключен";
+            if (Status == "Game is running") return "Игра запущена";
+            if (Status == "Game is not running") return "Игра не запущена";
             if (Status == "Watching for new lines") return "Ожидание новых строк";
             if (Status is "Installation not found" or "Star Citizen installation not found") return "Установка не найдена";
             if (Status == "Network data unavailable") return "Сетевые данные недоступны";
             if (Status == "Read access denied") return "Нет доступа на чтение";
+            if (Status == "Cached market data") return "Сохранённые рыночные данные";
+            if (Status == "Waiting for current ship") return "Ожидание текущего корабля";
+            if (Status == "No manual fallback values") return "Ручные резервные значения не заданы";
+            if (Status.StartsWith("Read-only: ")) return Status.Replace("Read-only: ", "Только чтение: ");
             if (Status.StartsWith("Processed ")) return Status.Replace("Processed ", "Обработано ").Replace(" new lines", " новых строк");
             if (Status.StartsWith("Recognized ")) return Status.Replace("Recognized ", "Распознано ").Replace(" values", " значений");
+            if (Status.EndsWith(" prices")) return Status.Replace(" prices", " цен");
+            if (Status.Contains(" slots for ")) return Status.Replace(" slots for ", " слотов для ");
+            if (Status.EndsWith(" fallback values")) return Status.Replace(" fallback values", " резервных значений");
+            if (Status.EndsWith(" saved observations")) return Status.Replace(" saved observations", " сохранённых наблюдений");
             return Status;
+        }
+    }
+    public string LastSuccessDisplay
+    {
+        get
+        {
+            if (LastSuccess is null) return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en"
+                ? "No successful update" : "Успешных обновлений ещё нет";
+            return new ObservedValue<string>("", Source, LastSuccess.Value, 1).AgeDisplay;
         }
     }
 }
 
-public sealed record DataFieldDisplay(string Label, string Value, string Source, string Age, double Confidence)
+public sealed record DataFieldDisplay(string Label, string Value, string Source, string Age, double Confidence,
+    string? DataVersion = null)
 {
-    public string ValueAndSource => $"{Value} • {Source}";
+    public string ValueAndSource => string.IsNullOrWhiteSpace(DataVersion)
+        ? $"{Value} • {Source}" : $"{Value} • {Source} • {DataVersion}";
     public string Freshness => $"{Age} • {Confidence:P0}";
 }
 
@@ -178,22 +211,25 @@ public sealed class DataCollectionSnapshot
     public IReadOnlyList<DataFieldDisplay> ToDisplayFields(bool english = false)
     {
         var fields = new List<DataFieldDisplay>();
-        Add(Player.CurrentShip, english ? "Current ship" : "Текущий корабль");
-        Add(Player.Balance, english ? "Balance" : "Баланс", x => x >= 1_000_000
+        Add(Player.CurrentShip, english ? "Current ship" : "Текущий корабль", TimeSpan.FromMinutes(30));
+        Add(Player.Balance, english ? "Balance" : "Баланс", TimeSpan.FromHours(1), x => x >= 1_000_000
             ? english ? $"{x / 1_000_000:0.#}m aUEC" : $"{x / 1_000_000:0.#} млн aUEC"
             : $"{x:N0} aUEC");
-        Add(Player.CurrentLocation, english ? "Location" : "Локация");
-        Add(Player.CurrentSystem, english ? "System" : "Система");
-        Add(Player.Environment, english ? "Environment" : "Контур игры");
-        Add(Player.GameBuild, english ? "Game build" : "Версия игры");
-        Add(Player.CurrentLoadout, english ? "Loadout" : "Текущая конфигурация");
+        Add(Player.CurrentLocation, english ? "Location" : "Локация", TimeSpan.FromMinutes(30));
+        Add(Player.CurrentSystem, english ? "System" : "Система", TimeSpan.FromMinutes(30));
+        Add(Player.Environment, english ? "Environment" : "Контур игры", TimeSpan.FromDays(30));
+        Add(Player.GameBuild, english ? "Game build" : "Версия игры", TimeSpan.FromDays(30));
+        Add(Player.CurrentLoadout, english ? "Loadout" : "Текущая конфигурация", TimeSpan.FromMinutes(30));
         return fields;
 
-        void Add<T>(ObservedValue<T>? item, string label, Func<T, string>? format = null)
+        void Add<T>(ObservedValue<T>? item, string label, TimeSpan freshness, Func<T, string>? format = null)
         {
             if (item is null) return;
             var value = format is null ? Convert.ToString(item.Value, CultureInfo.CurrentCulture) ?? "—" : format(item.Value);
-            fields.Add(new DataFieldDisplay(label, value, item.SourceDisplay, item.AgeDisplay, item.Confidence));
+            var age = item.AgeDisplay;
+            if (DateTimeOffset.UtcNow - item.Timestamp.ToUniversalTime() > freshness)
+                age = (english ? "last known" : "последнее известное") + " · " + age;
+            fields.Add(new DataFieldDisplay(label, value, item.SourceDisplay, age, item.Confidence));
         }
     }
 }
@@ -206,6 +242,7 @@ public sealed class DataObservation
     public string PayloadJson { get; set; } = "";
     public DataSourceKind Source { get; set; }
     public DateTimeOffset TimestampUtc { get; set; }
+    public long TimestampUnixMs { get; set; }
     public double Confidence { get; set; }
     public string Fingerprint { get; set; } = "";
 }

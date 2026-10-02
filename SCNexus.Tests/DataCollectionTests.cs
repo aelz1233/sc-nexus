@@ -33,6 +33,29 @@ public class DataCollectionTests
     }
 
     [Fact]
+    public async Task TruncatedActiveLogStartsANewSessionEvenOnTheSameShard()
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var log = Path.Combine(directory, "Game.log");
+            await File.WriteAllTextAsync(log,
+                "<2026-10-02T10:00:00Z> Connected to pub_euw1a_123\n" + new string('x', 1024));
+            var provider = new GameLogProvider(new GameLogService(directory));
+            var context = new DataProviderContext(directory, new PlayerState(), DateTimeOffset.UtcNow, false);
+            var first = await provider.CollectAsync(context, default);
+
+            await File.WriteAllTextAsync(log, "<2026-10-02T12:00:00Z> Connected to pub_euw1a_123\n");
+            var second = await provider.CollectAsync(context, default);
+
+            var firstSession = Assert.Single(first.Records, x => x.Kind == "session");
+            var secondSession = Assert.Single(second.Records, x => x.Kind == "session");
+            Assert.NotEqual(firstSession.Key, secondSession.Key);
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+
+    [Fact]
     public async Task LocalProviderDetectsEnvironmentAndBuildReadOnly()
     {
         var root = TempDirectory();
@@ -87,15 +110,16 @@ public class DataCollectionTests
             await settings.LoadAsync();
             var history = new DataHistoryService(settings);
             var time = DateTimeOffset.Parse("2026-10-02T10:00:00Z");
-            await history.SaveAsync([new ValueObservation("player.ship", "Guardian MX", DataSourceKind.GameLog, time, .93)], []);
+            await history.SaveAsync([new ValueObservation("player.ship", "Guardian MX", DataSourceKind.GameLog, time, .93, null, "4.10.1")], []);
             var rows = await history.LoadLatestAsync();
 
             var row = Assert.Single(rows);
             Assert.Equal(DataSourceKind.GameLog, row.Source);
             Assert.Equal(.93, row.Confidence, 3);
             Assert.Equal(time, row.TimestampUtc);
-            Assert.True(DataHistoryService.TryReadValue(row, out var value, out _));
+            Assert.True(DataHistoryService.TryReadValue(row, out var value, out _, out var version));
             Assert.Equal("Guardian MX", value);
+            Assert.Equal("4.10.1", version);
         }
         finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); Directory.Delete(directory, true); }
     }
@@ -123,6 +147,61 @@ public class DataCollectionTests
         finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); Directory.Delete(directory, true); }
     }
 
+    [Fact]
+    public async Task HistoricalLogValueDoesNotReplaceNewerManualCorrection()
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var settings = new SettingsService(Path.Combine(directory, "nexus.db"));
+            await settings.LoadAsync();
+            var now = DateTimeOffset.UtcNow;
+            var providers = new IDataProvider[]
+            {
+                new FixedProvider("old log", DataSourceKind.GameLog, 1, "Old ship", .99, now.AddHours(-2)),
+                new FixedProvider("manual", DataSourceKind.Manual, 7, "Guardian MX", 1, now)
+            };
+            var collection = new DataCollectionService(providers, new DataHistoryService(settings),
+                new GameLogService(directory));
+
+            await collection.RefreshAsync(false);
+
+            Assert.Equal("Guardian MX", collection.Current.Player.CurrentShip?.Value);
+            Assert.Equal(DataSourceKind.Manual, collection.Current.Player.CurrentShip?.Source);
+        }
+        finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); Directory.Delete(directory, true); }
+    }
+
+    [Fact]
+    public async Task RecoveryAlwaysIncludesLatestValuesAlongsideBusyEventHistory()
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var settings = new SettingsService(Path.Combine(directory, "nexus.db"));
+            await settings.LoadAsync();
+            var history = new DataHistoryService(settings);
+            var start = DateTimeOffset.UtcNow.AddDays(-1);
+            var records = Enumerable.Range(0, 900).Select(i =>
+            {
+                var time = start.AddMinutes(i);
+                var movement = new MovementEvent
+                {
+                    Id = $"m{i}", Location = new ObservedValue<string>($"Location {i}", DataSourceKind.GameLog, time, .9)
+                };
+                return new TypedObservation("movement", movement.Id, movement, DataSourceKind.GameLog, time, .9);
+            }).ToArray();
+            await history.SaveAsync(
+                [new ValueObservation("player.ship", "Guardian MX", DataSourceKind.GameLog, start, .95)], records);
+
+            var recovered = await history.LoadRecoverySnapshotAsync(100);
+
+            Assert.Contains(recovered, x => x.Kind == "value" && x.RecordKey == "player.ship");
+            Assert.Equal(100, recovered.Count(x => x.Kind == "movement"));
+        }
+        finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); Directory.Delete(directory, true); }
+    }
+
     private static string TempDirectory()
     {
         var path = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
@@ -130,7 +209,8 @@ public class DataCollectionTests
         return path;
     }
 
-    private sealed class FixedProvider(string name, DataSourceKind source, int priority, string value, double confidence) : IDataProvider
+    private sealed class FixedProvider(string name, DataSourceKind source, int priority, string value, double confidence,
+        DateTimeOffset? timestamp = null) : IDataProvider
     {
         public string Name => name;
         public DataSourceKind Source => source;
@@ -139,7 +219,7 @@ public class DataCollectionTests
         public Task<DataProviderResult> CollectAsync(DataProviderContext context, CancellationToken token) =>
             Task.FromResult(new DataProviderResult
             {
-                Values = [new ValueObservation("player.ship", value, source, DateTimeOffset.UtcNow, confidence)]
+                Values = [new ValueObservation("player.ship", value, source, timestamp ?? DateTimeOffset.UtcNow, confidence)]
             });
     }
 }

@@ -55,6 +55,24 @@ public class ShipBuildOptimizerTests
         Assert.Equal(10, budget.KnownCost);
     }
 
+    [Fact]
+    public void PurchasePlanGroupsRepeatedComponentsByShop()
+    {
+        var slotOne = new ShipComponentSlot("/shield#1", "Shield", 2, 2, "stock-1", "Stock 1");
+        var slotTwo = new ShipComponentSlot("/shield#2", "Shield", 2, 2, "stock-2", "Stock 2");
+        var component = Part("upgrade", "FR-76", 500, 20_000, slotOne.Key) with
+        {
+            Shop = "Omega Pro", CompatibleSlotKeys = [slotOne.Key, slotTwo.Key]
+        };
+        var build = new ShipBuildResult("Test",
+        [
+            new ShipBuildLine(slotOne, component, false, component.PriceAuec),
+            new ShipBuildLine(slotTwo, component, false, component.PriceAuec)
+        ], 40_000, 1, 0, 0, "OK");
+
+        Assert.Contains("Omega Pro: FR-76 ×2", build.PurchasePlanDisplay);
+    }
+
     private static ShipComponent Part(string uuid, string name, double health, decimal? price, string slotKey) =>
         new(uuid, name, "Shield", 2, price, "Магазин", DateTimeOffset.UtcNow, "4.10", health, 0,
             "Прочность щита / восстановление")

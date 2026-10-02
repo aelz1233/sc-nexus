@@ -17,6 +17,12 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        DispatcherUnhandledException += (_, args) => AppLogService.Write("UI", args.Exception);
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            if (args.ExceptionObject is Exception exception) AppLogService.Write("AppDomain", exception);
+        };
+        TaskScheduler.UnobservedTaskException += (_, args) => AppLogService.Write("Background task", args.Exception);
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("ru-RU");
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("ru-RU");
         try
@@ -40,6 +46,7 @@ public partial class App : Application
             collection.AddSingleton<DataHistoryService>();
             collection.AddSingleton<ShipComponentCatalogService>();
             collection.AddSingleton<IDataProvider, GameLogProvider>();
+            collection.AddSingleton<IDataProvider, GameProcessProvider>();
             collection.AddSingleton<IDataProvider, LocalGameDataProvider>();
             collection.AddSingleton<IDataProvider, UexProvider>();
             collection.AddSingleton<IDataProvider, SCWikiProvider>();
@@ -61,6 +68,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
+            AppLogService.Write("Startup", ex);
             MessageBox.Show($"Не удалось запустить SC NEXUS:\n{ex.Message}", "SC NEXUS", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1);
         }

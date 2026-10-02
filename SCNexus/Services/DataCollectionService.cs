@@ -26,7 +26,7 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
     }
 
     public async Task RefreshAsync(bool ocrEnabled, CancellationToken token = default) =>
-        await Task.WhenAll(_providers.Select(x => CollectProviderAsync(x, ocrEnabled, token)));
+        await Task.WhenAll(_providers.Select(x => CollectProviderAsync(x, ocrEnabled, token, true)));
 
     private async Task WatchProviderAsync(IDataProvider provider, Func<bool> ocrEnabled, CancellationToken token)
     {
@@ -38,7 +38,8 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
         }
     }
 
-    private async Task CollectProviderAsync(IDataProvider provider, bool ocrEnabled, CancellationToken token)
+    private async Task CollectProviderAsync(IDataProvider provider, bool ocrEnabled, CancellationToken token,
+        bool forceRefresh = false)
     {
         SemaphoreSlim gate;
         lock (_stateGate)
@@ -56,7 +57,8 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
             {
                 _providerStates.TryGetValue(provider.Name, out known);
                 _providerStates[provider.Name] = new ProviderState(now, known?.LastSuccess, false, "Updating");
-                context = new DataProviderContext(gameLogService.ResolveGameDirectory(), BuildPlayerState(), now, ocrEnabled);
+                context = new DataProviderContext(gameLogService.ResolveGameDirectory(), BuildPlayerState(), now,
+                    ocrEnabled, forceRefresh);
             }
             try
             {
@@ -83,16 +85,17 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
             foreach (var record in records) changed |= MergeRecord(record);
             _providerStates[provider.Name] = new ProviderState(attempt,
                 available ? DateTimeOffset.UtcNow : previousSuccess, available, status);
-            Current = snapshot = BuildSnapshot();
             if (!changed && previousState is not null && previousState.Available == available && previousState.Status == status)
                 return;
+            PruneRecords();
+            Current = snapshot = BuildSnapshot();
         }
         SnapshotUpdated?.Invoke(this, snapshot);
     }
 
     private bool MergeValue(ValueObservation incoming)
     {
-        if (_values.TryGetValue(incoming.Key, out var existing) && !Prefer(incoming.Source, incoming.Timestamp, incoming.Confidence,
+        if (_values.TryGetValue(incoming.Key, out var existing) && !Prefer(incoming.Key, incoming.Source, incoming.Timestamp, incoming.Confidence,
                 existing.Source, existing.Timestamp, existing.Confidence)) return false;
         _values[incoming.Key] = incoming;
         return true;
@@ -101,19 +104,45 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
     private bool MergeRecord(TypedObservation incoming)
     {
         var key = (incoming.Kind, incoming.Key);
-        if (_records.TryGetValue(key, out var existing) && !Prefer(incoming.Source, incoming.Timestamp, incoming.Confidence,
+        if (_records.TryGetValue(key, out var existing) && !Prefer(incoming.Kind, incoming.Source, incoming.Timestamp, incoming.Confidence,
                 existing.Source, existing.Timestamp, existing.Confidence)) return false;
         _records[key] = incoming;
         return true;
     }
 
-    private static bool Prefer(DataSourceKind incomingSource, DateTimeOffset incomingTime, double incomingConfidence,
+    private static bool Prefer(string key, DataSourceKind incomingSource, DateTimeOffset incomingTime, double incomingConfidence,
         DataSourceKind existingSource, DateTimeOffset existingTime, double existingConfidence)
     {
         if (incomingSource == existingSource) return incomingTime >= existingTime && incomingConfidence >= existingConfidence * .75;
-        var existingStale = DateTimeOffset.UtcNow - existingTime > TimeSpan.FromHours(6);
+        // A historical high-priority log entry must never replace a newer correction or observation.
+        if (incomingTime < existingTime - TimeSpan.FromMinutes(2)) return false;
+        var existingStale = DateTimeOffset.UtcNow - existingTime > FreshnessFor(key);
         if (existingStale && incomingTime > existingTime && incomingConfidence >= existingConfidence) return true;
         return (int)incomingSource < (int)existingSource && incomingConfidence >= .6;
+    }
+
+    private static TimeSpan FreshnessFor(string key) => key switch
+    {
+        "player.location" or "player.system" or "player.ship" or "player.loadout" => TimeSpan.FromMinutes(30),
+        "player.balance" => TimeSpan.FromHours(1),
+        "market.prices" or "market.terminals" => TimeSpan.FromHours(2),
+        "game.build" or "game.environment" => TimeSpan.FromDays(30),
+        "session" or "movement" => TimeSpan.FromHours(12),
+        _ => TimeSpan.FromHours(6)
+    };
+
+    private void PruneRecords()
+    {
+        foreach (var (kind, limit) in new[]
+                 {
+                     ("session", 200), ("ship", 200), ("mission", 500), ("trade", 1000),
+                     ("movement", 1000), ("death", 500), ("component-catalog", 50)
+                 })
+        {
+            var excess = _records.Where(x => x.Key.Kind == kind)
+                .OrderByDescending(x => x.Value.Timestamp).Skip(limit).Select(x => x.Key).ToArray();
+            foreach (var key in excess) _records.Remove(key);
+        }
     }
 
     private DataCollectionSnapshot BuildSnapshot() => new()

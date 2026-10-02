@@ -1,6 +1,7 @@
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
+using System.Collections.Concurrent;
 using SCNexus.Models;
 
 namespace SCNexus.Services;
@@ -14,6 +15,8 @@ public sealed class GameDataService
         PropertyNameCaseInsensitive = true
     };
     private readonly string _cacheDirectory;
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _cacheGates = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, object> _memoryCache = new(StringComparer.OrdinalIgnoreCase);
 
     public GameDataService(HttpClient client, string? cacheDirectory = null)
     {
@@ -49,14 +52,27 @@ public sealed class GameDataService
 
     private async Task<CachedData<T>> LoadAsync<T>(string key, string endpoint, TimeSpan ttl, CancellationToken token)
     {
+        var gate = _cacheGates.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(token);
+        try
+        {
+            return await LoadCoreAsync<T>(key, endpoint, ttl, token);
+        }
+        finally { gate.Release(); }
+    }
+
+    private async Task<CachedData<T>> LoadCoreAsync<T>(string key, string endpoint, TimeSpan ttl,
+        CancellationToken token)
+    {
         var path = Path.Combine(_cacheDirectory, key + ".json");
-        CachedData<T>? cached = null;
-        if (File.Exists(path))
+        var cached = _memoryCache.TryGetValue(key, out var memory) ? memory as CachedData<T> : null;
+        if (cached is null && File.Exists(path))
         {
             try
             {
                 await using var file = File.OpenRead(path);
                 cached = await JsonSerializer.DeserializeAsync<CachedData<T>>(file, Json, token);
+                if (cached is not null) _memoryCache[key] = cached;
             }
             catch (JsonException) { }
             catch (IOException) { }
@@ -73,6 +89,7 @@ public sealed class GameDataService
             if (payload?.Status != "ok" || payload.Data.Count == 0)
                 throw new InvalidDataException("UEX не вернул торговые данные.");
             var result = new CachedData<T>(DateTimeOffset.UtcNow, payload.Data, false);
+            _memoryCache[key] = result;
             var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
             await using (var file = File.Create(temporary))
                 await JsonSerializer.SerializeAsync(file, result, Json, token);

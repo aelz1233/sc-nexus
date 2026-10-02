@@ -10,7 +10,6 @@ using System.Windows.Media.Imaging;
 using SCNexus.Models;
 using Windows.Graphics.Imaging;
 using Windows.Media.Ocr;
-using Windows.Storage;
 
 namespace SCNexus.Services;
 
@@ -84,31 +83,19 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
             var source = Imaging.CreateBitmapSourceFromHBitmap(bitmap, IntPtr.Zero, Int32Rect.Empty,
                 BitmapSizeOptions.FromEmptyOptions());
             source.Freeze();
-            var temp = Path.Combine(Path.GetTempPath(), $"SCNexus-OCR-{Guid.NewGuid():N}.png");
-            try
-            {
-                await using (var output = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536, true))
-                {
-                    var encoder = new PngBitmapEncoder();
-                    encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(source));
-                    encoder.Save(output);
-                }
-                token.ThrowIfCancellationRequested();
-                var file = await StorageFile.GetFileFromPathAsync(temp);
-                await using var stream = await file.OpenStreamForReadAsync();
-                var random = stream.AsRandomAccessStream();
-                var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(random);
-                using var softwareBitmap = await decoder.GetSoftwareBitmapAsync(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied);
-                var engine = OcrEngine.TryCreateFromUserProfileLanguages();
-                if (engine is null) return "";
-                var result = await engine.RecognizeAsync(softwareBitmap);
-                return result.Text;
-            }
-            finally
-            {
-                try { File.Delete(temp); } catch (IOException) { }
-                catch (UnauthorizedAccessException) { }
-            }
+            await using var encoded = new MemoryStream();
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(source));
+            encoder.Save(encoded);
+            encoded.Position = 0;
+            token.ThrowIfCancellationRequested();
+            using var random = encoded.AsRandomAccessStream();
+            var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(random);
+            using var softwareBitmap = await decoder.GetSoftwareBitmapAsync(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied);
+            var engine = OcrEngine.TryCreateFromUserProfileLanguages();
+            if (engine is null) return "";
+            var result = await engine.RecognizeAsync(softwareBitmap);
+            return result.Text;
         }
         finally
         {

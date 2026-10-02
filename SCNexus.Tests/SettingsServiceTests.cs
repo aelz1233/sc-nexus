@@ -124,4 +124,30 @@ public class SettingsServiceTests
             if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
         }
     }
+
+    [Fact]
+    public async Task ExistingDatabaseGetsOneDailyAutomaticBackup()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(directory, "nexus.db");
+        try
+        {
+            var first = new SettingsService(path);
+            await first.LoadAsync();
+            await first.SaveAsync(new PersonalSettings { Balance = 12_400_000, CurrentShip = "Guardian MX" });
+
+            var restarted = new SettingsService(path);
+            await restarted.LoadAsync();
+            var backup = Assert.Single(Directory.GetFiles(restarted.BackupDirectory, "nexus-*.db"));
+
+            var backupSettings = await new SettingsService(backup).LoadAsync();
+            Assert.Equal(12_400_000, backupSettings.Balance);
+            Assert.Equal("Guardian MX", backupSettings.CurrentShip);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (Directory.Exists(directory)) Directory.Delete(directory, true);
+        }
+    }
 }

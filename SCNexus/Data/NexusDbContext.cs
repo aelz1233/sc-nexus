@@ -13,5 +13,7 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : D
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<DataObservation>().HasIndex(x => x.Fingerprint).IsUnique();
+        modelBuilder.Entity<DataObservation>().HasIndex(x => x.TimestampUnixMs);
+        modelBuilder.Entity<DataObservation>().HasIndex(x => new { x.Kind, x.RecordKey, x.TimestampUnixMs });
     }
 }

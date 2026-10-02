@@ -8,6 +8,7 @@ public sealed record HaulingRoute(
     public int BuyTerminalId { get; init; }
     public int SellTerminalId { get; init; }
     public int CommodityId { get; init; }
+    public double? PersonalDurationMinutes { get; init; }
     public decimal Profit => Revenue - Investment;
     public decimal ProfitPerScu => Scu == 0 ? 0 : Profit / Scu;
     public decimal RoiPercent => Investment == 0 ? 0 : Profit / Investment * 100;
@@ -29,4 +30,9 @@ public sealed record HaulingRoute(
     public string RiskColor => IsDangerous ? "#FF9A8F" : "#8D9AB5";
     public string CategoryDisplay => Category;
     public string UpdatedDisplay => $"Котировка: {UpdatedAt.LocalDateTime:dd.MM HH:mm}";
+    public decimal? PersonalProfitPerHour => PersonalDurationMinutes is > 0
+        ? Profit / (decimal)(PersonalDurationMinutes.Value / 60d) : null;
+    public string PersonalEfficiencyDisplay => PersonalProfitPerHour is { } value
+        ? $"По твоей истории: {value:N0} aUEC/ч · {PersonalDurationMinutes:N0} мин"
+        : "Время появится после первого завершённого рейса по этому маршруту";
 }

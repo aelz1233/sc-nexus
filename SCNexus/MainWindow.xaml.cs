@@ -16,16 +16,19 @@ public partial class MainWindow : Window
 {
     private bool _readyToClose;
     private bool _closePending;
-    private readonly DispatcherTimer _translationTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly DispatcherTimer _translationTimer = new() { Interval = TimeSpan.FromMilliseconds(80) };
     public MainWindow()
     {
         InitializeComponent();
+        _translationTimer.Tick += (_, _) =>
+        {
+            _translationTimer.Stop();
+            if (LocalizationService.IsEnglish) UiLocalization.Apply(this);
+        };
         Loaded += (_, _) =>
         {
             Language = XmlLanguage.GetLanguage(LocalizationService.IsEnglish ? "en-US" : "ru-RU");
             UiLocalization.Apply(this);
-            _translationTimer.Tick += (_, _) => { if (LocalizationService.IsEnglish) UiLocalization.Apply(this); };
-            _translationTimer.Start();
         };
         SourceInitialized += (_, _) => ApplyDarkTitleBar();
         DataContextChanged += (_, e) =>
@@ -60,6 +63,11 @@ public partial class MainWindow : Window
             Language = XmlLanguage.GetLanguage(LocalizationService.IsEnglish ? "en-US" : "ru-RU");
             UiLocalization.Apply(this);
         });
+        else if (LocalizationService.IsEnglish)
+        {
+            _translationTimer.Stop();
+            _translationTimer.Start();
+        }
     }
 
     private void SaveGithubToken_Click(object sender, RoutedEventArgs e)

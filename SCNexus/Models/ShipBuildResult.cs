@@ -58,4 +58,18 @@ public sealed record ShipBuildResult(
     public string CoverageDisplay => UnsupportedSlots == 0
         ? "Подтверждённые слоты компонентов рассчитаны"
         : $"Не удалось подобрать для {UnsupportedSlots} слотов";
+    public string ChangesDisplay => $"Заменить компонентов: {Lines.Count(x => !x.IsInstalled)} · оставить штатными: {Lines.Count(x => x.IsInstalled)}";
+    public string PurchasePlanDisplay
+    {
+        get
+        {
+            var purchases = Lines.Where(x => !x.IsInstalled).ToArray();
+            if (purchases.Length == 0) return "Покупки не требуются.";
+            return "Где купить: " + string.Join(" · ", purchases
+                .GroupBy(x => string.IsNullOrWhiteSpace(x.Component.Shop) ? "Магазин не указан" : x.Component.Shop!)
+                .OrderBy(x => x.Key)
+                .Select(x => $"{x.Key}: {string.Join(", ", x.GroupBy(y => y.Component.Name)
+                    .Select(y => y.Count() > 1 ? $"{y.Key} ×{y.Count()}" : y.Key))}"));
+        }
+    }
 }
