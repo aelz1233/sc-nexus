@@ -75,6 +75,17 @@ public class VoyagePlannerTests
     }
 
     [Fact]
+    public void SystemOnlyStartRestrictsTheFirstPurchase()
+    {
+        var data = Data(Quote(5, 1, buy: 10), Quote(2, 1, sell: 20), Quote(2, 2, buy: 10), Quote(3, 2, sell: 20));
+        var request = new VoyageRequest("Цепочка", 10, 1000, DestinationId: 3, StartSystem: "Pyro");
+
+        var plan = Assert.Single(new VoyagePlanner().Calculate(data, request));
+        Assert.Equal("Pyro", plan.Stops[0].System);
+        Assert.Empty(new VoyagePlanner().Calculate(data, request with { StartSystem = "Nyx" }));
+    }
+
+    [Fact]
     public void NoPlansForNoBudgetSingleCargoUnitOrUnavailableSales()
     {
         var data = Data(Quote(1, 1, buy: 10), Quote(2, 1, buy: 10), Quote(3, 1, sell: 20));

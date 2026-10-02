@@ -18,9 +18,11 @@ public sealed class VoyagePlanner
         var edges = new HaulingService().Calculate(data, request.Capacity, searchBudget,
             request.AllowRisky, request.SameSystemOnly, "За рейс", request.Category,
             avoidPyro: request.AvoidPyro, allowedSystems: request.AllowedSystems).ToArray();
-        var starts = data.Terminals.Where(x => string.IsNullOrWhiteSpace(request.StartLocation) || request.StartLocation == "Не указана" ||
-            (x.MatchesLocation(request.StartLocation) && (string.IsNullOrWhiteSpace(request.StartSystem) ||
-             string.Equals(x.StarSystemName, request.StartSystem, StringComparison.OrdinalIgnoreCase))))
+        var starts = data.Terminals.Where(x =>
+                (string.IsNullOrWhiteSpace(request.StartLocation) || request.StartLocation == "Не указана" ||
+                 x.MatchesLocation(request.StartLocation)) &&
+                (string.IsNullOrWhiteSpace(request.StartSystem) ||
+                 string.Equals(x.StarSystemName, request.StartSystem, StringComparison.OrdinalIgnoreCase)))
             .Select(x => x.Id).ToHashSet();
         var max = Math.Clamp(request.MaxPurchases, 2, 5);
         var plans = request.Mode == "Сбор груза"

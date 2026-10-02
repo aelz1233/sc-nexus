@@ -81,7 +81,9 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
 
     public string BalanceDisplay => $"{Balance:N0} aUEC";
     public string HaulingBudgetDisplay => $"{Math.Max(0, Balance - Reserve):N0} aUEC";
-    public string HaulingStartDisplay => CurrentLocation == "Не указана" ? "Все локации" : LocationDisplay;
+    public string HaulingStartDisplay => CurrentLocation != "Не указана" ? LocationDisplay
+        : !string.IsNullOrWhiteSpace(CurrentSystem) ? $"Любая локация · {CurrentSystem}"
+        : "Все системы и локации";
     public string LocationDisplay => string.IsNullOrWhiteSpace(CurrentSystem) ? CurrentLocation : $"{CurrentSystem} · {CurrentLocation}";
     public ObservableCollection<TradeRoute> Routes { get; } = [];
     public ObservableCollection<ShipSummary> Ships { get; } = [];
@@ -183,7 +185,12 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             Systems.Add("Все системы");
             foreach (var system in _allLocations.Select(x => x.System).Distinct(StringComparer.OrdinalIgnoreCase))
                 Systems.Add(system);
-            SelectedSystem = Systems.FirstOrDefault(x => x.Equals(CurrentSystem, StringComparison.OrdinalIgnoreCase)) ?? "Все системы";
+            _selectingLocation = true;
+            try
+            {
+                SelectedSystem = Systems.FirstOrDefault(x => x.Equals(CurrentSystem, StringComparison.OrdinalIgnoreCase)) ?? "Все системы";
+            }
+            finally { _selectingLocation = false; }
             LocationStatus = $"Найдено {_allLocations.Count} локаций. Введи минимум две буквы.";
             RefreshLocationSuggestions();
         }
@@ -321,7 +328,26 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         VehicleStatus = "Вместимость и роль заполнены автоматически.";
     }
     public bool HasSelectedCatalogVehicle => SelectedCatalogVehicle is not null;
-    partial void OnSelectedSystemChanged(string value) => ScheduleLocationRefresh();
+    partial void OnSelectedSystemChanged(string value)
+    {
+        if (!_selectingLocation)
+        {
+            _selectingLocation = true;
+            try
+            {
+                CurrentSystem = value == "Все системы" ? "" : value;
+                CurrentLocation = "Не указана";
+                LocationQuery = "";
+            }
+            finally { _selectingLocation = false; }
+            FilteredLocations.Clear();
+            ShowLocationSuggestions = false;
+            LocationStatus = value == "Все системы"
+                ? "Старт не выбран: поиск покажет маршруты из всех локаций."
+                : $"Старт: любая торговая точка в системе {value}.";
+        }
+        ScheduleLocationRefresh();
+    }
     partial void OnLocationQueryChanged(string value)
     {
         if (!_selectingLocation) ScheduleLocationRefresh();
@@ -394,6 +420,28 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         ShowLocationSuggestions = false;
         LocationStatus = "Старт не выбран: поиск покажет маршруты из всех локаций.";
     }
+
+    [RelayCommand]
+    private void UseSelectedSystemAsStart()
+    {
+        if (SelectedSystem == "Все системы")
+        {
+            ClearLocation();
+            return;
+        }
+        _selectingLocation = true;
+        try
+        {
+            CurrentSystem = SelectedSystem;
+            CurrentLocation = "Не указана";
+            LocationQuery = "";
+        }
+        finally { _selectingLocation = false; }
+        FilteredLocations.Clear();
+        ShowLocationSuggestions = false;
+        LocationStatus = $"Старт: любая торговая точка в системе {SelectedSystem}.";
+    }
+
     partial void OnIsSettingsOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
     partial void OnIsFleetOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
     partial void OnIsHistoryOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));

@@ -40,6 +40,10 @@ public class HaulingServiceTests
             startLocation: "Origin", startSystem: "Stanton").Count);
         Assert.Empty(service.Calculate(data, 10, 500, true, false, "За рейс",
             startLocation: "Origin", startSystem: "Pyro"));
+        Assert.Equal(2, service.Calculate(data, 10, 500, true, false, "За рейс",
+            startSystem: "Stanton").Count);
+        Assert.Empty(service.Calculate(data, 10, 500, true, false, "За рейс",
+            startSystem: "Pyro"));
         Assert.Single(service.Calculate(data, 10, 500, true, false, "За рейс", avoidPyro: true));
         Assert.Empty(service.Calculate(data, 10, 500, true, false, "За рейс", minimumFillPercent: 51));
         Assert.Single(service.Calculate(data, 10, 500, true, false, "За рейс", minimumProfit: 300));

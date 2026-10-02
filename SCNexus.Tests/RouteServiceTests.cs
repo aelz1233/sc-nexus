@@ -70,7 +70,7 @@ public class RouteServiceTests
     }
 
     [Fact]
-    public void WithoutStartingLocationFindsRoutesFromAllOrigins()
+    public void StartingSystemFiltersOriginsWithoutAnExactLocation()
     {
         var now = DateTimeOffset.UtcNow;
         var data = new DataSnapshot(
@@ -83,8 +83,12 @@ public class RouteServiceTests
         var settings = new PersonalSettings { Balance = 5000, CargoScu = 10, CurrentLocation = "Не указана", CurrentSystem = "Stanton" };
 
         var routes = new RouteService().FindRoutes(data, settings);
+        var stanton = Assert.Single(routes);
+        Assert.Equal("Stanton Origin", stanton.BuyAt);
+
+        settings.CurrentSystem = "";
+        routes = new RouteService().FindRoutes(data, settings);
         Assert.Equal(2, routes.Count);
-        Assert.Contains(routes, x => x.BuyAt == "Stanton Origin");
         var pyro = Assert.Single(routes, x => x.BuyAt == "Pyro Origin");
         Assert.Equal("Pyro", pyro.BuySystem);
         Assert.Equal("Stanton", pyro.SellSystem);

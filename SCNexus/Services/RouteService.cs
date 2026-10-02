@@ -9,8 +9,9 @@ public sealed class RouteService
         if (settings.CargoScu <= 0 || settings.Balance <= settings.Reserve)
             return [];
 
-        var hasStart = !string.IsNullOrWhiteSpace(settings.CurrentLocation) &&
+        var hasStartLocation = !string.IsNullOrWhiteSpace(settings.CurrentLocation) &&
             settings.CurrentLocation != "Не указана";
+        var hasStartSystem = !string.IsNullOrWhiteSpace(settings.CurrentSystem);
 
         var terminals = data.Terminals
             .Where(x => x.Type == "commodity" && x.IsAvailableLive == 1)
@@ -23,8 +24,8 @@ public sealed class RouteService
         foreach (var buy in data.Quotes)
         {
             if (buy.PriceBuy <= 0 || buy.StatusBuy == 1 || !terminals.TryGetValue(buy.IdTerminal, out var origin) ||
-                (hasStart && !origin.MatchesLocation(settings.CurrentLocation)) ||
-                (hasStart && !string.IsNullOrWhiteSpace(settings.CurrentSystem) &&
+                (hasStartLocation && !origin.MatchesLocation(settings.CurrentLocation)) ||
+                (hasStartSystem &&
                  !string.Equals(origin.StarSystemName, settings.CurrentSystem, StringComparison.OrdinalIgnoreCase)) ||
                 !sellQuotes.TryGetValue(buy.IdCommodity, out var destinations))
                 continue;

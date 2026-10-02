@@ -34,8 +34,7 @@ public partial class ShipConfiguratorView : System.Windows.Controls.UserControl
     private void OnShipSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         SummaryCard.Visibility = Visibility.Collapsed;
-        BudgetCard.Visibility = Visibility.Collapsed;
-        BestCard.Visibility = Visibility.Collapsed;
+        ResultsTabs.Visibility = Visibility.Collapsed;
     }
 
     private void OnUseBalanceClick(object sender, RoutedEventArgs e)
@@ -64,8 +63,7 @@ public partial class ShipConfiguratorView : System.Windows.Controls.UserControl
         BudgetBox.IsEnabled = false;
         UseBalanceButton.IsEnabled = false;
         SummaryCard.Visibility = Visibility.Collapsed;
-        BudgetCard.Visibility = Visibility.Collapsed;
-        BestCard.Visibility = Visibility.Collapsed;
+        ResultsTabs.Visibility = Visibility.Collapsed;
         StatusText.Text = LocalizationService.T("Загружаю порты корабля, детали и цены…");
         try
         {
@@ -74,10 +72,10 @@ public partial class ShipConfiguratorView : System.Windows.Controls.UserControl
             var builds = await Task.Run(() => ShipBuildOptimizer.Build(catalog, budget, profile,
                 _main?.CurrentSystem, _main?.CurrentLocation,
                 _main?.AvoidPyro ?? false, _main?.AllowRisky ?? true));
-            BudgetCard.DataContext = builds.Budget;
-            BestCard.DataContext = builds.Best;
-            BudgetCard.Visibility = Visibility.Visible;
-            BestCard.Visibility = Visibility.Visible;
+            BudgetTab.DataContext = builds.Budget;
+            BestTab.DataContext = builds.Best;
+            ResultsTabs.SelectedIndex = 0;
+            ResultsTabs.Visibility = Visibility.Visible;
             SummaryCard.Visibility = Visibility.Visible;
             DataStatusText.Text = $"{catalog.ShipName} · версия игры {catalog.GameVersion} · данные {catalog.FetchedAt.ToLocalTime():dd.MM.yyyy HH:mm}" +
                 (catalog.UsedOldCache ? " · сохранённая копия" : "");
@@ -110,8 +108,10 @@ public partial class ShipConfiguratorView : System.Windows.Controls.UserControl
                value >= 0 && value == decimal.Truncate(value);
     }
 
-    private void OnCopyBudgetClick(object sender, RoutedEventArgs e) => CopyBuild(BudgetCard.DataContext as ShipBuildResult);
-    private void OnCopyBestClick(object sender, RoutedEventArgs e) => CopyBuild(BestCard.DataContext as ShipBuildResult);
+    private void OnCopyBuildClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { CommandParameter: ShipBuildResult result }) CopyBuild(result);
+    }
 
     private void CopyBuild(ShipBuildResult? result)
     {

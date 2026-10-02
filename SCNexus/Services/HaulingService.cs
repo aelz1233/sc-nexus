@@ -27,9 +27,9 @@ public sealed class HaulingService
             if (buy.PriceBuy <= 0 || buy.ScuBuy <= 0 || buy.StatusBuy == 1 ||
                 !terminals.TryGetValue(buy.IdTerminal, out var origin) ||
                 (!string.IsNullOrWhiteSpace(startLocation) && startLocation != "Не указана" &&
-                 (!origin.MatchesLocation(startLocation) ||
-                  (!string.IsNullOrWhiteSpace(startSystem) &&
-                   !string.Equals(origin.StarSystemName, startSystem, StringComparison.OrdinalIgnoreCase)))) ||
+                 !origin.MatchesLocation(startLocation)) ||
+                (!string.IsNullOrWhiteSpace(startSystem) &&
+                 !string.Equals(origin.StarSystemName, startSystem, StringComparison.OrdinalIgnoreCase)) ||
                 !sellers.TryGetValue(buy.IdCommodity, out var destinations)) continue;
             var affordable = (int)Math.Min(int.MaxValue, Math.Floor(budget / buy.PriceBuy));
             var stock = (int)Math.Min(int.MaxValue, Math.Floor(buy.ScuBuy));
