@@ -52,14 +52,21 @@ public partial class MainViewModel
     private void ApplyGameTradesToFlight(bool onlyNew)
     {
         if (!AutoFillFlightData && onlyNew) return;
-        var purchase = GameTrades.Where(x => x.IsPurchase).OrderByDescending(x => x.TimeUtc).FirstOrDefault();
-        var sale = GameTrades.Where(x => !x.IsPurchase).OrderByDescending(x => x.TimeUtc).FirstOrDefault();
+        // Фоновый монитор не должен подменять подготовленный рейс событиями из старых журналов.
+        if (onlyNew && ActiveFlight is null) return;
+        var trades = ActiveFlight is { } active
+            ? GameTrades.Where(x => x.TimeUtc.UtcDateTime >= active.StartedAtUtc)
+            : GameTrades;
+        var purchase = trades.Where(x => x.IsPurchase).OrderByDescending(x => x.TimeUtc).FirstOrDefault();
+        var sale = trades.Where(x => !x.IsPurchase).OrderByDescending(x => x.TimeUtc).FirstOrDefault();
         var changed = false;
         if (purchase is not null && (!onlyNew || purchase.TimeUtc > _lastAutoPurchase)) { FlightInvestment = purchase.Amount; _lastAutoPurchase = purchase.TimeUtc; changed = true; }
         if (sale is not null && (!onlyNew || sale.TimeUtc > _lastAutoSale)) { FlightRevenue = sale.Amount; _lastAutoSale = sale.TimeUtc; changed = true; }
         if (changed)
             AutoFillStatus = $"Суммы обновлены из Game.log: покупка {purchase?.AmountDisplay ?? "—"}, продажа {sale?.AmountDisplay ?? "—"}. Проверь и при необходимости исправь поля.";
-        else if (!GameTrades.Any()) AutoFillStatus = "В Game.log пока нет запросов торговли. Поля можно заполнить вручную.";
+        else if (!trades.Any()) AutoFillStatus = ActiveFlight is null
+            ? "В Game.log пока нет запросов торговли. Поля можно заполнить вручную."
+            : "После начала этого рейса запросов торговли пока нет. Поля можно заполнить вручную.";
     }
 
     [RelayCommand]

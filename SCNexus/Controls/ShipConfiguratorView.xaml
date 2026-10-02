@@ -1,0 +1,117 @@
+<UserControl x:Class="SCNexus.Controls.ShipConfiguratorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Loaded="OnLoaded">
+    <StackPanel>
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <TextBlock Text="Подбор сменных деталей по совместимым портам выбранного корабля. Сравниваются измеримые характеристики из текущего каталога игры." Style="{StaticResource Hint}" Margin="0,0,0,18" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="КОРАБЛЬ ИЗ ФЛОТА" Style="{StaticResource FieldLabel}" />
+                        <ComboBox x:Name="ShipPicker" DisplayMemberPath="Name" SelectionChanged="OnShipSelectionChanged" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="БЮДЖЕТ, aUEC" Style="{StaticResource FieldLabel}" />
+                        <TextBox x:Name="BudgetBox" Text="0" HorizontalContentAlignment="Right" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="4">
+                        <TextBlock Text="ПРИОРИТЕТ" Style="{StaticResource FieldLabel}" />
+                        <ComboBox x:Name="ProfilePicker" SelectedIndex="0">
+                            <ComboBoxItem Content="Бой" />
+                            <ComboBoxItem Content="Путешествие и торговля" />
+                        </ComboBox>
+                    </StackPanel>
+                </Grid>
+                <WrapPanel Margin="0,14,0,0">
+                    <Button x:Name="BuildButton" Content="Подобрать конфигурации" Style="{StaticResource PrimaryButton}" Click="OnBuildClick" Margin="0,0,10,0" />
+                    <Button x:Name="UseBalanceButton" Content="Подставить доступный баланс" Click="OnUseBalanceClick" />
+                </WrapPanel>
+                <TextBlock x:Name="StatusText" Text="Выбери корабль и нажми «Подобрать конфигурации»." Style="{StaticResource Hint}" Margin="0,14,0,0" />
+            </StackPanel>
+        </Border>
+
+        <Border x:Name="SummaryCard" Style="{StaticResource Card}" Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock x:Name="DataStatusText" FontWeight="SemiBold" Foreground="{StaticResource Accent}" TextWrapping="Wrap" />
+                <TextBlock x:Name="CoverageText" Style="{StaticResource Hint}" Margin="0,8,0,0" />
+                <TextBlock x:Name="MethodText" Style="{StaticResource Hint}" Margin="0,7,0,0" />
+                <TextBlock Text="Ракеты и другие системы без проверенной совместимости в расчёт не входят. Орудия турелей требуют экипажа. Общая нагрузка на питание и охлаждение пока не проверяется: перед покупкой проверь сборку в игре." Style="{StaticResource Hint}" Margin="0,7,0,0" />
+                <TextBlock Margin="0,9,0,0" FontSize="12" Foreground="{StaticResource Muted}">
+                    <Run Text="Данные: " />
+                    <Hyperlink NavigateUri="https://api.star-citizen.wiki/developers" RequestNavigate="OnSourceNavigate" Foreground="{StaticResource Accent}">Star Citizen Wiki API</Hyperlink>
+                    <Run Text="; цены магазинов: UEX Corp." />
+                </TextBlock>
+            </StackPanel>
+        </Border>
+
+        <Border x:Name="BudgetCard" Style="{StaticResource Card}" Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock Text="ЛУЧШЕЕ ЗА БЮДЖЕТ" Foreground="{StaticResource Accent}" FontSize="13" FontWeight="Bold" Margin="0,0,0,10" />
+                <TextBlock Text="{Binding CostDisplay}" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Status}" Style="{StaticResource Hint}" Margin="0,7,0,0" />
+                <TextBlock Text="{Binding CoverageDisplay}" Style="{StaticResource Hint}" Margin="0,5,0,14" />
+                <Button Content="Скопировать список деталей" Click="OnCopyBudgetClick" HorizontalAlignment="Left" Margin="0,0,0,12" />
+                <ItemsControl ItemsSource="{Binding Lines}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="#0C1723" CornerRadius="7" Padding="13" Margin="0,0,0,7">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="150" /><ColumnDefinition Width="*" /><ColumnDefinition Width="190" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding SlotDisplay}" Foreground="{StaticResource Muted}" FontWeight="SemiBold" />
+                                    <StackPanel Grid.Column="1" Margin="8,0,12,0">
+                                        <TextBlock Text="{Binding NameDisplay}" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding MetricDisplay}" Style="{StaticResource Hint}" Margin="0,4,0,0" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" HorizontalAlignment="Right">
+                                        <TextBlock Text="{Binding PriceDisplay}" HorizontalAlignment="Right" />
+                                        <TextBlock Text="{Binding ShopDisplay}" Style="{StaticResource Hint}" TextWrapping="Wrap" TextAlignment="Right" />
+                                        <TextBlock Text="{Binding UpdatedDisplay}" Style="{StaticResource Hint}" HorizontalAlignment="Right" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
+        <Border x:Name="BestCard" Style="{StaticResource Card}" Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock Text="ЛУЧШЕЕ БЕЗ ОГРАНИЧЕНИЯ БЮДЖЕТА" Foreground="{StaticResource Accent}" FontSize="13" FontWeight="Bold" Margin="0,0,0,10" />
+                <TextBlock Text="{Binding CostDisplay}" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Status}" Style="{StaticResource Hint}" Margin="0,7,0,0" />
+                <TextBlock Text="{Binding CoverageDisplay}" Style="{StaticResource Hint}" Margin="0,5,0,14" />
+                <Button Content="Скопировать список деталей" Click="OnCopyBestClick" HorizontalAlignment="Left" Margin="0,0,0,12" />
+                <ItemsControl ItemsSource="{Binding Lines}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="#0C1723" CornerRadius="7" Padding="13" Margin="0,0,0,7">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="150" /><ColumnDefinition Width="*" /><ColumnDefinition Width="190" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding SlotDisplay}" Foreground="{StaticResource Muted}" FontWeight="SemiBold" />
+                                    <StackPanel Grid.Column="1" Margin="8,0,12,0">
+                                        <TextBlock Text="{Binding NameDisplay}" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding MetricDisplay}" Style="{StaticResource Hint}" Margin="0,4,0,0" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" HorizontalAlignment="Right">
+                                        <TextBlock Text="{Binding PriceDisplay}" HorizontalAlignment="Right" />
+                                        <TextBlock Text="{Binding ShopDisplay}" Style="{StaticResource Hint}" TextWrapping="Wrap" TextAlignment="Right" />
+                                        <TextBlock Text="{Binding UpdatedDisplay}" Style="{StaticResource Hint}" HorizontalAlignment="Right" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

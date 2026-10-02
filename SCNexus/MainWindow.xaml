@@ -37,6 +37,12 @@
                             <TextBlock Text="Флот" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
                         </StackPanel>
                     </Button>
+                    <Button Style="{StaticResource NavButton}" Command="{Binding OpenConfiguratorCommand}" Tag="{Binding IsConfiguratorOpen}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Margin="0,0,12,0" />
+                            <TextBlock Text="Конфигуратор" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                        </StackPanel>
+                    </Button>
                     <Button Style="{StaticResource NavButton}" Command="{Binding OpenHistoryCommand}" Tag="{Binding IsHistoryOpen}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Margin="0,0,12,0" />
@@ -147,7 +153,6 @@
                                     <TextBlock Text="Флот" Style="{StaticResource SectionTitle}" />
                                     <TextBlock Text="{Binding FleetSummary}" />
                                     <TextBlock Text="{Binding CurrentShip, StringFormat=Выбран: {0}}" Style="{StaticResource Hint}" Margin="0,8,0,0" />
-                                    <Button Content="Управлять кораблями" Command="{Binding OpenFleetCommand}" HorizontalAlignment="Left" Margin="0,16,0,0" />
                                 </StackPanel>
                             </Border>
                             <Border Grid.Column="2" Style="{StaticResource Card}">
@@ -155,7 +160,6 @@
                                     <TextBlock Text="Star Citizen" Style="{StaticResource SectionTitle}" />
                                     <TextBlock Text="{Binding GameProcessStatus}" Foreground="{StaticResource Accent}" />
                                     <TextBlock Text="{Binding ResolvedGameDirectory}" Style="{StaticResource Hint}" Margin="0,8,0,0" />
-                                    <Button Content="Проверить игру" Command="{Binding OpenToolsCommand}" HorizontalAlignment="Left" Margin="0,16,0,0" />
                                 </StackPanel>
                             </Border>
                         </Grid>
@@ -279,10 +283,7 @@
                                     <TextBlock Text="{Binding VoyageHelp}" TextWrapping="Wrap" Foreground="{StaticResource Muted}" LineHeight="22" />
                                 </Border>
                                 <DockPanel Margin="0,0,0,6">
-                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                        <Button Content="Все" Command="{Binding SelectAllRouteSystemsCommand}" Padding="10,5" Margin="0,0,6,0" />
-                                        <Button Content="Снять выбор" Command="{Binding ClearRouteSystemsCommand}" Padding="10,5" />
-                                    </StackPanel>
+                                    <Button DockPanel.Dock="Right" Content="Выбрать все" Command="{Binding SelectAllRouteSystemsCommand}" Padding="10,5" />
                                     <TextBlock Text="Системы маршрута" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" />
                                 </DockPanel>
                                 <ItemsControl ItemsSource="{Binding RouteSystems}" Margin="0,4,0,8">
@@ -472,30 +473,8 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                         <TextBlock Text="{Binding FlightStatus}" Foreground="{StaticResource Accent}" TextWrapping="Wrap" Margin="0,10,0,0" />
-                        <Border Style="{StaticResource Card}" Margin="0,16,0,0">
-                            <Expander Header="Сравнить вместимость кораблей">
-                                <Grid Margin="0,16,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition />
-                                        <ColumnDefinition Width="20" />
-                                        <ColumnDefinition />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0">
-                                        <ComboBox ItemsSource="{Binding ShipMatches}" SelectedItem="{Binding ComparisonLeft}" DisplayMemberPath="Name" />
-                                        <TextBlock Text="{Binding ComparisonLeft.Scu, StringFormat={}{0:N0} SCU}" FontSize="26" Foreground="{StaticResource Accent}" Margin="0,16,0,0" />
-                                        <TextBlock Text="{Binding ComparisonLeft.CompanyName}" Style="{StaticResource Hint}" Margin="0,8,0,0" />
-                                        <TextBlock Text="{Binding ComparisonLeftRole}" Style="{StaticResource Hint}" Margin="0,5,0,0" />
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2">
-                                        <ComboBox ItemsSource="{Binding ShipMatches}" SelectedItem="{Binding ComparisonRight}" DisplayMemberPath="Name" />
-                                        <TextBlock Text="{Binding ComparisonRight.Scu, StringFormat={}{0:N0} SCU}" FontSize="26" Foreground="{StaticResource Accent}" Margin="0,16,0,0" />
-                                        <TextBlock Text="{Binding ComparisonRight.CompanyName}" Style="{StaticResource Hint}" Margin="0,8,0,0" />
-                                        <TextBlock Text="{Binding ComparisonRightRole}" Style="{StaticResource Hint}" Margin="0,5,0,0" />
-                                    </StackPanel>
-                                </Grid>
-                            </Expander>
-                        </Border>
                     </StackPanel>
+                    <ui:ShipConfiguratorView Visibility="{Binding IsConfiguratorOpen, Converter={StaticResource BoolVisibility}}" />
                     <StackPanel Visibility="{Binding IsHistoryOpen, Converter={StaticResource BoolVisibility}}">
                         <TextBlock Text="{Binding ActiveFlightDisplay}" Foreground="{StaticResource Accent}" FontSize="17" Margin="0,0,0,18" />
                         <Border Style="{StaticResource Card}" Margin="0,0,0,16">
@@ -809,13 +788,6 @@
                                 </Border>
                                 <Border Style="{StaticResource Card}">
                                     <StackPanel>
-                                        <TextBlock Text="Торговые параметры" Style="{StaticResource SectionTitle}" />
-                                        <TextBlock Text="Баланс, резерв, корабль, старт и ограничения находятся рядом с результатами поиска." Style="{StaticResource Hint}" />
-                                        <Button Content="Открыть маршруты" Command="{Binding OpenHaulingCommand}" HorizontalAlignment="Left" Margin="0,14,0,0" />
-                                    </StackPanel>
-                                </Border>
-                                <Border Style="{StaticResource Card}">
-                                    <StackPanel>
                                         <TextBlock Text="Обновление программы" Style="{StaticResource SectionTitle}" />
                                         <TextBlock Text="{Binding CurrentAppVersion}" Foreground="{StaticResource Muted}" Margin="0,0,0,10" />
                                         <Button Content="Проверить обновление" Command="{Binding CheckForUpdatesCommand}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left" />
@@ -838,7 +810,6 @@
                                 <TextBlock Text="{Binding DataDirectory}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" FontSize="12" Margin="0,7,0,16" />
                                 <WrapPanel>
                                     <Button Content="Резервная копия" Command="{Binding BackupDataCommand}" Margin="0,0,10,8" />
-                                    <Button Content="Экспорт рейсов в CSV" Command="{Binding ExportFlightsCommand}" Margin="0,0,10,8" />
                                     <Button Content="Открыть папку данных" Command="{Binding OpenDataFolderCommand}" Margin="0,0,0,8" />
                                 </WrapPanel>
                                 <TextBlock Text="Резервная копия содержит всю базу. Для переноса закрой приложение и замени nexus.db в папке данных сохранённой копией." Style="{StaticResource Hint}" Margin="0,8,0,0" />

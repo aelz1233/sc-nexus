@@ -15,15 +15,16 @@ public partial class MainViewModel
     partial void OnIsUpdateBusyChanged(bool value) => CheckForUpdatesCommand.NotifyCanExecuteChanged();
     private bool CanCheckForUpdates() => !IsUpdateBusy;
 
-    public void SaveGithubToken(string token)
+    public bool SaveGithubToken(string token)
     {
         try
         {
             updateService.SaveToken(token);
             OnPropertyChanged(nameof(GithubTokenStatus));
             UpdateStatus = "Токен сохранён для текущего пользователя Windows.";
+            return true;
         }
-        catch (Exception ex) { UpdateStatus = $"Не удалось сохранить токен: {ex.Message}"; }
+        catch (Exception ex) { UpdateStatus = $"Не удалось сохранить токен: {ex.Message}"; return false; }
     }
 
     [RelayCommand]

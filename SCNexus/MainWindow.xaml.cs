@@ -49,8 +49,7 @@ public partial class MainWindow : Window
     private void SaveGithubToken_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not MainViewModel vm) return;
-        vm.SaveGithubToken(GithubTokenBox.Password);
-        GithubTokenBox.Clear();
+        if (vm.SaveGithubToken(GithubTokenBox.Password)) GithubTokenBox.Clear();
     }
 
     protected override void OnClosed(EventArgs e)

@@ -21,8 +21,6 @@ public partial class MainViewModel
     [ObservableProperty] private string workspaceStatus = "";
     [ObservableProperty] private bool isMarketLoading;
     [ObservableProperty] private string catalogQuery = "";
-    [ObservableProperty] private VehicleCatalogItem? comparisonLeft;
-    [ObservableProperty] private VehicleCatalogItem? comparisonRight;
     public ObservableCollection<VehicleCatalogItem> CatalogShips { get; } = [];
     public int[] MonitorIntervals { get; } = [15, 30, 60];
     public string DataDirectory => Path.GetDirectoryName(settingsService.DatabasePath)!;
@@ -32,12 +30,11 @@ public partial class MainViewModel
     public bool HasNoHaulingRoutes => HaulingRoutes.Count == 0 && !IsMarketLoading;
     public string FleetSummary => $"Кораблей во флоте: {Ships.Count} · {Ships.Sum(x => x.Ship.CargoScu):N0} SCU всего";
     public string TradeBudgetHint => Reserve > Balance ? "Резерв больше баланса — денег на закупку нет." : $"На закупку: {Math.Max(0, Balance - Reserve):N0} aUEC";
-    public string ComparisonLeftRole => ComparisonLeft is null ? "Выбери корабль" : VehicleCatalog.InferRole(ComparisonLeft);
-    public string ComparisonRightRole => ComparisonRight is null ? "Выбери корабль" : VehicleCatalog.InferRole(ComparisonRight);
     public string PageDescription => ActivePage switch
     {
         "Маршруты" => "Корабль, бюджет и подходящие торговые рейсы",
-        "Флот" => "Твои корабли и каталог для сравнения",
+        "Флот" => "Твои корабли и каталог моделей",
+        "Конфигуратор" => "Подбор оснащения под бюджет и задачу",
         "Рейсы" => "Текущий рейс, фактические суммы и история",
         "Инструменты" => "Состояние игры, проверка файлов и журнал сессий",
         "Настройки" => "Подключение к игре, отображение и сохранение данных",
@@ -50,13 +47,12 @@ public partial class MainViewModel
     partial void OnShowRouteDetailsChanged(bool value) => QueueSave();
     partial void OnIsMarketLoadingChanged(bool value) => OnPropertyChanged(nameof(HasNoHaulingRoutes));
     partial void OnCatalogQueryChanged(string value) => RefreshCatalog();
-    partial void OnComparisonLeftChanged(VehicleCatalogItem? value) => OnPropertyChanged(nameof(ComparisonLeftRole));
-    partial void OnComparisonRightChanged(VehicleCatalogItem? value) => OnPropertyChanged(nameof(ComparisonRightRole));
 
     private void Navigate(string page)
     {
         IsSettingsOpen = page == "Настройки";
         IsFleetOpen = page == "Флот";
+        IsConfiguratorOpen = page == "Конфигуратор";
         IsHistoryOpen = page == "Рейсы";
         IsToolsOpen = page == "Инструменты";
         IsHaulingOpen = page == "Маршруты";
@@ -69,7 +65,11 @@ public partial class MainViewModel
         CatalogShips.Clear();
         foreach (var vehicle in VehicleCatalog.Search(_allVehicles, CatalogQuery, ShipSortMode)) CatalogShips.Add(vehicle);
         if (selected is not null && CatalogShips.Contains(selected)) SelectedCatalogVehicle = selected;
-        else VehicleStatus = $"В списке: {CatalogShips.Count}. Вместимость и роль заполнятся после выбора модели.";
+        else
+        {
+            SelectedCatalogVehicle = null;
+            VehicleStatus = $"В списке: {CatalogShips.Count}. Выбери модель для заполнения вместимости и роли.";
+        }
     }
 
     private void NotifyWorkspace()
@@ -80,9 +80,11 @@ public partial class MainViewModel
 
     [RelayCommand] private void ResetRouteFilters()
     {
-        ClearLocation(); AvoidPyro = false; AllowRisky = false;
+        AvoidPyro = false; AllowRisky = false;
         MinimumFillPercent = 0; MinimumProfit = 0;
-        HaulingSameSystemOnly = false; HaulingCategory = "Все маршруты"; HaulingSortMode = "За рейс";
+        HaulingSameSystemOnly = false; HaulingCategory = "Все маршруты";
+        SelectAllRouteSystems();
+        WorkspaceStatus = "Ограничения сброшены. Стартовая точка и сортировка сохранены.";
     }
 
     [RelayCommand] private Task RefreshMarketAsync() => LoadMarketAsync(true);
@@ -122,8 +124,14 @@ public partial class MainViewModel
     [RelayCommand] private async Task AutoDetectGameAsync()
     {
         GameDirectoryPath = "";
-        await RefreshToolsAsync();
-        WorkspaceStatus = "Автопоиск завершён.";
+        try
+        {
+            await RefreshGameInfoAsync();
+            WorkspaceStatus = Directory.Exists(ResolvedGameDirectory)
+                ? $"Игра найдена: {ResolvedGameDirectory}"
+                : "Игра не найдена. Выбери папку вручную.";
+        }
+        catch (Exception ex) { WorkspaceStatus = $"Не удалось проверить игру: {ex.Message}"; }
     }
 
     [RelayCommand] private void OpenDataFolder() => OpenFolder(DataDirectory);
