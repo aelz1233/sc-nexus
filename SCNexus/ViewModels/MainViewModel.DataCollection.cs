@@ -17,8 +17,14 @@ public partial class MainViewModel
     [ObservableProperty] private string dataCollectionStatus = "Источники данных запускаются…";
     [ObservableProperty] private bool needsManualGamePath = true;
     [ObservableProperty] private string language = "ru";
+    [ObservableProperty] private string shipDetectionStatus = "";
 
     public bool IsEnglish => Language == "en";
+    public string OcrShipDetectionTitle => IsEnglish ? "OCR ship detection" : "OCR и обнаружение корабля";
+    public string OcrShipDetectionGuide => IsEnglish
+        ? "To identify a ship, open Star Citizen and show a screen with its model name: Vehicle Loadout, ASOP, Fleet Manager, or a HUD panel. Keep the game visible, then use \"Force ship detection\" in the expanded overlay. OCR reads only the visible screen and never controls the game."
+        : "Чтобы определить корабль, открой Star Citizen и покажи экран с названием модели: Vehicle Loadout, ASOP, «Мой флот» или HUD. Оставь игру видимой и нажми «Принудительно обнаружить корабль» в расширенном оверлее. OCR читает только видимый экран и не управляет игрой.";
+    public string OverlayDetectShipButtonText => IsEnglish ? "Force ship detection" : "Принудительно обнаружить корабль";
     public string[] Languages { get; } = ["Русский", "English"];
     public string SelectedLanguage
     {
@@ -218,7 +224,55 @@ public partial class MainViewModel
         await dataCollectionService.RefreshAsync(OcrEnabled);
     }
 
+    [RelayCommand]
+    private async Task DetectShipFromOverlayAsync()
+    {
+        if (dataCollectionService is null)
+        {
+            ShipDetectionStatus = IsEnglish
+                ? "Automatic data collection is not available."
+                : "Автоматический сбор данных недоступен.";
+            return;
+        }
+
+        ShipDetectionStatus = IsEnglish ? "Reading the visible Star Citizen screen…" : "Считываю видимый экран Star Citizen…";
+        var completed = await dataCollectionService.RefreshOcrAsync();
+        var snapshot = dataCollectionService.Current;
+        ApplyDataSnapshot(snapshot);
+        var ocrStatus = snapshot.Sources.FirstOrDefault(x => x.Source == DataSourceKind.Ocr)?.Status ?? "Waiting";
+        var ship = snapshot.Player.CurrentShip;
+        if (ship is { Source: DataSourceKind.Ocr })
+        {
+            ShipDetectionStatus = IsEnglish ? $"Ship detected: {ship.Value}." : $"Корабль определён: {ship.Value}.";
+            return;
+        }
+
+        var fleet = snapshot.Ships.Where(x => x.Name.Source == DataSourceKind.Ocr).Take(3).Select(x => x.Name.Value).ToArray();
+        if (fleet.Length > 0)
+        {
+            var names = string.Join(", ", fleet);
+            ShipDetectionStatus = IsEnglish ? $"Detected ship entries: {names}." : $"Найдены корабли: {names}.";
+            return;
+        }
+
+        ShipDetectionStatus = !completed
+            ? (IsEnglish ? "OCR is already scanning. Try again in a moment." : "OCR уже выполняет проверку. Повтори через мгновение.")
+            : ocrStatus switch
+            {
+                "Waiting for Star Citizen foreground window" => IsEnglish
+                    ? "Keep Star Citizen visible; the overlay itself may stay on top."
+                    : "Оставь окно Star Citizen видимым; оверлей можно оставить поверх игры.",
+                "No text recognized" => IsEnglish
+                    ? "No text was recognized. Open a ship screen with the model name and try again."
+                    : "Текст не распознан. Открой экран корабля с названием модели и повтори.",
+                _ => IsEnglish
+                    ? "A ship name was not found. Open Vehicle Loadout, ASOP, Fleet Manager, or a HUD panel and try again."
+                    : "Название корабля не найдено. Открой Vehicle Loadout, ASOP, «Мой флот» или HUD и повтори."
+            };
+    }
+
     partial void OnOcrEnabledChanged(bool value) => QueueSave();
+    partial void OnShipDetectionStatusChanged(string value) => OnPropertyChanged(nameof(OverlayShipDetectionStatus));
     partial void OnLanguageChanged(string value)
     {
         LocalizationService.SetLanguage(value);

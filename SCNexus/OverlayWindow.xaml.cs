@@ -11,15 +11,25 @@ public partial class OverlayWindow : Window
 {
     private const double BaseWidth = 460;
     private const int GwlExStyle = -20;
+    private const int WmNcHitTest = 0x0084;
+    private const int HtClient = 1;
+    private const int HtTransparent = -1;
     private const long WsExTransparent = 0x00000020L;
     private const long WsExToolWindow = 0x00000080L;
     private const long WsExNoActivate = 0x08000000L;
     private bool _dragging;
+    private HwndSource? _source;
 
     public OverlayWindow()
     {
         InitializeComponent();
-        SourceInitialized += (_, _) => MakePassive();
+        SourceInitialized += (_, _) =>
+        {
+            _source = PresentationSource.FromVisual(this) as HwndSource;
+            _source?.AddHook(WindowMessageHook);
+            MakePassive();
+        };
+        Closed += (_, _) => _source?.RemoveHook(WindowMessageHook);
         Loaded += (_, _) => PositionAtWorkAreaEdge();
         SizeChanged += (_, _) => PositionAtWorkAreaEdge();
         MouseLeftButtonDown += OnMouseLeftButtonDown;
@@ -70,7 +80,12 @@ public partial class OverlayWindow : Window
         var style = GetWindowLongPtr(handle, GwlExStyle).ToInt64();
         style |= WsExToolWindow;
         if (editable) style &= ~(WsExTransparent | WsExNoActivate);
-        else style |= WsExTransparent | WsExNoActivate;
+        else
+        {
+            // Let WM_NCHITTEST keep only the OCR button interactive; every other pixel passes through to the game.
+            style &= ~WsExTransparent;
+            style |= WsExNoActivate;
+        }
         SetWindowLongPtr(handle, GwlExStyle, new IntPtr(style));
         Focusable = editable;
         Cursor = editable ? Cursors.SizeAll : Cursors.Arrow;
@@ -88,6 +103,23 @@ public partial class OverlayWindow : Window
             _dragging = false;
             vm.SetOverlayCustomPosition(Left, Top);
         }
+    }
+
+    private IntPtr WindowMessageHook(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (message != WmNcHitTest || DataContext is not MainViewModel { OverlayEditMode: false }) return IntPtr.Zero;
+        if (!DetectShipButton.IsVisible || !DetectShipButton.IsEnabled)
+        {
+            handled = true;
+            return new IntPtr(HtTransparent);
+        }
+        var raw = lParam.ToInt64();
+        var screenPoint = new Point((short)(raw & 0xffff), (short)((raw >> 16) & 0xffff));
+        var point = PointFromScreen(screenPoint);
+        var buttonBounds = DetectShipButton.TransformToAncestor(this).TransformBounds(
+            new Rect(0, 0, DetectShipButton.ActualWidth, DetectShipButton.ActualHeight));
+        handled = true;
+        return buttonBounds.Contains(point) ? new IntPtr(HtClient) : new IntPtr(HtTransparent);
     }
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]

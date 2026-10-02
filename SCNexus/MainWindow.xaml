@@ -930,6 +930,9 @@
                                             <TextBlock Text="Использовать OCR, когда данных нет в журнале и API" TextWrapping="Wrap" />
                                         </CheckBox>
                                         <TextBlock Text="OCR экрана работает только когда окно Star Citizen находится на переднем плане. Снимок удаляется сразу после распознавания." Style="{StaticResource Hint}" Margin="0,7,0,0" />
+                                        <Expander Header="{Binding OcrShipDetectionTitle}" Margin="0,12,0,0">
+                                            <TextBlock Text="{Binding OcrShipDetectionGuide}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,9,0,0" />
+                                        </Expander>
                                     </StackPanel>
                                 </Border>
                                 <Border Style="{StaticResource Card}">

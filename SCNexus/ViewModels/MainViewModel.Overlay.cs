@@ -71,6 +71,9 @@ public partial class MainViewModel
     public string OverlayEditorButtonText => OverlayEditMode
         ? (IsEnglish ? "Finish positioning" : "Завершить размещение")
         : (IsEnglish ? "Move on screen" : "Разместить на экране");
+    public string OverlayShipDetectionStatus => string.IsNullOrWhiteSpace(ShipDetectionStatus)
+        ? (IsEnglish ? "Open a ship screen, then run detection." : "Открой экран корабля и запусти обнаружение.")
+        : ShipDetectionStatus;
     public string OverlayShipDisplay
     {
         get
@@ -248,6 +251,7 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(OverlayFreshnessDisplay));
         OnPropertyChanged(nameof(OverlayDanger));
         OnPropertyChanged(nameof(OverlayDangerDisplay));
+        OnPropertyChanged(nameof(OverlayShipDetectionStatus));
     }
 
     public sealed record OverlayAnchorOption(string Value, string Display)

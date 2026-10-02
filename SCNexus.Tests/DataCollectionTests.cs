@@ -227,6 +227,28 @@ public class DataCollectionTests
         finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); Directory.Delete(directory, true); }
     }
 
+    [Fact]
+    public async Task ForceOcrRefreshUsesOnlyOcrAndTemporarilyEnablesIt()
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var settings = new SettingsService(Path.Combine(directory, "nexus.db"));
+            await settings.LoadAsync();
+            var ocr = new CapturingOcrProvider();
+            var other = new CountingProvider();
+            var collection = new DataCollectionService([ocr, other], new DataHistoryService(settings), new GameLogService(directory));
+
+            var completed = await collection.RefreshOcrAsync();
+
+            Assert.True(completed);
+            Assert.Equal(1, ocr.CallCount);
+            Assert.Equal(0, other.CallCount);
+            Assert.True(ocr.LastContext is { OcrEnabled: true, ForceRefresh: true });
+        }
+        finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); Directory.Delete(directory, true); }
+    }
+
     private static string TempDirectory()
     {
         var path = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
@@ -258,6 +280,22 @@ public class DataCollectionTests
         public Task<DataProviderResult> CollectAsync(DataProviderContext context, CancellationToken token)
         {
             CallCount++;
+            return Task.FromResult(new DataProviderResult());
+        }
+    }
+
+    private sealed class CapturingOcrProvider : IDataProvider
+    {
+        public int CallCount { get; private set; }
+        public DataProviderContext? LastContext { get; private set; }
+        public string Name => "Screen OCR";
+        public DataSourceKind Source => DataSourceKind.Ocr;
+        public int Priority => 5;
+        public TimeSpan RefreshInterval => TimeSpan.FromSeconds(20);
+        public Task<DataProviderResult> CollectAsync(DataProviderContext context, CancellationToken token)
+        {
+            CallCount++;
+            LastContext = context;
             return Task.FromResult(new DataProviderResult());
         }
     }

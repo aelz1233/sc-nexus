@@ -27,7 +27,18 @@ SC Nexus is a Windows companion application for **Star Citizen**. It collects av
 
 The guiding principle is simple: use automatic data first and ask the player for manual input only when a reliable source is unavailable.
 
-> There are no application screenshots committed to this repository yet. The project logo above is the only current image asset; screenshots will be added only after they are captured from the released application.
+## Interface
+
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" width="94%" alt="SC Nexus dashboard">
+</p>
+<p align="center">
+  <img src="docs/screenshots/trade-route-card.png" width="31%" alt="Trade route recommendation">
+  <img src="docs/screenshots/flight-journal.png" width="31%" alt="Flight journal">
+  <img src="docs/screenshots/cargo-stops.png" width="31%" alt="Multi-stop cargo plan">
+</p>
+
+<p align="center"><em>Dashboard, trade analysis, flight tracking, and an expandable multi-stop cargo plan. The application supports Russian and English.</em></p>
 
 ## Features
 
@@ -96,6 +107,19 @@ Every collected value carries its source, timestamp, and confidence. Providers a
 
 The app detects LIVE, PTU, and EPTU folders on first launch. Manual selection is available when automatic discovery cannot find the game.
 
+## OCR and ship detection
+
+OCR is an optional fallback when a value cannot be reliably obtained from `Game.log`, local game data, or APIs. It captures only the visible Star Citizen window, sends the image to the Windows OCR engine locally, and releases the image immediately after recognition. No image is uploaded or kept by SC Nexus.
+
+To identify a ship:
+
+1. Open Star Citizen and keep its window visible.
+2. Open **Vehicle Loadout**, **ASOP**, **Fleet Manager**, a retrieval screen, or a HUD panel that displays the ship model name.
+3. Expand the in-game SC Nexus overlay and select **Force ship detection**.
+4. Read the result below the button. When a known model is found, Nexus adds it to the detected fleet or selects it when enough evidence is available.
+
+The force button runs one OCR scan even if periodic OCR is disabled. The overlay remains click-through outside that single button, so normal game input is not blocked. OCR can fail on a hidden or minimized game window, low-contrast text, unsupported UI languages, or screens without a recognizable model name.
+
 ## Data sources
 
 | Source | Used for | Notes |
@@ -109,7 +133,7 @@ The app detects LIVE, PTU, and EPTU folders on first launch. Manual selection is
 
 SC Nexus is an external, read-only helper. It does **not** use DLL injection, memory reading, process hooks, packet interception, or modifications to Star Citizen files.
 
-OCR is disabled by default. When enabled, it only processes the foreground Star Citizen window and releases the captured image after recognition. Application data is stored locally under `%LOCALAPPDATA%\SCNexus`.
+OCR is disabled by default. When enabled, it only processes the visible Star Citizen window and releases the captured image after recognition. Application data is stored locally under `%LOCALAPPDATA%\SCNexus`.
 
 ## Project structure
 
@@ -142,7 +166,6 @@ SC Nexus is actively developed as a personal companion application. The current 
 - 🚧 Broader parsing coverage for new or changed Star Citizen log events
 - 🚧 More resilient provider diagnostics and data-quality reporting across game patches
 - 📋 Additional data providers using the existing `IDataProvider` extension point
-- 📋 Official interface screenshots captured from released builds
 
 ## Known limitations
 
