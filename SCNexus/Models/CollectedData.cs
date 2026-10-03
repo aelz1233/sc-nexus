@@ -234,6 +234,7 @@ public sealed record DataFieldDisplay(string Label, string Value, string Source,
 
 public sealed class DataCollectionSnapshot
 {
+    public IReadOnlyList<ContractEarning> ContractEarnings { get; init; } = [];
     public PlayerState Player { get; init; } = new();
     public IReadOnlyList<GameSession> Sessions { get; init; } = [];
     public IReadOnlyList<DetectedShip> Ships { get; init; } = [];

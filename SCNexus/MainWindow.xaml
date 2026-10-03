@@ -144,7 +144,7 @@
                             </Border>
                             <Border Grid.Column="1" Style="{StaticResource Card}" Margin="0,0,12,0">
                                 <StackPanel>
-                                    <TextBlock Text="За завершённые рейсы" Style="{StaticResource FieldLabel}" />
+                                    <TextBlock Text="{Binding TotalIncomeLabel}" Style="{StaticResource FieldLabel}" />
                                     <TextBlock Text="{Binding TotalFlightProfitDisplay}" FontSize="21" FontWeight="SemiBold" />
                                 </StackPanel>
                             </Border>
@@ -596,7 +596,8 @@
                         <TextBlock Text="{Binding ActiveFlightDisplay}" Foreground="{StaticResource Accent}" FontSize="17" Margin="0,0,0,18" />
                         <Border Style="{StaticResource Card}" Margin="0,0,0,16">
                             <StackPanel>
-                                <TextBlock Text="МАРШРУТ И ФАКТИЧЕСКИЕ СУММЫ" Foreground="{StaticResource Accent}" FontWeight="Bold" Margin="0,0,0,14" />
+                                <Expander Header="{Binding RecordTripLabel}" IsExpanded="False">
+                                <StackPanel Margin="0,12,0,0">
                                 <TextBlock Text="Выбери корабль из своего флота для этого рейса. При завершении прибыль добавится к балансу." Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,14" />
                                 <TextBlock Style="{StaticResource Caption}" Text="КОРАБЛЬ ДЛЯ НОВОГО РЕЙСА" />
                                 <Grid Margin="0,7,0,7">
@@ -698,6 +699,8 @@
                                     <Button Content="Завершить рейс" Command="{Binding FinishFlightCommand}" IsEnabled="{Binding HasActiveFlight}" />
                                 </StackPanel>
                                 <TextBlock Text="{Binding FlightStatus}" Foreground="{StaticResource Accent}" TextWrapping="Wrap" Margin="0,12,0,0" />
+                                </StackPanel>
+                                </Expander>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource Card}" Margin="0,0,0,18">
@@ -737,11 +740,25 @@
                                     <ComboBox ItemsSource="{Binding FlightStatisticsPeriods}" SelectedItem="{Binding FlightStatisticsPeriod}" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1">
-                                    <TextBlock Text="Статистика по завершённым рейсам" Style="{StaticResource FieldLabel}" />
+                                    <TextBlock Text="{Binding TotalIncomeLabel}" Style="{StaticResource FieldLabel}" />
                                     <TextBlock Text="{Binding FlightStatisticsDisplay}" FontSize="16" FontWeight="SemiBold" />
                                     <TextBlock Text="История ниже отфильтрована по времени завершения. Активный рейс всегда виден." Style="{StaticResource Hint}" Margin="0,5,0,0" />
                                 </StackPanel>
                             </Grid>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="{Binding ContractEarningsTitle}" Style="{StaticResource SectionTitle}" />
+                                <TextBlock Text="{Binding ContractEarningsHelp}" Style="{StaticResource Hint}" TextWrapping="Wrap" />
+                                <ComboBox ItemsSource="{Binding CompletedEarningMissions}" SelectedItem="{Binding SelectedEarningMission}" DisplayMemberPath="DisplayName" Margin="0,10,0,8" />
+                                <WrapPanel>
+                                    <StackPanel Width="220" Margin="0,0,12,0"><TextBlock Text="{Binding ContractAmountLabel}" Style="{StaticResource FieldLabel}" /><TextBox Text="{Binding ContractRewardAmount, UpdateSourceTrigger=LostFocus}" /></StackPanel>
+                                    <StackPanel Width="160"><TextBlock Text="{Binding ContractMinutesLabel}" Style="{StaticResource FieldLabel}" /><TextBox Text="{Binding ContractDurationMinutes, UpdateSourceTrigger=LostFocus}" /></StackPanel>
+                                </WrapPanel>
+                                <WrapPanel Margin="0,10,0,0"><Button Content="{Binding UseRewardLabel}" Command="{Binding UseVisibleContractRewardCommand}" Margin="0,0,8,0" /><Button Content="{Binding SaveContractLabel}" Command="{Binding SaveContractEarningCommand}" /></WrapPanel>
+                                <TextBlock Text="{Binding ContractEarningStatus}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                                <ItemsControl ItemsSource="{Binding VisibleContractEarnings}"><ItemsControl.ItemTemplate><DataTemplate><DockPanel Margin="0,8,0,0"><Button DockPanel.Dock="Right" Content="{Binding DataContext.DeleteContractLabel, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DeleteContractEarningCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><TextBlock Text="{Binding Display}" TextWrapping="Wrap" VerticalAlignment="Center" /></DockPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                            </StackPanel>
                         </Border>
                         <DockPanel Margin="0,0,0,14">
                             <Button DockPanel.Dock="Right" Content="Экспорт CSV" Command="{Binding ExportFlightsCommand}" />
@@ -925,6 +942,7 @@
                                 <Border Style="{StaticResource Card}">
                                     <StackPanel>
                                         <TextBlock Text="Данные и автоматизация" Style="{StaticResource SectionTitle}" />
+                                        <CheckBox IsChecked="{Binding ContractEarningsEnabled}" Margin="0,0,0,12"><TextBlock Text="{Binding ContractEarningsLabel}" TextWrapping="Wrap" /></CheckBox>
                                         <TextBlock Text="Язык" Style="{StaticResource FieldLabel}" />
                                         <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}" Width="180" HorizontalAlignment="Left" Margin="0,5,0,14" />
                                         <CheckBox IsChecked="{Binding OcrEnabled}">

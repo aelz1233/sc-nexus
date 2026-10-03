@@ -240,6 +240,21 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
 
     private void ParseStructuredMission(string line, DateTimeOffset timestamp, List<TypedObservation> records)
     {
+        var payout = Regex.Match(line, "<SHUDEvent_OnNotification> Added notification \"(?:Начислено|Awarded|Credited)\\s+(?<amount>[0-9][0-9 ,.]*?)\\s+aUEC[^\"]*\"\\s*\\[(?<notification>\\d+)\\]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (payout.Success && BalanceText.TryParse(payout.Groups["amount"].Value, out var amount) && amount > 0)
+        {
+            var completed = _missions.Values.Where(x => x.Status.Value == "completed" &&
+                timestamp >= x.Status.Timestamp && timestamp - x.Status.Timestamp < TimeSpan.FromSeconds(3)).ToArray();
+            if (completed.Length > 0)
+            {
+                var key = Id("contract-income", completed.Max(x => x.Status.Timestamp), payout.Groups["notification"].Value, string.Join("|", completed.Select(x => x.Id).OrderBy(x => x)));
+                var start = completed.Min(x => x.Name.Timestamp);
+                var minutes = start < completed.Min(x => x.Status.Timestamp) ? (timestamp - start).TotalMinutes : 0;
+                var name = completed.Length == 1 ? completed[0].Name.Value : "Contract payout / Выплата по контрактам";
+                var earning = new ContractEarning(key, name, amount, timestamp, minutes, true, completed.Select(x => x.Id).ToArray());
+                records.Add(new("contract-income", key, earning, Source, timestamp, .95));
+            }
+        }
         var marker = MissionMarkerPattern().Match(line);
         if (marker.Success)
         {

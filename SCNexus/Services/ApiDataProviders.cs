@@ -102,6 +102,7 @@ public sealed class NexusHistoryProvider(DataHistoryService history) : IDataProv
                 "session" => DataHistoryService.ReadRecord<GameSession>(row),
                 "ship" => DataHistoryService.ReadRecord<DetectedShip>(row),
                 "mission" => DataHistoryService.ReadRecord<MissionState>(row),
+                "contract-income" => DataHistoryService.ReadRecord<ContractEarning>(row),
                 "trade" => DataHistoryService.ReadRecord<TradeEvent>(row),
                 "movement" => DataHistoryService.ReadRecord<MovementEvent>(row),
                 "death" => DataHistoryService.ReadRecord<DeathEvent>(row),

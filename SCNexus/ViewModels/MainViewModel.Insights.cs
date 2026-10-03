@@ -123,7 +123,7 @@ public partial class MainViewModel
             : duration.TotalHours >= 1
                 ? $"{(int)duration.TotalHours} ч {duration.Minutes} мин"
                 : $"{Math.Max(1, duration.Minutes)} мин";
-        var result = flightProfit != 0 ? flightProfit : sales - purchases;
+        var result = (flightProfit != 0 ? flightProfit : sales - purchases) + CountedEarnings.Where(x => x.CompletedAt >= started && x.CompletedAt <= ended).Sum(x => x.Amount);
 
         SessionInsightTitle = active
             ? (IsEnglish ? "Current game session" : "Текущая игровая сессия")

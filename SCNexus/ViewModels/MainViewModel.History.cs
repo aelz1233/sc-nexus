@@ -19,12 +19,7 @@ public partial class MainViewModel
     {
         get
         {
-            var completed = FilteredFlights.Where(x => x.EndedAtUtc is not null).ToArray();
-            var profit = completed.Sum(x => x.Profit);
-            var hours = completed.Sum(x => x.DurationHours);
-            var hourly = hours <= 0 ? "нет данных по времени" : $"{profit / (decimal)hours:N0} aUEC/ч";
-            return completed.Length == 0 ? "За выбранный период завершённых рейсов нет." :
-                $"{completed.Length} рейс(ов) · {profit:+#,##0;-#,##0;0} aUEC · {hourly}";
+            return EarningsSummary(FilteredFlights, CountedEarnings.Where(x => x.CompletedAt >= FlightPeriodStart));
         }
     }
 
@@ -47,6 +42,7 @@ public partial class MainViewModel
         foreach (var flight in Flights.Where(x => x.EndedAtUtc is null || x.EndedAtUtc >= start).OrderByDescending(x => x.StartedAtUtc))
             FilteredFlights.Add(flight);
         OnPropertyChanged(nameof(FlightStatisticsDisplay));
+        OnPropertyChanged(nameof(VisibleContractEarnings));
     }
 
     private void ApplyGameTradesToFlight(bool onlyNew)

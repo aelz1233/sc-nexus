@@ -52,6 +52,8 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
     {
         var text = string.Join("\n", lines.Select(x => x.Text));
         var values = new List<ValueObservation>();
+        if (ReadContractReward(lines) is { } reward)
+            values.Add(new("mission.offeredReward", reward.ToString(CultureInfo.InvariantCulture), DataSourceKind.Ocr, now, .8, "aUEC"));
         var balance = BalancePattern().Match(text);
         if (balance.Success)
         {
@@ -83,6 +85,18 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
     }
 
     internal sealed record ScreenLine(string Text, Rect Bounds);
+
+    internal static decimal? ReadContractReward(IReadOnlyList<ScreenLine> lines)
+    {
+        var label = lines.FirstOrDefault(x => Regex.IsMatch(x.Text.Trim(), @"^(НАГРАДА|REWARD)$", RegexOptions.IgnoreCase));
+        if (label is null) return null;
+        var candidates = lines.Where(x => x.Bounds.Left > label.Bounds.Right &&
+            Math.Abs(x.Bounds.Top - label.Bounds.Top) <= Math.Max(8, label.Bounds.Height))
+            .Select(x => Regex.Match(x.Text.Trim(), @"^[^\d\s]{0,2}\s*(?<amount>\d[\d,.\s]*)$"))
+            .Where(x => x.Success).Select(x => BalanceText.TryParse(x.Groups["amount"].Value, out var amount) ? (decimal?)amount : null)
+            .Where(x => x > 0).Distinct().ToArray();
+        return candidates.Length == 1 ? candidates[0] : null;
+    }
 
     private static bool IsHomeLabel(string text) => Regex.IsMatch(text.Trim(), @"^(HOME|ГЛАВН[А-Я]{1,2})$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
@@ -247,6 +261,27 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
     internal static async Task<IReadOnlyList<ScreenLine>> RecognizeScreenAsync(BitmapSource source, CancellationToken token)
     {
         var lines = (await RecognizeBitmapAsync(source, token)).ToList();
+        var rewardLabel = lines.FirstOrDefault(x => Regex.IsMatch(x.Text.Trim(), @"^(НАГРАДА|REWARD)$", RegexOptions.IgnoreCase));
+        if (rewardLabel is not null)
+        {
+            var rewardLeft = Math.Max(0, (int)rewardLabel.Bounds.Left);
+            var rewardTop = Math.Max(0, (int)rewardLabel.Bounds.Top - 20);
+            var rewardHeight = Math.Min(source.PixelHeight - rewardTop, (int)rewardLabel.Bounds.Height + 40);
+            var rewardCrop = new CroppedBitmap(source, new Int32Rect(rewardLeft, rewardTop, source.PixelWidth - rewardLeft, rewardHeight));
+            var gray = new FormatConvertedBitmap(rewardCrop, System.Windows.Media.PixelFormats.Gray8, null, 0);
+            var pixels = new byte[gray.PixelWidth * gray.PixelHeight];
+            gray.CopyPixels(pixels, gray.PixelWidth, 0);
+            for (var i = 0; i < pixels.Length; i++) pixels[i] = pixels[i] >= 215 ? (byte)0 : (byte)255;
+            var clean = BitmapSource.Create(gray.PixelWidth, gray.PixelHeight, 96, 96,
+                System.Windows.Media.PixelFormats.Gray8, null, pixels, gray.PixelWidth);
+            clean.Freeze();
+            var rewardZoom = new TransformedBitmap(clean, new System.Windows.Media.ScaleTransform(3, 3));
+            rewardZoom.Freeze();
+            var rewardLines = await RecognizeBitmapAsync(rewardZoom, token);
+            lines.RemoveAll(x => x.Bounds.Left > rewardLabel.Bounds.Right && x.Bounds.Top >= rewardTop && x.Bounds.Bottom <= rewardTop + rewardHeight);
+            lines.AddRange(rewardLines.Select(x => new ScreenLine(x.Text, new Rect(rewardLeft + x.Bounds.X / 3,
+                rewardTop + x.Bounds.Y / 3, x.Bounds.Width / 3, x.Bounds.Height / 3))));
+        }
         var home = lines.FirstOrDefault(x => IsHomeLabel(x.Text));
         // The tiny toolbar label may be unreadable at full-screen resolution. Enlarge the
         // toolbar first, but still require its Home anchor and wallet geometry when parsing.

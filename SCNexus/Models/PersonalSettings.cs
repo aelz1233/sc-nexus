@@ -17,6 +17,8 @@ public sealed class PersonalSettings
     public bool MonitorEnabled { get; set; } = true;
     public int MonitorIntervalSeconds { get; set; } = 15;
     public bool ShowRouteDetails { get; set; } = true;
+    public bool ContractEarningsEnabled { get; set; } = true;
+    public string ContractEarningsJson { get; set; } = "[]";
     public bool OcrEnabled { get; set; }
     public bool AutoFleetOcrEnabled { get; set; } = true;
     public bool FleetOcrAutoScroll { get; set; } = true;

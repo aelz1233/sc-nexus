@@ -193,7 +193,7 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
     {
         foreach (var (kind, limit) in new[]
                  {
-                     ("session", 200), ("ship", 200), ("mission", 500), ("trade", 1000),
+                     ("session", 200), ("ship", 200), ("mission", 500), ("trade", 1000), ("contract-income", 1000),
                      ("movement", 1000), ("death", 500), ("component-catalog", 50)
                  })
         {
@@ -205,6 +205,7 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
 
     private DataCollectionSnapshot BuildSnapshot() => new()
     {
+        ContractEarnings = Records<ContractEarning>("contract-income", 1000),
         Player = BuildPlayerState(), Sessions = Records<GameSession>("session", 100),
         Ships = Records<DetectedShip>("ship", 100), Missions = Records<MissionState>("mission", 200),
         Trades = Records<TradeEvent>("trade", 500), Movements = Records<MovementEvent>("movement", 500),

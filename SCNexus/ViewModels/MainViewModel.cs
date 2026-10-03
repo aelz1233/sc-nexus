@@ -114,18 +114,18 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     {
         get
         {
-            var completed = Flights.Where(x => x.EndedAtUtc != null).ToList();
-            var hours = completed.Sum(x => x.DurationHours);
-            return hours <= 0 ? "Нет данных" : $"{completed.Sum(x => x.Profit) / (decimal)hours:N0} aUEC / час";
+            return EarningsSummary(Flights, CountedEarnings, hourlyOnly: true);
         }
     }
-    public string TotalFlightProfitDisplay => $"{Flights.Where(x => x.EndedAtUtc != null).Sum(x => x.Profit):+#,##0;-#,##0;0} aUEC";
-    public string TodayProfitDisplay => $"{Flights.Where(x => x.EndedAtUtc?.ToLocalTime().Date == DateTime.Today).Sum(x => x.Profit):+#,##0;-#,##0;0} aUEC";
+    public string TotalFlightProfitDisplay => $"{Flights.Where(x => x.EndedAtUtc != null).Sum(x => x.Profit) + CountedEarnings.Sum(x => x.Amount):+#,##0;-#,##0;0} aUEC";
+    public string TodayProfitDisplay => $"{Flights.Where(x => x.EndedAtUtc?.ToLocalTime().Date == DateTime.Today).Sum(x => x.Profit) + CountedEarnings.Where(x => x.CompletedAt.LocalDateTime.Date == DateTime.Today).Sum(x => x.Amount):+#,##0;-#,##0;0} aUEC";
 
     public async Task InitializeAsync()
     {
         var settings = await settingsService.LoadAsync();
         Balance = settings.Balance;
+        ContractEarningsEnabled = settings.ContractEarningsEnabled;
+        LoadContractEarnings(settings.ContractEarningsJson ?? "[]");
         CurrentShip = settings.CurrentShip;
         CurrentLocation = settings.CurrentLocation;
         CurrentSystem = settings.CurrentSystem;
@@ -523,6 +523,8 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             MonitorEnabled = MonitorEnabled,
             MonitorIntervalSeconds = Math.Clamp(MonitorIntervalSeconds, 15, 60),
             ShowRouteDetails = ShowRouteDetails,
+            ContractEarningsEnabled = ContractEarningsEnabled,
+            ContractEarningsJson = System.Text.Json.JsonSerializer.Serialize(ContractEarnings),
             OcrEnabled = OcrEnabled,
             AutoFleetOcrEnabled = AutoFleetOcrEnabled,
             FleetOcrAutoScroll = FleetOcrAutoScroll,

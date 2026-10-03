@@ -97,6 +97,8 @@ public partial class MainViewModel
     private void ApplyDataSnapshot(DataCollectionSnapshot snapshot)
     {
         _lastDataSnapshot = snapshot;
+        ImportContractEarnings(snapshot);
+        OnPropertyChanged(nameof(CompletedEarningMissions));
         AutomaticDataFields.Clear();
         foreach (var field in snapshot.ToDisplayFields(IsEnglish)) AutomaticDataFields.Add(field);
         if (snapshot.Values.TryGetValue("market.prices", out var market))

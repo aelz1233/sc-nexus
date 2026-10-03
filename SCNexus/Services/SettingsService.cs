@@ -292,6 +292,8 @@ public sealed class SettingsService
                 current.MonitorEnabled = snapshot.MonitorEnabled;
                 current.MonitorIntervalSeconds = snapshot.MonitorIntervalSeconds;
                 current.ShowRouteDetails = snapshot.ShowRouteDetails;
+                current.ContractEarningsEnabled = snapshot.ContractEarningsEnabled;
+                current.ContractEarningsJson = snapshot.ContractEarningsJson ?? "[]";
                 current.OcrEnabled = snapshot.OcrEnabled;
                 current.AutoFleetOcrEnabled = snapshot.AutoFleetOcrEnabled;
                 current.FleetOcrAutoScroll = snapshot.FleetOcrAutoScroll;
@@ -346,6 +348,8 @@ public sealed class SettingsService
             if (!names.Contains("AutoFleetOcrEnabled")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN AutoFleetOcrEnabled INTEGER NOT NULL DEFAULT 1");
             if (!names.Contains("FleetOcrAutoScroll")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN FleetOcrAutoScroll INTEGER NOT NULL DEFAULT 1");
             if (!names.Contains("OcrIntervalSeconds")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OcrIntervalSeconds INTEGER NOT NULL DEFAULT 5");
+            if (!names.Contains("ContractEarningsEnabled")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN ContractEarningsEnabled INTEGER NOT NULL DEFAULT 1");
+            if (!names.Contains("ContractEarningsJson")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN ContractEarningsJson TEXT NOT NULL DEFAULT '[]'");
             if (!names.Contains("OcrEnabled")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OcrEnabled INTEGER NOT NULL DEFAULT 0");
             if (!names.Contains("Language")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN Language TEXT NOT NULL DEFAULT 'ru'");
             if (!names.Contains("OverlayEnabled")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayEnabled INTEGER NOT NULL DEFAULT 1");

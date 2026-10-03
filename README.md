@@ -210,3 +210,7 @@ No open-source license has been selected for this repository yet. Until one is a
 ## Acknowledgements
 
 SC Nexus is an unofficial fan-made companion. Star Citizen and related marks belong to Cloud Imperium Games. UEX and Star Citizen Wiki are independent community data sources.
+
+### Contract earnings
+Game.log payout notifications near completed contracts are recorded in Journal. Use Settings → Data and automation to include or exclude them from analytics. Missing payouts can be confirmed manually; offer OCR only prefills the amount for verification. The wallet is updated separately by OCR. Hourly income needs known activity duration.
+
