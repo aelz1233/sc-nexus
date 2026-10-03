@@ -7,7 +7,10 @@
 - На обзоре и в оверлее показываются подтверждённые активные миссии текущей сессии. Записи из прошлых сессий остаются в журнале. Завершение отдельной цели больше не завершает всю миссию.
 - Добавлены количество текущих миссий, цели и источник данных. Известные технические названия заменены понятными подписями, исходные имена доступны в подсказках. Полный ID сервера также перенесён в подсказку.
 - Старые локации помечены как последние известные. Торговый бюджет показывает баланс Nexus и резерв отдельно.
-- Проверены 133 тестов и распознавание пользовательского изображения баланса. Полный список контрактов и их официальные названия доступны не во всех журналах; отсутствие подтверждения не означает отсутствие миссий в игре.
+- Названия принятых контрактов берутся из уведомлений игры по ID миссии (русский/английский), независимо от языка Nexus.
+- Пройдены 133 теста; проверено распознавание пользовательского изображения баланса. Полный список контрактов и их официальные названия доступны не во всех журналах; отсутствие подтверждения не означает отсутствие миссий в игре.
+
+- Сквозная проверка автоматического сохранения баланса в живой игре ещё не завершена. Другие языки игры пока не проверены.
 
 ## English
 
@@ -16,7 +19,6 @@
 - Dashboard and overlay show confirmed active missions from the current session. Earlier observations remain in Journal. Completing an objective no longer completes the entire contract.
 - Added current mission count, objectives and source details. Known internal names use readable labels with original names in tooltips; the full shard ID is also available in a tooltip.
 - Earlier locations are labeled as last known. Trading budget shows the Nexus balance and reserve separately.
-- Verified 133 tests and OCR against a supplied balance screenshot. Logs may omit contracts or official titles; missing confirmation does not mean there are no missions in the game.
-
-- Названия принятых контрактов берутся из уведомлений игры по ID миссии (русский/английский), независимо от языка Nexus.
 - Accepted contract titles are matched by mission ID from Russian/English game notifications, independently of the Nexus language.
+- Verified 133 tests and OCR against a supplied balance screenshot. Logs may omit contracts or official titles; missing confirmation does not mean there are no missions in the game.
+- End-to-end verification of automatic balance saving in a live game is still pending. Other game languages have not yet been verified.
