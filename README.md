@@ -107,6 +107,12 @@ Every collected value carries its source, timestamp, and confidence. Providers a
 
 The app detects LIVE, PTU, and EPTU folders on first launch. Manual selection is available when automatic discovery cannot find the game.
 
+## Language and updates
+
+The installer offers **English / Русский**. On first launch, confirm your language in the bilingual welcome screen. The suggested language comes from the installer, or from Windows for portable installs (English unless Windows uses Russian). Existing profiles keep their saved language across updates. Change it in **Settings → Language**.
+
+Use **Settings → Check for updates** to check GitHub. Confirm the update to download and verify the installer, back up your data, install in the background and restart. Public releases require no GitHub token. The update check stops after 30 seconds if GitHub does not respond.
+
 ## OCR and ship detection
 
 OCR is an optional fallback when a value cannot be reliably obtained from `Game.log`, local game data, or APIs. It captures only the visible Star Citizen window, sends the image to the Windows OCR engine locally, and releases the image immediately after recognition. No image is uploaded or kept by SC Nexus.

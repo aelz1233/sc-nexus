@@ -29,6 +29,17 @@ public class WindowRegressionTests
                 var dir = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
                 try
                 {
+                    var languageChoice = new LanguageSelectionWindow("en");
+                    var languageContent = (FrameworkElement)languageChoice.Content;
+                    languageContent.Measure(new Size(440, double.PositiveInfinity));
+                    languageContent.Arrange(new Rect(new Point(), languageContent.DesiredSize));
+                    languageContent.UpdateLayout();
+                    Assert.Equal("en", languageChoice.SelectedLanguage);
+                    var languageList = LogicalDescendants(languageContent).OfType<ComboBox>().Single();
+                    languageList.SelectedIndex = 1;
+                    Assert.Equal("ru", languageChoice.SelectedLanguage);
+                    Assert.True(languageContent.DesiredSize.Height < 400);
+                    languageChoice.Close();
                     using var client = new HttpClient();
                     var settings = new SettingsService(Path.Combine(dir, "test.db"));
                     var data = new GameDataService(client, Path.Combine(dir, "cache"));

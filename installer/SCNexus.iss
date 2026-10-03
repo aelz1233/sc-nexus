@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.5.7"
+  #define AppVersion "0.5.8"
 #endif
 #ifndef PublishDir
   #define PublishDir "..\publish"
@@ -24,6 +24,8 @@ OutputBaseFilename=SCNexus-Setup-{#AppVersion}-win-x64
 SetupIconFile=..\SCNexus\Assets\sc-nexus.ico
 UninstallDisplayIcon={app}\SCNexus.exe
 WizardStyle=modern
+ShowLanguageDialog=yes
+LanguageDetectionMethod=uilanguage
 Compression=lzma2
 SolidCompression=yes
 CloseApplications=yes
@@ -54,6 +56,9 @@ Source: "{#PublishDir}\SCNexus.exe"; DestDir: "{app}"; Flags: ignoreversion
 [Icons]
 Name: "{group}\SC NEXUS"; Filename: "{app}\SCNexus.exe"
 Name: "{autodesktop}\SC NEXUS"; Filename: "{app}\SCNexus.exe"; Tasks: desktopicon
+
+[Registry]
+Root: HKCU; Subkey: "Software\SCNexus"; ValueType: string; ValueName: "SetupLanguage"; ValueData: "{language}"
 
 [Run]
 Filename: "{app}\SCNexus.exe"; Description: "{cm:LaunchApp}"; Flags: nowait postinstall skipifsilent

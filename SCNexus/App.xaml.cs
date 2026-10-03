@@ -32,8 +32,7 @@ public partial class App : System.Windows.Application
             if (args.ExceptionObject is Exception exception) AppLogService.Write("AppDomain", exception);
         };
         TaskScheduler.UnobservedTaskException += (_, args) => AppLogService.Write("Background task", args.Exception);
-        CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("ru-RU");
-        CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("ru-RU");
+        var windowsLanguage = CultureInfo.CurrentUICulture.Name;
         try
         {
             // All installations for this Windows user share the same database and hotkey.
@@ -84,12 +83,23 @@ public partial class App : System.Windows.Application
             collection.AddSingleton<OverlayCoordinator>();
             collection.AddSingleton<MainViewModel>();
             _services = collection.BuildServiceProvider();
+            var settingsService = _services.GetRequiredService<SettingsService>();
+            var initialSettings = await settingsService.LoadAsync();
+            if (settingsService.NeedsLanguageSelection)
+            {
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                string? installerLanguage = null;
+                try { installerLanguage = Microsoft.Win32.Registry.GetValue(@"HKEY_CURRENT_USER\Software\SCNexus", "SetupLanguage", null) as string; }
+                catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException) { AppLogService.Write("Setup language", ex); }
+                var choice = new LanguageSelectionWindow(LanguageSelectionWindow.PreferredLanguage(installerLanguage, windowsLanguage));
+                if (choice.ShowDialog() != true) { Shutdown(); return; }
+                initialSettings.Language = choice.SelectedLanguage;
+                await settingsService.SaveAsync(initialSettings);
+            }
             var vm = _services.GetRequiredService<MainViewModel>();
             await vm.InitializeAsync();
-            FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(vm.IsEnglish ? "en-US" : "ru-RU")));
             ShutdownMode = ShutdownMode.OnMainWindowClose;
-            var mainWindow = new MainWindow { DataContext = vm };
+            var mainWindow = new MainWindow { DataContext = vm, Language = XmlLanguage.GetLanguage(vm.IsEnglish ? "en-US" : "ru-RU") };
             MainWindow = mainWindow;
             mainWindow.EnableTrayMode();
             mainWindow.Show();

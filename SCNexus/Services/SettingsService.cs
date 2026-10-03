@@ -16,6 +16,7 @@ public sealed class SettingsService
     public string DatabasePath { get; }
     public string BackupDirectory => Path.Combine(Path.GetDirectoryName(DatabasePath)!, "backups");
     public string? StartupRecoveryMessage { get; private set; }
+    public bool NeedsLanguageSelection { get; private set; }
 
     public SettingsService(string? databasePath = null)
     {
@@ -53,7 +54,9 @@ public sealed class SettingsService
         await EnsureFlightTablesAsync(db);
         await EnsureDataCollectionTablesAsync(db);
         await ConfigureDatabaseAsync(db);
-        var settings = await db.PersonalSettings.AsNoTracking().SingleOrDefaultAsync(x => x.Id == 1) ?? new();
+        var saved = await db.PersonalSettings.AsNoTracking().SingleOrDefaultAsync(x => x.Id == 1);
+        NeedsLanguageSelection = saved is null;
+        var settings = saved ?? new();
         NormalizeSettings(settings);
         return settings;
     }
