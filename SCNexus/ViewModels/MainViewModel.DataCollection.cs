@@ -19,6 +19,9 @@ public partial class MainViewModel
     private ObservedValue<string>? _lastAppliedSystem;
     private ObservedValue<string>? _lastAppliedShip;
     [ObservableProperty] private bool ocrEnabled;
+    [ObservableProperty] private int ocrIntervalSeconds = 5;
+    public int[] OcrIntervals { get; } = [5, 10, 20, 30];
+    public string OcrIntervalLabel => IsEnglish ? "OCR interval, seconds" : "Интервал OCR, секунды";
     [ObservableProperty] private string dataCollectionStatus = "Источники данных запускаются…";
     [ObservableProperty] private bool needsManualGamePath = true;
     [ObservableProperty] private string language = "ru";
@@ -361,6 +364,12 @@ public partial class MainViewModel
                     ? "A ship name was not found. Open Vehicle Loadout, ASOP, Fleet Manager, or a HUD panel and try again."
                     : "Название корабля не найдено. Открой Vehicle Loadout, ASOP, «Мой флот» или HUD и повтори."
             };
+    }
+
+    partial void OnOcrIntervalSecondsChanged(int value)
+    {
+        dataCollectionService?.SetOcrInterval(value);
+        QueueSave();
     }
 
     partial void OnOcrEnabledChanged(bool value) => QueueSave();

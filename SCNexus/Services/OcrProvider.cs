@@ -20,7 +20,8 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
     public string Name => "Screen OCR";
     public DataSourceKind Source => DataSourceKind.Ocr;
     public int Priority => 5;
-    public TimeSpan RefreshInterval => TimeSpan.FromSeconds(20);
+    public int IntervalSeconds { get; set; } = 5;
+    public TimeSpan RefreshInterval => TimeSpan.FromSeconds(Math.Clamp(IntervalSeconds, 5, 30));
 
     public async Task<DataProviderResult> CollectAsync(DataProviderContext context, CancellationToken token)
     {

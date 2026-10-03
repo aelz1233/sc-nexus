@@ -18,6 +18,11 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
     public DataCollectionSnapshot Current { get; private set; } = new();
     public event EventHandler<DataCollectionSnapshot>? SnapshotUpdated;
 
+    public void SetOcrInterval(int seconds)
+    {
+        foreach (var provider in _providers.OfType<OcrProvider>()) provider.IntervalSeconds = Math.Clamp(seconds, 5, 30);
+    }
+
     public async Task WatchAsync(Func<bool> monitoringEnabled, Func<bool> ocrEnabled, CancellationToken token)
     {
         var tasks = _providers.Select(provider => WatchProviderAsync(provider, monitoringEnabled, ocrEnabled, token)).ToArray();
@@ -115,7 +120,7 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
     }
 
     private static TimeSpan ProviderTimeout(IDataProvider provider) => TimeSpan.FromSeconds(
-        Math.Clamp(provider.RefreshInterval.TotalSeconds * 2, 15, 120));
+        provider.Source == DataSourceKind.Ocr ? 40 : Math.Clamp(provider.RefreshInterval.TotalSeconds * 2, 15, 120));
 
     private void Publish(IDataProvider provider, DateTimeOffset attempt, bool available, string status,
         IReadOnlyList<ValueObservation> values, IReadOnlyList<TypedObservation> records,

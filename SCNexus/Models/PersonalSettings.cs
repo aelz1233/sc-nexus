@@ -18,6 +18,7 @@ public sealed class PersonalSettings
     public int MonitorIntervalSeconds { get; set; } = 15;
     public bool ShowRouteDetails { get; set; } = true;
     public bool OcrEnabled { get; set; }
+    public int OcrIntervalSeconds { get; set; } = 5;
     public string Language { get; set; } = "ru";
     public bool OverlayEnabled { get; set; } = true;
     public bool OverlayExpanded { get; set; }

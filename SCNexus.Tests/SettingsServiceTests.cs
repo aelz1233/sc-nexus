@@ -7,6 +7,35 @@ namespace SCNexus.Tests;
 public class SettingsServiceTests
 {
     [Fact]
+    public async Task OcrIntervalDefaultsToFiveAndSurvivesRestartAndOldSchemaUpgrade()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(directory, "nexus.db");
+        try
+        {
+            var service = new SettingsService(path);
+            var settings = await service.LoadAsync();
+            Assert.Equal(5, settings.OcrIntervalSeconds);
+            settings.OcrIntervalSeconds = 10;
+            await service.SaveAsync(settings);
+            Assert.Equal(10, (await new SettingsService(path).LoadAsync()).OcrIntervalSeconds);
+            await using (var connection = new SqliteConnection($"Data Source={path};Pooling=False"))
+            {
+                await connection.OpenAsync();
+                await using var command = connection.CreateCommand();
+                command.CommandText = "ALTER TABLE PersonalSettings DROP COLUMN OcrIntervalSeconds";
+                await command.ExecuteNonQueryAsync();
+            }
+            Assert.Equal(5, (await new SettingsService(path).LoadAsync()).OcrIntervalSeconds);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (Directory.Exists(directory)) Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
     public async Task CorruptDatabaseIsRestoredFromTheLatestVerifiedBackup()
     {
         var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));

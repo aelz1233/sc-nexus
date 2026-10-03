@@ -69,7 +69,7 @@ public static class LocalizationService
         ["Мониторинг игры"] = "Game monitoring", ["Автоматически читать игровой журнал"] = "Read the game log automatically",
         ["Обновлять каждые, секунд"] = "Update every, seconds", ["Отображение"] = "Display",
         ["Автоматический мониторинг"] = "Automatic monitoring", ["Game.log отслеживается постоянно"] = "Game.log is monitored continuously",
-        ["Nexus читает только новые строки журнала. Частота API и OCR регулируется автоматически, чтобы не создавать лишнюю нагрузку."] = "Nexus reads only new log lines. API and OCR intervals are adjusted automatically to avoid unnecessary load.",
+        ["Nexus читает только новые строки журнала. Интервал OCR выбирается в настройках данных и автоматизации."] = "Nexus reads only new log lines. Choose the OCR interval under Data and automation.",
         ["Подробности торговых маршрутов"] = "Trade route details", ["Обновление программы"] = "Application update",
         ["Игровой оверлей"] = "Game overlay", ["Показывать оверлей при запущенном Star Citizen"] = "Show the overlay while Star Citizen is running",
         ["Расширенный вид: миссия, следующая остановка и свежесть данных"] = "Expanded view: mission, next stop, and data freshness",
