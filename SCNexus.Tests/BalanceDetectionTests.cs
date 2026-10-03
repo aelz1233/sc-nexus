@@ -20,13 +20,16 @@ public class BalanceDetectionTests
         Assert.Equal(decimal.Parse(expected, System.Globalization.CultureInfo.InvariantCulture), amount);
     }
 
-    [Fact]
-    public void MobiGlasBalanceRequiresKnownLayoutAndAUniqueAmount()
+    [Theory]
+    [InlineData("ГЛАВНАЯ")]
+    [InlineData("ГЛАВНМ")]
+    [InlineData("HOME")]
+    public void MobiGlasBalanceRequiresKnownLayoutAndAUniqueAmount(string home)
     {
         var lines = new List<OcrProvider.ScreenLine>
         {
             new("КРИМСТАТ", new Rect(300, 0, 100, 20)),
-            new("ГЛАВНАЯ", new Rect(560, 140, 70, 20)),
+            new(home, new Rect(560, 140, 70, 20)),
             new("35,087,892", new Rect(350, 116, 90, 20)),
             new("35.087.892", new Rect(350, 117, 90, 20)),
             new("1,200,000", new Rect(350, 300, 90, 20))
@@ -34,7 +37,7 @@ public class BalanceDetectionTests
         Assert.Equal(35087892m, OcrProvider.ReadMobiGlasBalance(lines));
         lines.Add(new("99,999", new Rect(200, 120, 90, 20)));
         Assert.Null(OcrProvider.ReadMobiGlasBalance(lines));
-        Assert.Null(OcrProvider.ReadMobiGlasBalance(lines.Where(x => x.Text != "ГЛАВНАЯ").ToArray()));
+        Assert.Null(OcrProvider.ReadMobiGlasBalance(lines.Where(x => x.Text != home).ToArray()));
     }
 
     [Fact]

@@ -87,9 +87,11 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
 
     internal sealed record ScreenLine(string Text, Rect Bounds);
 
+    private static bool IsHomeLabel(string text) => Regex.IsMatch(text.Trim(), @"^(HOME|ГЛАВН[А-Я]{1,2})$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
     internal static decimal? ReadMobiGlasBalance(IReadOnlyList<ScreenLine> lines)
     {
-        var home = lines.FirstOrDefault(x => Regex.IsMatch(x.Text.Trim(), @"^(HOME|ГЛАВНАЯ)$", RegexOptions.IgnoreCase));
+        var home = lines.FirstOrDefault(x => IsHomeLabel(x.Text));
         if (home is null || !lines.Any(x => Regex.IsMatch(x.Text, @"\b(HEALTH|CRIMESTAT|UEE)\b|ЗДОР|КРИМСТАТ", RegexOptions.IgnoreCase))) return null;
         var tolerance = Math.Max(40, home.Bounds.Height * 4);
         var candidates = lines.Where(x => x.Bounds.Right < home.Bounds.Left && x.Bounds.Left > home.Bounds.Left - tolerance * 8 &&
@@ -253,7 +255,24 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
     internal static async Task<IReadOnlyList<ScreenLine>> RecognizeScreenAsync(BitmapSource source, CancellationToken token)
     {
         var lines = (await RecognizeBitmapAsync(source, token)).ToList();
-        var home = lines.FirstOrDefault(x => Regex.IsMatch(x.Text.Trim(), @"^(HOME|ГЛАВНАЯ)$", RegexOptions.IgnoreCase));
+        var home = lines.FirstOrDefault(x => IsHomeLabel(x.Text));
+        // The tiny toolbar label may be unreadable at full-screen resolution. Enlarge the
+        // toolbar first, but still require its Home anchor and wallet geometry when parsing.
+        if (home is null && source.PixelHeight >= 600 && lines.Any(x =>
+            Regex.IsMatch(x.Text, @"\b(HEALTH|CRIMESTAT)\b|ЗДОРОВЬЕ|КРИМСТАТ", RegexOptions.IgnoreCase)))
+        {
+            var toolbarTop = (int)(source.PixelHeight * .85);
+            var toolbar = new CroppedBitmap(source, new Int32Rect(0, toolbarTop,
+                (int)(source.PixelWidth * .5), source.PixelHeight - toolbarTop));
+            var zoomed = new TransformedBitmap(toolbar, new System.Windows.Media.ScaleTransform(3, 3));
+            zoomed.Freeze();
+            var toolbarLines = await RecognizeBitmapAsync(zoomed, token);
+            lines.RemoveAll(x => x.Bounds.Top >= toolbarTop && x.Bounds.Right <= source.PixelWidth * .5);
+            lines.AddRange(toolbarLines.Select(x => new ScreenLine(x.Text,
+                new Rect(x.Bounds.X / 3, toolbarTop + x.Bounds.Y / 3, x.Bounds.Width / 3, x.Bounds.Height / 3))));
+            home = lines.FirstOrDefault(x => IsHomeLabel(x.Text));
+            if (ReadMobiGlasBalance(lines) is not null) return lines;
+        }
         if (home is null) return lines;
         var tolerance = Math.Max(40, home.Bounds.Height * 4);
         var left = Math.Max(0, (int)(home.Bounds.Left - tolerance * 8));
