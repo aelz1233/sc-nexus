@@ -45,6 +45,8 @@
                         Background="#1B4352" Foreground="#EAF5F4" BorderBrush="#69CFC0" Padding="10,6" Margin="0,0,0,6"
                         HorizontalAlignment="Stretch" Focusable="False"
                         Visibility="{Binding OverlayExpanded, Converter={StaticResource BoolVisibility}}" />
+                <TextBlock Text="{Binding FleetScanHint}" Foreground="#91A5B8" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,7"
+                           Visibility="{Binding OverlayExpanded, Converter={StaticResource BoolVisibility}}" />
                 <Grid>
                     <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                     <Button Content="{Binding OverlayModeButtonText}" Command="{Binding ToggleOverlayModeCommand}"

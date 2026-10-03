@@ -28,10 +28,14 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
     public async Task RefreshAsync(bool ocrEnabled, CancellationToken token = default) =>
         await Task.WhenAll(_providers.Select(x => CollectProviderAsync(x, ocrEnabled, token, true)));
 
-    public async Task<DataProviderResult?> RefreshOcrAsync(CancellationToken token = default)
+    public async Task<DataProviderResult?> RefreshOcrAsync(CancellationToken token = default,
+        bool scanFleet = false, IProgress<FleetScanSummary>? progress = null)
     {
         var provider = _providers.FirstOrDefault(x => x.Source == DataSourceKind.Ocr);
-        return provider is null ? null : await CollectProviderAsync(provider, ocrEnabled: true, token, forceRefresh: true);
+        if (provider is null) return null;
+        return scanFleet && provider is OcrProvider ocr
+            ? await CollectProviderAsync(provider, true, token, true, (context, cancellation) => ocr.DetectShipsAsync(context, progress, cancellation), TimeSpan.FromSeconds(120))
+            : await CollectProviderAsync(provider, ocrEnabled: true, token, forceRefresh: true);
     }
 
     private async Task WatchProviderAsync(IDataProvider provider, Func<bool> monitoringEnabled,
@@ -53,7 +57,8 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
     }
 
     private async Task<DataProviderResult?> CollectProviderAsync(IDataProvider provider, bool ocrEnabled, CancellationToken token,
-        bool forceRefresh = false)
+        bool forceRefresh = false, Func<DataProviderContext, CancellationToken, Task<DataProviderResult>>? collect = null,
+        TimeSpan? operationTimeout = null)
     {
         SemaphoreSlim gate;
         lock (_stateGate)
@@ -77,8 +82,8 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
             try
             {
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
-                timeout.CancelAfter(ProviderTimeout(provider));
-                var result = await provider.CollectAsync(context, timeout.Token);
+                timeout.CancelAfter(operationTimeout ?? ProviderTimeout(provider));
+                var result = await (collect is null ? provider.CollectAsync(context, timeout.Token) : collect(context, timeout.Token));
                 await history.SaveAsync(result.Values.Where(x => x.Source != DataSourceKind.NexusHistory),
                     result.Records.Where(x => x.Source != DataSourceKind.NexusHistory), timeout.Token);
                 Publish(provider, now, true, result.Status, result.Values, result.Records, known?.LastSuccess, known);

@@ -83,6 +83,21 @@ public sealed class FlightLogService(SettingsService settingsService)
         });
     }
 
+    public Task<(bool Added, bool Changed)> UpsertDetectedShipAsync(string name, int cargoScu, string role, string notes) =>
+        settingsService.InTransactionAsync(async db =>
+        {
+            var ship = await db.PersonalShips.FirstOrDefaultAsync(x => EF.Functions.Collate(x.Name, "NOCASE") == name);
+            if (ship is null)
+            {
+                db.PersonalShips.Add(new PersonalShip { Name = name, CargoScu = Math.Max(0, cargoScu), Role = role, BuildNotes = notes });
+                return (true, true);
+            }
+            var changed = ship.Role != role || ship.CargoScu != cargoScu;
+            ship.Role = role;
+            ship.CargoScu = Math.Max(0, cargoScu);
+            return (false, changed);
+        });
+
     public async Task<FlightRecord?> DeleteFinishedFlightAsync(int id, bool updateBalance = false)
     {
         return await settingsService.InTransactionAsync<FlightRecord?>(async db =>

@@ -6,6 +6,13 @@ namespace SCNexus.Tests;
 public class VehicleCatalogTests
 {
     [Fact]
+    public void UsesCatalogRoleFlagsForModelsOutsideTheNameFallbackList()
+    {
+        Assert.Equal("Боевое", VehicleCatalog.InferRole(new() { Name = "Guardian MX", IsMilitary = 1 }));
+        Assert.Equal("Утилизация", VehicleCatalog.InferRole(new() { Name = "New salvage model", IsCargo = 1, IsSalvage = 1 }));
+        Assert.Equal("Медицинский", VehicleCatalog.InferRole(new() { Name = "New rescue model", IsMilitary = 1, IsMedical = 1 }));
+    }
+    [Fact]
     public void FindsShipsByNameAndSortsByCargoOrName()
     {
         var ships = new[]

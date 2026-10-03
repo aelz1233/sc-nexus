@@ -47,6 +47,8 @@ public sealed class GameDataService
     {
         Directory.CreateDirectory(_cacheDirectory);
         var vehicles = await LoadAsync<VehicleCatalogItem>("vehicles", "vehicles", TimeSpan.FromHours(12), token);
+        if (vehicles.Data.All(x => x.IsMilitary is null))
+            vehicles = await LoadAsync<VehicleCatalogItem>("vehicles", "vehicles", TimeSpan.Zero, token);
         return vehicles.Data;
     }
 

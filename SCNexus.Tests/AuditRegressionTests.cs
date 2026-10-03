@@ -62,7 +62,7 @@ public class AuditRegressionTests
 
     [Theory]
     [InlineData("Vehicle Loadout\nGuardian MX")]
-    [InlineData("Fleet Manager\nGuardian MX")]
+    [InlineData("Fleet Manager\nGuardian MX\nStored")]
     public void OcrFleetDoesNotInventCurrentShipOrShorterVariant(string text)
     {
         var result = OcrProvider.ParseText(text, Vehicles, DateTimeOffset.UtcNow);

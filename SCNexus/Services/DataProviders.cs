@@ -19,6 +19,7 @@ public sealed class DataProviderResult
     public IReadOnlyList<ValueObservation> Values { get; init; } = [];
     public IReadOnlyList<TypedObservation> Records { get; init; } = [];
     public string Status { get; init; } = "OK";
+    public FleetScanSummary? FleetScan { get; init; }
 }
 
 public sealed record ValueObservation(string Key, string Value, DataSourceKind Source,

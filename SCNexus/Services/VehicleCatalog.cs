@@ -6,6 +6,16 @@ public static class VehicleCatalog
 {
     public static string InferRole(VehicleCatalogItem vehicle)
     {
+        if (vehicle.IsMedical == 1) return "Медицинский";
+        if (vehicle.IsMining == 1) return "Добыча ресурсов";
+        if (vehicle.IsSalvage == 1) return "Утилизация";
+        if (vehicle.IsRefuel == 1) return "Заправка";
+        if (vehicle.IsRepair == 1) return "Поддержка и ремонт";
+        if (vehicle.IsBomber == 1) return "Бомбардировщик";
+        if (vehicle.IsRacing == 1) return "Гоночный";
+        if (vehicle.IsDatarunner == 1) return "Передача данных";
+        if (vehicle.IsResearch == 1 || vehicle.IsScience == 1) return "Исследование";
+        // Known primary roles disambiguate multi-role flags and support older offline catalogs.
         var name = vehicle.Name.ToUpperInvariant();
         if (name.StartsWith("A2 HERCULES") || name.Contains("GLADIATOR") ||
             name.Contains("ECLIPSE") || name.Contains("RETALIATOR BOMBER")) return "Бомбардировщик";
@@ -38,6 +48,11 @@ public static class VehicleCatalog
             name.Contains("SABRE") || name.Contains("SCORPIUS") || name.Contains("VANGUARD") ||
             name.Contains("ARES ") || name.Contains("F8C") || name.Contains("BUCCANEER") ||
             name.Contains("HURRICANE") || name.Contains("REDEEMER")) return "Боевое";
+        if (vehicle.IsBoarding == 1) return "Военный транспорт";
+        if (vehicle.IsExploration == 1) return "Исследование";
+        if (vehicle.IsPassenger == 1) return "Пассажирский";
+        if (vehicle.IsMilitary == 1) return "Боевое";
+        if (vehicle.IsCargo == 1) return "Грузоперевозки";
         return "Универсальный";
     }
 

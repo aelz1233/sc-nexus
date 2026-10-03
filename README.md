@@ -118,7 +118,11 @@ To identify a ship:
 3. Expand the in-game SC Nexus overlay and select **Force ship detection**. Switch to Star Citizen within three seconds; the game must be the foreground window.
 4. Read the result below the button. Catalog matches on fleet screens are added to the detected fleet. OCR changes the current ship only with an explicit **Current Ship** label and an exact catalog match; it cannot infer which ship you are flying from a list of ships.
 
-The force button runs one OCR scan even if periodic OCR is disabled. The overlay remains click-through outside its controls and checklist. OCR can fail on a hidden or minimized game window, low-contrast text, unsupported UI languages, or screens without a recognizable model name.
+In an interactive **ASOP** list, the force button reads the visible rows, scrolls to the top, then down through the list (up to 60 scroll steps / 100 seconds). Clear ASOP search filters first and keep the cursor still during the scan. **Esc**, switching away from the game, or losing the terminal stops scanning. Already recognized entries are kept; interrupted scans may be incomplete. An unchanged list is a stopping heuristic, not proof that every ship was found.
+
+**Locked / Заблокировано** entries are excluded. Rows whose status cannot be read are also skipped. Claim, destroyed and delivery entries are included when recognized. Models are deduplicated; an unlocked copy is kept even when another copy of that model is locked. Categories use UEX metadata with name-based rules as a fallback. Existing ship notes are preserved; scanning does not delete existing fleet entries.
+
+English and Russian Windows OCR are used together when installed. For Russian terminal statuses, install Russian OCR in Windows language settings. On other screens the button performs a single scan, even if periodic OCR is disabled. No retrieve, claim or purchase buttons are pressed. The overlay remains click-through outside its controls and checklist. OCR can fail on a hidden/minimized window, unreadable text or unsupported languages.
 
 ### Overlay controls and checklists
 
@@ -140,7 +144,7 @@ The force button runs one OCR scan even if periodic OCR is disabled. The overlay
 
 ## Privacy and game safety
 
-SC Nexus is an external, read-only helper. It does **not** use DLL injection, memory reading, process hooks, packet interception, or modifications to Star Citizen files.
+SC Nexus reads game files and background data without modifying them. The explicitly requested ASOP scan is the only game UI automation: it moves the pointer over recognized list text and sends mouse-wheel scrolling. It does **not** use DLL injection, memory reading, process hooks, packet interception, or modifications to Star Citizen files.
 
 OCR is disabled by default. When enabled, it only processes the visible Star Citizen window and releases the captured image after recognition. Application data is stored locally under `%LOCALAPPDATA%\SCNexus`.
 

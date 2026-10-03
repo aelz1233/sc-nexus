@@ -6,6 +6,31 @@ namespace SCNexus.Tests;
 public class FlightLogServiceTests
 {
     [Fact]
+    public async Task RepeatedDetectionUpdatesCategoryWithoutDuplicatingShipsOrLosingNotes()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var settings = new SettingsService(Path.Combine(directory, "fleet.db"));
+            await settings.LoadAsync();
+            var log = new FlightLogService(settings);
+            var original = await log.AddShipAsync("Guardian MX", 0, "Универсальный", "Мои заметки");
+            await Task.WhenAll(Enumerable.Range(0, 5).Select(_ =>
+                log.UpsertDetectedShipAsync("Guardian MX", 0, "Бой", "OCR")));
+            var ship = Assert.Single((await log.LoadAsync()).Ships).Ship;
+            Assert.Equal(original.Id, ship.Id);
+            Assert.Equal("Бой", ship.Role);
+            Assert.Equal("Мои заметки", ship.BuildNotes);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
     public async Task ExistingDatabaseCanTrackFleetAndActualProfitAcrossRestart()
     {
         var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));

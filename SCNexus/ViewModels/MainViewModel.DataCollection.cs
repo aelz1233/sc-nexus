@@ -12,6 +12,7 @@ namespace SCNexus.ViewModels;
 public partial class MainViewModel
 {
     private readonly HashSet<string> _fleetSyncPending = new(StringComparer.OrdinalIgnoreCase);
+    private readonly SemaphoreSlim _fleetSyncGate = new(1, 1);
     private DataCollectionSnapshot _lastDataSnapshot = new();
     private ObservedValue<decimal>? _lastAppliedBalance;
     private ObservedValue<string>? _lastAppliedLocation;
@@ -25,9 +26,11 @@ public partial class MainViewModel
 
     public bool IsEnglish => Language == "en";
     public string OcrShipDetectionTitle => IsEnglish ? "OCR ship detection" : "OCR и обнаружение корабля";
+    public string FleetScanHint => IsEnglish ? "ASOP: automatic list scrolling. Esc to stop. Locked or unreadable entries are skipped."
+        : "ASOP: автоматическая прокрутка списка. Esc — стоп. Заблокированные и нераспознанные строки пропускаются.";
     public string OcrShipDetectionGuide => IsEnglish
-        ? "Open ASOP, Fleet Manager or Vehicle Loadout with readable model names. Press Force ship detection, then switch to Star Citizen within 3 seconds. Only the active game window is scanned. Catalog matches are added to the detected fleet; the current ship is changed only with an explicit Current Ship label. OCR never controls the game."
-        : "Открой ASOP, «Мой флот» или Vehicle Loadout с читаемыми названиями моделей. Нажми «Принудительно обнаружить корабль» и за 3 секунды переключись в Star Citizen. Сканируется только активное окно игры. Модели из каталога добавляются в обнаруженный флот; текущий корабль меняется только при явной подписи Current Ship. OCR не управляет игрой.";
+        ? "Open the interactive ASOP fleet list and clear its search/filter first. Press Force ship detection and switch to the game within 3 seconds. Nexus reads the list, scrolls to the top and then down. Do not move the cursor during scanning; Esc, leaving the game or closing the terminal stops it. Locked entries and duplicates are excluded; claim/delivery entries are included. Ship categories come from the catalog. Other screens use one scan. No retrieve, claim or purchase buttons are pressed; the current ship still requires an explicit Current Ship label. Russian ASOP statuses require the Russian Windows OCR language."
+        : "Открой список флота в ASOP в режиме взаимодействия и сбрось его поиск/фильтры. Нажми «Принудительно обнаружить корабль» и за 3 секунды переключись в игру. Nexus прочитает список, прокрутит его вверх, затем вниз. Не двигай курсор во время проверки; Esc, уход из игры или закрытие терминала останавливают её. Заблокированные строки и повторы исключаются; восстановление и доставка учитываются. Категория берётся из каталога. На других экранах выполняется один скан. Кнопки вызова, восстановления и покупки не нажимаются; текущий корабль требует явной подписи Current Ship. Для русских статусов ASOP нужен русский язык Windows OCR.";
     public string OverlayDetectShipButtonText => IsEnglish ? "Force ship detection" : "Принудительно обнаружить корабль";
     public string[] Languages { get; } = ["Русский", "English"];
     public string SelectedLanguage
@@ -211,10 +214,13 @@ public partial class MainViewModel
 
     private async Task SyncDetectedFleetAsync(IEnumerable<DetectedShip> detectedShips)
     {
+        await _fleetSyncGate.WaitAsync();
+        try
+        {
         foreach (var detected in detectedShips.Where(x => x.Name.Confidence >= .8))
         {
             var raw = detected.Name.Value.Trim();
-            if (Ships.Any(x => x.Name.Equals(raw, StringComparison.OrdinalIgnoreCase)) || !_fleetSyncPending.Add(raw)) continue;
+            if (!_fleetSyncPending.Add(raw)) continue;
             try
             {
                 var normalized = raw.Replace('_', ' ').Replace('-', ' ');
@@ -225,11 +231,18 @@ public partial class MainViewModel
                      normalized.EndsWith(x.Name, StringComparison.OrdinalIgnoreCase))).ToArray();
                 if (matches.Length != 1) continue;
                 var vehicle = matches[0];
-                if (Ships.Any(x => x.Name.Equals(vehicle.Name, StringComparison.OrdinalIgnoreCase))) continue;
-                await flightLogService.AddShipAsync(vehicle.Name, (int)Math.Max(0, vehicle.Scu), VehicleCatalog.InferRole(vehicle),
+                var existing = Ships.FirstOrDefault(x => x.Name.Equals(vehicle.Name, StringComparison.OrdinalIgnoreCase));
+                var role = VehicleCatalog.InferRole(vehicle);
+                if (existing is not null && existing.Ship.Role == role && existing.Ship.CargoScu == (int)Math.Max(0, vehicle.Scu))
+                {
+                    if (detected.IsCurrent) SelectDetectedShip(vehicle.Name);
+                    continue;
+                }
+                var update = await flightLogService.UpsertDetectedShipAsync(vehicle.Name, (int)Math.Max(0, vehicle.Scu), role,
                     (IsEnglish ? "Detected automatically: " : "Обнаружен автоматически: ") + SourceName(detected.Name.Source));
-                await ReloadFlightLogAsync();
+                if (update.Changed) await ReloadFlightLogAsync();
                 if (detected.IsCurrent) SelectDetectedShip(vehicle.Name);
+                if (!update.Added) continue;
                 WorkspaceStatus = IsEnglish ? $"Added detected ship: {vehicle.Name}" : $"Обнаруженный корабль добавлен во флот: {vehicle.Name}";
                 RaiseNotification($"ship:{vehicle.Name}", IsEnglish ? "Ship detected" : "Обнаружен корабль",
                     vehicle.Name, NexusNotificationKind.Success, TimeSpan.FromHours(1));
@@ -237,6 +250,8 @@ public partial class MainViewModel
             catch (Exception ex) { WorkspaceStatus = ex.Message; }
             finally { _fleetSyncPending.Remove(raw); }
         }
+        }
+        finally { _fleetSyncGate.Release(); }
     }
 
     [RelayCommand]
@@ -260,14 +275,21 @@ public partial class MainViewModel
             return;
         }
 
-        ShipDetectionStatus = IsEnglish ? "Switch to Star Citizen. Scanning in 3 seconds…" : "Переключись в Star Citizen. Сканирование через 3 секунды…";
+        ShipDetectionStatus = IsEnglish ? "Switch to Star Citizen. Scanning in 3 seconds; ASOP will scroll automatically. Esc stops." : "Переключись в Star Citizen. Через 3 секунды проверка; список ASOP прокрутится автоматически. Esc — стоп.";
         DataProviderResult? result;
         try
         {
             await Task.Delay(3000);
             IsShipDetectionCapturing = true;
             await Task.Delay(150);
-            result = await dataCollectionService.RefreshOcrAsync();
+            result = await dataCollectionService.RefreshOcrAsync(scanFleet: true, progress: new Progress<FleetScanSummary>(scan =>
+                ShipDetectionStatus = IsEnglish ? $"Scanning ASOP: {scan.Models} models, {scan.Pages} screens. Esc to stop."
+                    : $"Сканирую ASOP: моделей {scan.Models}, экранов {scan.Pages}. Esc — стоп."));
+        }
+        catch (OperationCanceledException)
+        {
+            ShipDetectionStatus = IsEnglish ? "Scan stopped. Open ASOP and try again when ready." : "Сканирование остановлено. Открой ASOP и повтори, когда будешь готов.";
+            return;
         }
         catch (Exception ex)
         {
@@ -278,6 +300,17 @@ public partial class MainViewModel
         finally { IsShipDetectionCapturing = false; }
         var snapshot = dataCollectionService.Current;
         ApplyDataSnapshot(snapshot);
+        if (result?.FleetScan is { } scan)
+        {
+            await SyncDetectedFleetAsync(result.Records.Select(x => x.Value).OfType<DetectedShip>());
+            var stopped = scan.StopReason == "end-of-list"
+                ? (IsEnglish ? "List stopped changing." : "Список перестал прокручиваться.")
+                : (IsEnglish ? "Scan interrupted or limited; results may be incomplete." : "Сканирование прервано или достигнут лимит; список может быть неполным.");
+            ShipDetectionStatus = IsEnglish
+                ? $"ASOP: {scan.Models} unique models, {scan.Pages} screens. Locked/unreadable entries skipped. {stopped}"
+                : $"ASOP: уникальных моделей {scan.Models}, экранов {scan.Pages}. Заблокированные и нераспознанные строки пропущены. {stopped}";
+            return;
+        }
         var ocrStatus = result?.Status ?? "Waiting";
         var ship = result?.Values.FirstOrDefault(x => x.Key == "player.ship");
         if (ship is not null)
@@ -304,6 +337,8 @@ public partial class MainViewModel
                 "No text recognized" => IsEnglish
                     ? "No text was recognized. Open a ship screen with the model name and try again."
                     : "Текст не распознан. Открой экран корабля с названием модели и повтори.",
+                "Ship catalog unavailable" => IsEnglish ? "Ship catalog is unavailable. Connect to the internet and retry."
+                    : "Каталог кораблей недоступен. Подключись к интернету и повтори.",
                 _ => IsEnglish
                     ? "A ship name was not found. Open Vehicle Loadout, ASOP, Fleet Manager, or a HUD panel and try again."
                     : "Название корабля не найдено. Открой Vehicle Loadout, ASOP, «Мой флот» или HUD и повтори."
