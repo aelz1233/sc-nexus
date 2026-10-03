@@ -16,7 +16,7 @@
                     <Border Width="7" Height="7" Background="#69CFC0" CornerRadius="4" VerticalAlignment="Center" Margin="0,0,8,0" />
                     <TextBlock Text="SC NEXUS" Foreground="#F0F6FC" FontWeight="Bold" FontSize="13" />
                 </StackPanel>
-                <TextBlock Grid.Column="1" Text="LIVE" Foreground="#69CFC0" FontWeight="Bold" FontSize="11" />
+                <TextBlock Grid.Column="1" Text="{Binding OverlayEnvironmentDisplay}" Foreground="#69CFC0" FontWeight="Bold" FontSize="11" />
             </Grid>
             <TextBlock Text="{Binding OverlayShipDisplay}" Foreground="#DCE7F1" FontSize="13" FontWeight="SemiBold" Margin="0,11,0,0" TextTrimming="CharacterEllipsis"
                        Visibility="{Binding OverlayShowShip, Converter={StaticResource BoolVisibility}}" />

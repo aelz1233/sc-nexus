@@ -60,6 +60,21 @@ public sealed class SettingsService
 
     public NexusDbContext CreateDbContext() => new(_options);
 
+    internal async Task<T> InTransactionAsync<T>(Func<NexusDbContext, Task<T>> action)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            await using var db = CreateDbContext();
+            await using var transaction = await db.Database.BeginTransactionAsync();
+            var result = await action(db);
+            await db.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return result;
+        }
+        finally { _gate.Release(); }
+    }
+
     private static async Task ConfigureDatabaseAsync(NexusDbContext db)
     {
         await db.Database.ExecuteSqlRawAsync("PRAGMA busy_timeout=5000");
@@ -94,18 +109,40 @@ public sealed class SettingsService
             if (backup is null) throw original;
 
             SqliteConnection.ClearAllPools();
-            var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
-            var preserved = MoveAside(DatabasePath, $"{Path.GetFileNameWithoutExtension(DatabasePath)}-corrupt-{timestamp}.db");
-            MoveAside(DatabasePath + "-wal", $"{Path.GetFileNameWithoutExtension(DatabasePath)}-corrupt-{timestamp}.db-wal");
-            MoveAside(DatabasePath + "-shm", $"{Path.GetFileNameWithoutExtension(DatabasePath)}-corrupt-{timestamp}.db-shm");
-            if (!preserved && File.Exists(DatabasePath))
-                throw new IOException("Не удалось сохранить повреждённый файл базы перед восстановлением.");
-
-            File.Copy(backup, DatabasePath, overwrite: true);
-            DeleteIfExists(DatabasePath + "-wal");
-            DeleteIfExists(DatabasePath + "-shm");
+            var staged = DatabasePath + ".restore-" + Guid.NewGuid().ToString("N");
+            var preserved = Path.Combine(Path.GetDirectoryName(DatabasePath)!,
+                $"{Path.GetFileNameWithoutExtension(DatabasePath)}-corrupt-{DateTime.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}.db");
+            var moved = new List<(string Original, string Preserved)>();
+            try
+            {
+                // SQLite backup includes any committed WAL data. Prepare it before touching the original.
+                await using (var source = new SqliteConnection(new SqliteConnectionStringBuilder
+                    { DataSource = backup, Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString()))
+                await using (var target = new SqliteConnection(new SqliteConnectionStringBuilder
+                    { DataSource = staged, Pooling = false }.ToString()))
+                {
+                    await source.OpenAsync();
+                    await target.OpenAsync();
+                    source.BackupDatabase(target);
+                }
+                if (!await IsHealthyDatabaseAsync(staged)) throw new InvalidDataException("Резервная копия не содержит данных Nexus.");
+                foreach (var suffix in new[] { "", "-wal", "-shm" })
+                {
+                    if (!File.Exists(DatabasePath + suffix)) continue;
+                    File.Move(DatabasePath + suffix, preserved + suffix);
+                    moved.Add((DatabasePath + suffix, preserved + suffix));
+                }
+                File.Move(staged, DatabasePath);
+            }
+            catch
+            {
+                foreach (var item in moved.AsEnumerable().Reverse())
+                    File.Move(item.Preserved, item.Original);
+                throw;
+            }
+            finally { if (File.Exists(staged)) File.Delete(staged); }
             StartupRecoveryMessage = $"Повреждённая база восстановлена из резервной копии {Path.GetFileName(backup)}.";
-            AppLogService.Write("Database recovery", original);
+            AppLogService.Write($"Database recovery: {DatabasePath}; backup: {backup}", original);
         }
         catch (Exception recoveryError) when (!ReferenceEquals(recoveryError, original))
         {
@@ -138,24 +175,17 @@ public sealed class SettingsService
             await connection.OpenAsync();
             await using var command = connection.CreateCommand();
             command.CommandText = "PRAGMA quick_check";
-            return string.Equals(await command.ExecuteScalarAsync() as string, "ok", StringComparison.OrdinalIgnoreCase);
+            if (!string.Equals(await command.ExecuteScalarAsync() as string, "ok", StringComparison.OrdinalIgnoreCase)) return false;
+            command.CommandText = "SELECT Balance, CurrentShip, CurrentLocation FROM PersonalSettings WHERE Id = 1";
+            await using var reader = await command.ExecuteReaderAsync();
+            return await reader.ReadAsync() && !reader.IsDBNull(0) &&
+                decimal.TryParse(reader.GetString(0), System.Globalization.NumberStyles.Number,
+                    System.Globalization.CultureInfo.InvariantCulture, out _) &&
+                !reader.IsDBNull(1) && !reader.IsDBNull(2);
         }
         catch (SqliteException) { return false; }
         catch (IOException) { return false; }
         catch (UnauthorizedAccessException) { return false; }
-    }
-
-    private static bool MoveAside(string source, string destinationName)
-    {
-        if (!File.Exists(source)) return false;
-        var destination = Path.Combine(Path.GetDirectoryName(source)!, destinationName);
-        File.Move(source, destination, overwrite: false);
-        return true;
-    }
-
-    private static void DeleteIfExists(string path)
-    {
-        if (File.Exists(path)) File.Delete(path);
     }
 
     private static bool IsDatabaseCorruption(Exception exception)
@@ -336,8 +366,8 @@ public sealed class SettingsService
         await _gate.WaitAsync();
         try
         {
-            await using var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = DatabasePath }.ToString());
-            await using var target = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = destination }.ToString());
+            await using var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = DatabasePath, Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString());
+            await using var target = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = destination, Pooling = false }.ToString());
             await source.OpenAsync();
             await target.OpenAsync();
             source.BackupDatabase(target);
@@ -392,6 +422,8 @@ public sealed class SettingsService
             if (!File.Exists(destination)) await BackupAsync(destination);
 
             foreach (var old in Directory.EnumerateFiles(BackupDirectory, $"{Path.GetFileNameWithoutExtension(DatabasePath)}-*.db")
+                         .Where(path => DateOnly.TryParseExact(Path.GetFileNameWithoutExtension(path)[(Path.GetFileNameWithoutExtension(DatabasePath).Length + 1)..],
+                             "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _))
                          .OrderByDescending(File.GetLastWriteTimeUtc).Skip(7))
                 File.Delete(old);
         }

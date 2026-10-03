@@ -127,10 +127,11 @@ public partial class MainViewModel
                 : $"{value.SourceDisplay} • {value.AgeDisplay}";
         }
     }
-    public bool OverlayDanger => CurrentSystem.Equals("Pyro", StringComparison.OrdinalIgnoreCase) ||
+    public string OverlayEnvironmentDisplay => _lastDataSnapshot.Player.Environment?.Value ?? (IsEnglish ? "UNKNOWN" : "НЕИЗВЕСТНО");
+    public bool OverlayDanger => string.Equals(CurrentSystem, "Pyro", StringComparison.OrdinalIgnoreCase) ||
         (ActiveVoyageStop?.IsPyro ?? false) ||
         (ActiveVoyagePlan?.Trades.Any(x => x.Risky) ?? false);
-    public string OverlayDangerDisplay => CurrentSystem.Equals("Pyro", StringComparison.OrdinalIgnoreCase) ||
+    public string OverlayDangerDisplay => string.Equals(CurrentSystem, "Pyro", StringComparison.OrdinalIgnoreCase) ||
         (ActiveVoyageStop?.IsPyro ?? false)
         ? (IsEnglish ? "DANGER • PYRO" : "ОПАСНО • PYRO")
         : (IsEnglish ? "RISKY NQA TERMINAL" : "РИСК • ТЕРМИНАЛ NQA");
@@ -239,6 +240,7 @@ public partial class MainViewModel
 
     private void NotifyOverlayChanged()
     {
+        OnPropertyChanged(nameof(OverlayEnvironmentDisplay));
         OnPropertyChanged(nameof(OverlayShipDisplay));
         OnPropertyChanged(nameof(OverlayLocationDisplay));
         OnPropertyChanged(nameof(OverlayRouteHeading));

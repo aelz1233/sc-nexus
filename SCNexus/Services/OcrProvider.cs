@@ -24,42 +24,53 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
     public async Task<DataProviderResult> CollectAsync(DataProviderContext context, CancellationToken token)
     {
         if (!context.OcrEnabled) return new DataProviderResult { Status = "Disabled" };
-        var window = FindStarCitizenWindow();
-        if (window == IntPtr.Zero)
+        var window = GetForegroundWindow();
+        if (window == IntPtr.Zero || !IsStarCitizen(window))
             return new DataProviderResult { Status = "Waiting for Star Citizen foreground window" };
         var text = await CaptureAndRecognizeAsync(window, token);
         if (string.IsNullOrWhiteSpace(text)) return new DataProviderResult { Status = "No text recognized" };
-        var now = DateTimeOffset.UtcNow;
+        try { _vehicles ??= await gameDataService.GetVehiclesAsync(token); }
+        catch (HttpRequestException) { }
+        catch (InvalidDataException) { }
+        return ParseText(text, _vehicles ?? [], DateTimeOffset.UtcNow);
+    }
+
+    internal static DataProviderResult ParseText(string text, IReadOnlyList<VehicleCatalogItem> vehicles, DateTimeOffset now)
+    {
         var values = new List<ValueObservation>();
         var balance = BalancePattern().Match(text);
         if (balance.Success)
         {
             var cleaned = balance.Groups["value"].Value.Replace(" ", "").Replace(" ", "").Replace(",", "").Replace(".", "");
             if (decimal.TryParse(cleaned, NumberStyles.Integer, CultureInfo.InvariantCulture, out var amount))
-                values.Add(new ValueObservation("player.balance", amount.ToString(CultureInfo.InvariantCulture), Source, now, .78, "aUEC"));
+                values.Add(new ValueObservation("player.balance", amount.ToString(CultureInfo.InvariantCulture), DataSourceKind.Ocr, now, .78, "aUEC"));
         }
         AddTextValue(LocationPattern(), "player.location", text, now, values, .68);
-        AddTextValue(ShipPattern(), "player.ship", text, now, values, .66);
         var records = new List<TypedObservation>();
-        if (FleetScreenPattern().IsMatch(text))
+        var current = ShipPattern().Match(text);
+        var currentModel = current.Success ? vehicles.FirstOrDefault(v => v.IsSpaceship == 1 &&
+            (v.Name.Equals(current.Groups["value"].Value.Trim(), StringComparison.OrdinalIgnoreCase) ||
+             v.NameFull.Equals(current.Groups["value"].Value.Trim(), StringComparison.OrdinalIgnoreCase))) : null;
+        if (currentModel is not null)
+            values.Add(new ValueObservation("player.ship", currentModel.Name, DataSourceKind.Ocr, now, .82));
+        if (FleetScreenPattern().IsMatch(text) || currentModel is not null)
         {
-            try
+            // Match whole names; a Guardian MX entry must not also create Guardian.
+            var remaining = text;
+            foreach (var vehicle in vehicles.Where(x => x.IsSpaceship == 1 && x.Name.Length >= 4)
+                         .DistinctBy(x => x.Name).OrderByDescending(x => x.Name.Length))
             {
-                _vehicles ??= await gameDataService.GetVehiclesAsync(token);
-                foreach (var vehicle in _vehicles.Where(x => x.IsSpaceship == 1 && x.Name.Length >= 4 &&
-                             text.Contains(x.Name, StringComparison.OrdinalIgnoreCase)).DistinctBy(x => x.Name))
+                var pattern = new Regex(@"(?<![\p{L}\p{N}])" + Regex.Escape(vehicle.Name).Replace(@"\ ", @"\s+") + @"(?![\p{L}\p{N}])", RegexOptions.IgnoreCase);
+                if (!pattern.IsMatch(remaining)) continue;
+                remaining = pattern.Replace(remaining, " ");
+                var id = "ocr-ship-" + vehicle.Id;
+                var detected = new DetectedShip
                 {
-                    var id = "ocr-ship-" + vehicle.Id;
-                    var detected = new DetectedShip
-                    {
-                        Id = id, Name = new ObservedValue<string>(vehicle.Name, Source, now, .82), IsCurrent = false,
-                        Role = new ObservedValue<string>(VehicleCatalog.InferRole(vehicle), Source, now, .7)
-                    };
-                    records.Add(new TypedObservation("ship", id, detected, Source, now, .82));
-                }
+                    Id = id, Name = new ObservedValue<string>(vehicle.Name, DataSourceKind.Ocr, now, .82), IsCurrent = vehicle == currentModel,
+                    Role = new ObservedValue<string>(VehicleCatalog.InferRole(vehicle), DataSourceKind.Ocr, now, .7)
+                };
+                records.Add(new TypedObservation("ship", id, detected, DataSourceKind.Ocr, now, .82));
             }
-            catch (HttpRequestException) { }
-            catch (InvalidDataException) { }
         }
         return new DataProviderResult
         {
@@ -91,11 +102,15 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
             token.ThrowIfCancellationRequested();
             using var random = encoded.AsRandomAccessStream();
             var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(random);
-            using var softwareBitmap = await decoder.GetSoftwareBitmapAsync(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied);
-            var engine = OcrEngine.TryCreateFromUserProfileLanguages();
-            if (engine is null) return "";
+            var ratio = Math.Min(1d, (double)OcrEngine.MaxImageDimension / Math.Max(decoder.PixelWidth, decoder.PixelHeight));
+            var transform = new BitmapTransform { ScaledWidth = (uint)Math.Max(1, decoder.PixelWidth * ratio), ScaledHeight = (uint)Math.Max(1, decoder.PixelHeight * ratio) };
+            using var softwareBitmap = await decoder.GetSoftwareBitmapAsync(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied,
+                transform, ExifOrientationMode.IgnoreExifOrientation, ColorManagementMode.DoNotColorManage);
+            var engine = OcrEngine.TryCreateFromLanguage(new Windows.Globalization.Language("en-US")) ?? OcrEngine.TryCreateFromUserProfileLanguages();
+            if (engine is null) throw new InvalidOperationException("Windows OCR language is not installed");
             var result = await engine.RecognizeAsync(softwareBitmap);
-            return result.Text;
+            token.ThrowIfCancellationRequested();
+            return string.Join("\n", result.Lines.Select(x => x.Text));
         }
         finally
         {
@@ -118,35 +133,13 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
     private static bool IsStarCitizen(IntPtr window)
     {
         GetWindowThreadProcessId(window, out var processId);
-        try { return Process.GetProcessById((int)processId).ProcessName.Equals("StarCitizen", StringComparison.OrdinalIgnoreCase); }
+        try { using var process = Process.GetProcessById((int)processId); return process.ProcessName.Equals("StarCitizen", StringComparison.OrdinalIgnoreCase); }
         catch (ArgumentException) { return false; }
     }
 
-    private static IntPtr FindStarCitizenWindow()
-    {
-        var foreground = GetForegroundWindow();
-        if (foreground != IntPtr.Zero && IsStarCitizen(foreground)) return foreground;
-
-        if (foreground == IntPtr.Zero || !IsNexusWindow(foreground)) return IntPtr.Zero;
-        var processes = Process.GetProcessesByName("StarCitizen");
-        try
-        {
-            return processes.Select(x => x.MainWindowHandle)
-                .FirstOrDefault(x => x != IntPtr.Zero && IsWindowVisible(x) && !IsIconic(x));
-        }
-        finally { foreach (var process in processes) process.Dispose(); }
-    }
-
-    private static bool IsNexusWindow(IntPtr window)
-    {
-        GetWindowThreadProcessId(window, out var processId);
-        try { return Process.GetProcessById((int)processId).ProcessName.Equals("SCNexus", StringComparison.OrdinalIgnoreCase); }
-        catch (ArgumentException) { return false; }
-    }
-
-    [GeneratedRegex(@"(?<value>[0-9][0-9\s .,]{2,})\s*aUEC", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex BalancePattern();
+    [GeneratedRegex(@"(?:Balance|Wallet|Баланс)[ \t]*[:\-]?[ \t]*(?<value>[0-9][0-9 \t .,]*)[ \t]*aUEC", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex BalancePattern();
     [GeneratedRegex(@"(?:Current\s+Location|Location|Текущая\s+локация|Локация)\s*[:\-]?\s*(?<value>[^\r\n]{2,80})", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex LocationPattern();
-    [GeneratedRegex(@"(?:Current\s+Ship|Ship|Vehicle|Текущий\s+корабль|Корабль)\s*[:\-]?\s*(?<value>[^\r\n]{2,80})", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex ShipPattern();
+    [GeneratedRegex(@"^(?:Current[ \t]+Ship|Текущий[ \t]+корабль)[ \t]*[:\-][ \t]*(?<value>[^\r\n]{2,80})$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Multiline)] private static partial Regex ShipPattern();
     [GeneratedRegex(@"(ASOP|Vehicle\s+Loadout|Fleet\s+Manager|Retrieve\s+Vehicle|Мой\s+флот|Корабли)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex FleetScreenPattern();
 
     [StructLayout(LayoutKind.Sequential)] private struct POINT { public int X; public int Y; }
@@ -158,8 +151,6 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
     }
     [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
-    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool IsWindowVisible(IntPtr window);
-    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool IsIconic(IntPtr window);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetClientRect(IntPtr window, out RECT rect);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool ClientToScreen(IntPtr window, ref POINT point);
     [DllImport("user32.dll")] private static extern IntPtr GetDC(IntPtr window);

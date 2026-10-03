@@ -11,25 +11,23 @@ public partial class OverlayWindow : Window
 {
     private const double BaseWidth = 460;
     private const int GwlExStyle = -20;
-    private const int WmNcHitTest = 0x0084;
-    private const int HtClient = 1;
-    private const int HtTransparent = -1;
     private const long WsExTransparent = 0x00000020L;
     private const long WsExToolWindow = 0x00000080L;
     private const long WsExNoActivate = 0x08000000L;
     private bool _dragging;
-    private HwndSource? _source;
+    private OverlayActionWindow? _actionWindow;
 
     public OverlayWindow()
     {
         InitializeComponent();
         SourceInitialized += (_, _) =>
         {
-            _source = PresentationSource.FromVisual(this) as HwndSource;
-            _source?.AddHook(WindowMessageHook);
             MakePassive();
         };
-        Closed += (_, _) => _source?.RemoveHook(WindowMessageHook);
+        Closed += (_, _) => { _actionWindow?.Close(); _actionWindow = null; };
+        IsVisibleChanged += (_, _) => UpdateActionWindow();
+        LocationChanged += (_, _) => UpdateActionWindow();
+        LayoutUpdated += (_, _) => UpdateActionWindow();
         Loaded += (_, _) => PositionAtWorkAreaEdge();
         SizeChanged += (_, _) => PositionAtWorkAreaEdge();
         MouseLeftButtonDown += OnMouseLeftButtonDown;
@@ -82,13 +80,14 @@ public partial class OverlayWindow : Window
         if (editable) style &= ~(WsExTransparent | WsExNoActivate);
         else
         {
-            // Let WM_NCHITTEST keep only the OCR button interactive; every other pixel passes through to the game.
-            style &= ~WsExTransparent;
-            style |= WsExNoActivate;
+            // HTTRANSPARENT only passes to windows on the same thread. This style also works with the game.
+            style |= WsExTransparent | WsExNoActivate;
         }
         SetWindowLongPtr(handle, GwlExStyle, new IntPtr(style));
         Focusable = editable;
         Cursor = editable ? Cursors.SizeAll : Cursors.Arrow;
+        DetectShipButton.Opacity = editable ? 1 : 0;
+        UpdateActionWindow();
     }
 
     private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -105,21 +104,23 @@ public partial class OverlayWindow : Window
         }
     }
 
-    private IntPtr WindowMessageHook(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
+    private void UpdateActionWindow()
     {
-        if (message != WmNcHitTest || DataContext is not MainViewModel { OverlayEditMode: false }) return IntPtr.Zero;
-        if (!DetectShipButton.IsVisible || !DetectShipButton.IsEnabled)
+        if (!IsVisible || DataContext is not MainViewModel { OverlayEditMode: false, OverlayExpanded: true } vm ||
+            !DetectShipButton.IsVisible || DetectShipButton.ActualWidth <= 0)
         {
-            handled = true;
-            return new IntPtr(HtTransparent);
+            _actionWindow?.Hide();
+            return;
         }
-        var raw = lParam.ToInt64();
-        var screenPoint = new Point((short)(raw & 0xffff), (short)((raw >> 16) & 0xffff));
-        var point = PointFromScreen(screenPoint);
-        var buttonBounds = DetectShipButton.TransformToAncestor(this).TransformBounds(
-            new Rect(0, 0, DetectShipButton.ActualWidth, DetectShipButton.ActualHeight));
-        handled = true;
-        return buttonBounds.Contains(point) ? new IntPtr(HtClient) : new IntPtr(HtTransparent);
+        _actionWindow ??= new OverlayActionWindow { Owner = this, DataContext = vm };
+        var bounds = DetectShipButton.TransformToAncestor(this).TransformBounds(
+            new Rect(DetectShipButton.RenderSize));
+        _actionWindow.Left = Left + bounds.Left;
+        _actionWindow.Top = Top + bounds.Top;
+        _actionWindow.Width = bounds.Width;
+        _actionWindow.Height = bounds.Height;
+        _actionWindow.Opacity = Math.Clamp(vm.OverlayTextOpacity, .65, 1);
+        if (!_actionWindow.IsVisible) _actionWindow.Show();
     }
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]

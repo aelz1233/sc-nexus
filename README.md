@@ -115,8 +115,8 @@ To identify a ship:
 
 1. Open Star Citizen and keep its window visible.
 2. Open **Vehicle Loadout**, **ASOP**, **Fleet Manager**, a retrieval screen, or a HUD panel that displays the ship model name.
-3. Expand the in-game SC Nexus overlay and select **Force ship detection**.
-4. Read the result below the button. When a known model is found, Nexus adds it to the detected fleet or selects it when enough evidence is available.
+3. Expand the in-game SC Nexus overlay and select **Force ship detection**. Switch to Star Citizen within three seconds; the game must be the foreground window.
+4. Read the result below the button. Catalog matches on fleet screens are added to the detected fleet. OCR changes the current ship only with an explicit **Current Ship** label and an exact catalog match; it cannot infer which ship you are flying from a list of ships.
 
 The force button runs one OCR scan even if periodic OCR is disabled. The overlay remains click-through outside that single button, so normal game input is not blocked. OCR can fail on a hidden or minimized game window, low-contrast text, unsupported UI languages, or screens without a recognizable model name.
 

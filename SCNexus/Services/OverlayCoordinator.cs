@@ -57,7 +57,7 @@ public sealed class OverlayCoordinator : IDisposable
     {
         if (e.PropertyName is nameof(MainViewModel.OverlayEnabled) or nameof(MainViewModel.OverlayPreview)
             or nameof(MainViewModel.IsGameRunning) or nameof(MainViewModel.OverlayHotkeyVisible)
-            or nameof(MainViewModel.OverlaySuppressed)) Reevaluate();
+            or nameof(MainViewModel.OverlaySuppressed) or nameof(MainViewModel.IsShipDetectionCapturing)) Reevaluate();
         else if (e.PropertyName == nameof(MainViewModel.OverlayHotkey)) RegisterSelectedHotkey();
         else if (e.PropertyName is nameof(MainViewModel.OverlayExpanded) or nameof(MainViewModel.OverlayOpacity)
                  or nameof(MainViewModel.OverlayTextOpacity) or nameof(MainViewModel.OverlayScale)
@@ -169,7 +169,7 @@ public sealed class OverlayCoordinator : IDisposable
         }
         var visible = _viewModel.OverlayPreview || _viewModel.OverlayEditMode || _viewModel.OverlayHotkeyVisible ||
             (_viewModel.OverlayEnabled && _viewModel.IsGameRunning && !_viewModel.OverlaySuppressed);
-        if (!visible)
+        if (!visible || _viewModel.IsShipDetectionCapturing)
         {
             _window?.Hide();
             return;

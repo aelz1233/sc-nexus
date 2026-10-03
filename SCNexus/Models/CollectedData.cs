@@ -167,6 +167,9 @@ public sealed class DataSourceInfo
             if (Status == "Read access denied") return "Нет доступа на чтение";
             if (Status == "Cached market data") return "Сохранённые рыночные данные";
             if (Status == "Waiting for current ship") return "Ожидание текущего корабля";
+            if (Status == "Waiting for Star Citizen foreground window") return "Ожидание активного окна Star Citizen";
+            if (Status == "No text recognized") return "Текст не распознан";
+            if (Status == "Screen read; no supported values found") return "Экран прочитан, подходящие данные не найдены";
             if (Status == "No manual fallback values") return "Ручные резервные значения не заданы";
             if (Status.StartsWith("Read-only: ")) return Status.Replace("Read-only: ", "Только чтение: ");
             if (Status.StartsWith("Processed ")) return Status.Replace("Processed ", "Обработано ").Replace(" new lines", " новых строк");

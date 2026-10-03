@@ -267,7 +267,7 @@ public partial class MainWindow : Window
         _notifyIcon.ShowBalloonTip(2500);
     }
 
-    private void RestoreFromTray()
+    internal void RestoreFromTray()
     {
         ShowInTaskbar = true;
         Show();

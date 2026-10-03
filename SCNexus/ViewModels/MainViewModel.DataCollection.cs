@@ -13,6 +13,10 @@ public partial class MainViewModel
 {
     private readonly HashSet<string> _fleetSyncPending = new(StringComparer.OrdinalIgnoreCase);
     private DataCollectionSnapshot _lastDataSnapshot = new();
+    private ObservedValue<decimal>? _lastAppliedBalance;
+    private ObservedValue<string>? _lastAppliedLocation;
+    private ObservedValue<string>? _lastAppliedSystem;
+    private ObservedValue<string>? _lastAppliedShip;
     [ObservableProperty] private bool ocrEnabled;
     [ObservableProperty] private string dataCollectionStatus = "Источники данных запускаются…";
     [ObservableProperty] private bool needsManualGamePath = true;
@@ -22,8 +26,8 @@ public partial class MainViewModel
     public bool IsEnglish => Language == "en";
     public string OcrShipDetectionTitle => IsEnglish ? "OCR ship detection" : "OCR и обнаружение корабля";
     public string OcrShipDetectionGuide => IsEnglish
-        ? "To identify a ship, open Star Citizen and show a screen with its model name: Vehicle Loadout, ASOP, Fleet Manager, or a HUD panel. Keep the game visible, then use \"Force ship detection\" in the expanded overlay. OCR reads only the visible screen and never controls the game."
-        : "Чтобы определить корабль, открой Star Citizen и покажи экран с названием модели: Vehicle Loadout, ASOP, «Мой флот» или HUD. Оставь игру видимой и нажми «Принудительно обнаружить корабль» в расширенном оверлее. OCR читает только видимый экран и не управляет игрой.";
+        ? "Open ASOP, Fleet Manager or Vehicle Loadout with readable model names. Press Force ship detection, then switch to Star Citizen within 3 seconds. Only the active game window is scanned. Catalog matches are added to the detected fleet; the current ship is changed only with an explicit Current Ship label. OCR never controls the game."
+        : "Открой ASOP, «Мой флот» или Vehicle Loadout с читаемыми названиями моделей. Нажми «Принудительно обнаружить корабль» и за 3 секунды переключись в Star Citizen. Сканируется только активное окно игры. Модели из каталога добавляются в обнаруженный флот; текущий корабль меняется только при явной подписи Current Ship. OCR не управляет игрой.";
     public string OverlayDetectShipButtonText => IsEnglish ? "Force ship detection" : "Принудительно обнаружить корабль";
     public string[] Languages { get; } = ["Русский", "English"];
     public string SelectedLanguage
@@ -50,7 +54,7 @@ public partial class MainViewModel
             var mission = _lastDataSnapshot.Missions.FirstOrDefault(x =>
                 x.Status.Value.Equals("active", StringComparison.OrdinalIgnoreCase));
             return mission is null ? (IsEnglish ? "No active mission detected" : "Активная миссия не обнаружена")
-                : $"{mission.Name.Value} • {mission.StatusDisplay}";
+                : $"{mission.Name.Value} • {mission.StatusDisplay} • {mission.Status.AgeDisplay}";
         }
     }
 
@@ -145,14 +149,32 @@ public partial class MainViewModel
             : IsEnglish ? $"Sessions found: {sessions.Length}" : $"Найдено сессий: {sessions.Length}";
 
         var player = snapshot.Player;
-        if (player.CurrentLocation is { Confidence: >= .75 } location && IsFresh(location, TimeSpan.FromMinutes(30)))
+        if (player.CurrentLocation is { Confidence: >= .75 } location && location.Source != DataSourceKind.Manual &&
+            location != _lastAppliedLocation && IsFresh(location, TimeSpan.FromMinutes(30)))
         {
+            _lastAppliedLocation = location;
             CurrentLocation = location.Value;
             LocationQuery = location.Value;
         }
-        if (player.CurrentSystem is { Confidence: >= .75 } system && IsFresh(system, TimeSpan.FromMinutes(30))) CurrentSystem = system.Value;
-        if (player.CurrentShip is { Confidence: >= .8 } ship && IsFresh(ship, TimeSpan.FromMinutes(30))) SelectDetectedShip(ship.Value);
-        if (player.Balance is { Confidence: >= .9 } balance && balance.Value >= 0 && IsFresh(balance, TimeSpan.FromHours(1))) Balance = balance.Value;
+        if (player.CurrentSystem is { Confidence: >= .75 } system && system.Source != DataSourceKind.Manual &&
+            system != _lastAppliedSystem && IsFresh(system, TimeSpan.FromMinutes(30)))
+        {
+            _lastAppliedSystem = system;
+            CurrentSystem = system.Value;
+        }
+        if (player.CurrentShip is { Confidence: >= .8 } ship && ship.Source != DataSourceKind.Manual &&
+            ship != _lastAppliedShip && IsFresh(ship, TimeSpan.FromMinutes(30)) && Ships.Any(x => x.Name.Equals(ship.Value, StringComparison.OrdinalIgnoreCase)))
+        {
+            _lastAppliedShip = ship;
+            SelectDetectedShip(ship.Value);
+        }
+        if (player.Balance is { Confidence: >= .9 } balance && balance.Value >= 0 &&
+            balance.Source is not (DataSourceKind.Manual or DataSourceKind.NexusHistory) &&
+            IsFresh(balance, TimeSpan.FromHours(1)) && balance != _lastAppliedBalance)
+        {
+            _lastAppliedBalance = balance;
+            Balance = balance.Value;
+        }
         if (player.Environment is { } environment)
             DataCollectionStatus = IsEnglish
                 ? $"{environment.Value} • {snapshot.Sources.Count(x => x.IsAvailable)}/{snapshot.Sources.Count} sources"
@@ -205,8 +227,9 @@ public partial class MainViewModel
                 var vehicle = matches[0];
                 if (Ships.Any(x => x.Name.Equals(vehicle.Name, StringComparison.OrdinalIgnoreCase))) continue;
                 await flightLogService.AddShipAsync(vehicle.Name, (int)Math.Max(0, vehicle.Scu), VehicleCatalog.InferRole(vehicle),
-                    IsEnglish ? "Detected automatically from Game.log" : "Обнаружен автоматически из Game.log");
+                    (IsEnglish ? "Detected automatically: " : "Обнаружен автоматически: ") + SourceName(detected.Name.Source));
                 await ReloadFlightLogAsync();
+                if (detected.IsCurrent) SelectDetectedShip(vehicle.Name);
                 WorkspaceStatus = IsEnglish ? $"Added detected ship: {vehicle.Name}" : $"Обнаруженный корабль добавлен во флот: {vehicle.Name}";
                 RaiseNotification($"ship:{vehicle.Name}", IsEnglish ? "Ship detected" : "Обнаружен корабль",
                     vehicle.Name, NexusNotificationKind.Success, TimeSpan.FromHours(1));
@@ -224,6 +247,8 @@ public partial class MainViewModel
         await dataCollectionService.RefreshAsync(OcrEnabled);
     }
 
+    [ObservableProperty] private bool isShipDetectionCapturing;
+
     [RelayCommand]
     private async Task DetectShipFromOverlayAsync()
     {
@@ -235,19 +260,33 @@ public partial class MainViewModel
             return;
         }
 
-        ShipDetectionStatus = IsEnglish ? "Reading the visible Star Citizen screen…" : "Считываю видимый экран Star Citizen…";
-        var completed = await dataCollectionService.RefreshOcrAsync();
+        ShipDetectionStatus = IsEnglish ? "Switch to Star Citizen. Scanning in 3 seconds…" : "Переключись в Star Citizen. Сканирование через 3 секунды…";
+        DataProviderResult? result;
+        try
+        {
+            await Task.Delay(3000);
+            IsShipDetectionCapturing = true;
+            await Task.Delay(150);
+            result = await dataCollectionService.RefreshOcrAsync();
+        }
+        catch (Exception ex)
+        {
+            AppLogService.Write("Manual ship detection failed", ex);
+            ShipDetectionStatus = IsEnglish ? "Scan failed. Check the data source status." : "Не удалось выполнить проверку. Проверь состояние источников данных.";
+            return;
+        }
+        finally { IsShipDetectionCapturing = false; }
         var snapshot = dataCollectionService.Current;
         ApplyDataSnapshot(snapshot);
-        var ocrStatus = snapshot.Sources.FirstOrDefault(x => x.Source == DataSourceKind.Ocr)?.Status ?? "Waiting";
-        var ship = snapshot.Player.CurrentShip;
-        if (ship is { Source: DataSourceKind.Ocr })
+        var ocrStatus = result?.Status ?? "Waiting";
+        var ship = result?.Values.FirstOrDefault(x => x.Key == "player.ship");
+        if (ship is not null)
         {
             ShipDetectionStatus = IsEnglish ? $"Ship detected: {ship.Value}." : $"Корабль определён: {ship.Value}.";
             return;
         }
 
-        var fleet = snapshot.Ships.Where(x => x.Name.Source == DataSourceKind.Ocr).Take(3).Select(x => x.Name.Value).ToArray();
+        var fleet = result?.Records.Select(x => x.Value).OfType<DetectedShip>().Take(3).Select(x => x.Name.Value).ToArray() ?? [];
         if (fleet.Length > 0)
         {
             var names = string.Join(", ", fleet);
@@ -255,13 +294,13 @@ public partial class MainViewModel
             return;
         }
 
-        ShipDetectionStatus = !completed
-            ? (IsEnglish ? "OCR is already scanning. Try again in a moment." : "OCR уже выполняет проверку. Повтори через мгновение.")
+        ShipDetectionStatus = result is null
+            ? (IsEnglish ? "Scan unavailable. Check OCR source status and try again." : "Проверка недоступна. Проверь состояние OCR и повтори.")
             : ocrStatus switch
             {
                 "Waiting for Star Citizen foreground window" => IsEnglish
-                    ? "Keep Star Citizen visible; the overlay itself may stay on top."
-                    : "Оставь окно Star Citizen видимым; оверлей можно оставить поверх игры.",
+                    ? "Switch to Star Citizen before scanning. It must be the foreground window."
+                    : "Перед сканированием переключись в Star Citizen. Окно игры должно быть активным.",
                 "No text recognized" => IsEnglish
                     ? "No text was recognized. Open a ship screen with the model name and try again."
                     : "Текст не распознан. Открой экран корабля с названием модели и повтори.",

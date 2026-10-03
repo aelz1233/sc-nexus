@@ -19,6 +19,14 @@ public class SettingsServiceTests
             Directory.CreateDirectory(service.BackupDirectory);
             await service.BackupAsync(Path.Combine(service.BackupDirectory, "nexus-2026-10-02.db"));
 
+            await using (var connection = new SqliteConnection($"Data Source={path};Pooling=False"))
+            {
+                await connection.OpenAsync();
+                await using var checkpoint = connection.CreateCommand();
+                checkpoint.CommandText = "PRAGMA wal_checkpoint(TRUNCATE)";
+                await checkpoint.ExecuteNonQueryAsync();
+            }
+
             SqliteConnection.ClearAllPools();
             await File.WriteAllTextAsync(path, "this is not a sqlite database");
 

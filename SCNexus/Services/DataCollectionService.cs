@@ -28,10 +28,10 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
     public async Task RefreshAsync(bool ocrEnabled, CancellationToken token = default) =>
         await Task.WhenAll(_providers.Select(x => CollectProviderAsync(x, ocrEnabled, token, true)));
 
-    public async Task<bool> RefreshOcrAsync(CancellationToken token = default)
+    public async Task<DataProviderResult?> RefreshOcrAsync(CancellationToken token = default)
     {
         var provider = _providers.FirstOrDefault(x => x.Source == DataSourceKind.Ocr);
-        return provider is not null && await CollectProviderAsync(provider, ocrEnabled: true, token, forceRefresh: true);
+        return provider is null ? null : await CollectProviderAsync(provider, ocrEnabled: true, token, forceRefresh: true);
     }
 
     private async Task WatchProviderAsync(IDataProvider provider, Func<bool> monitoringEnabled,
@@ -52,7 +52,7 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
         }
     }
 
-    private async Task<bool> CollectProviderAsync(IDataProvider provider, bool ocrEnabled, CancellationToken token,
+    private async Task<DataProviderResult?> CollectProviderAsync(IDataProvider provider, bool ocrEnabled, CancellationToken token,
         bool forceRefresh = false)
     {
         SemaphoreSlim gate;
@@ -61,7 +61,7 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
             if (!_providerGates.TryGetValue(provider.Name, out gate!))
                 _providerGates[provider.Name] = gate = new SemaphoreSlim(1, 1);
         }
-        if (!await gate.WaitAsync(0, token)) return false;
+        if (!await gate.WaitAsync(0, token)) return null;
         try
         {
             var now = DateTimeOffset.UtcNow;
@@ -82,6 +82,7 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
                 await history.SaveAsync(result.Values.Where(x => x.Source != DataSourceKind.NexusHistory),
                     result.Records.Where(x => x.Source != DataSourceKind.NexusHistory), timeout.Token);
                 Publish(provider, now, true, result.Status, result.Values, result.Records, known?.LastSuccess, known);
+                return result;
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
             catch (OperationCanceledException)
@@ -91,7 +92,7 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
             catch (Exception ex) { Publish(provider, now, false, FriendlyError(ex), [], [], known?.LastSuccess); }
         }
         finally { gate.Release(); }
-        return true;
+        return null;
     }
 
     private void PublishPaused(IDataProvider provider)

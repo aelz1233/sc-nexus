@@ -13,6 +13,10 @@ public partial class App : System.Windows.Application
 {
     private ServiceProvider? _services;
     private readonly CancellationTokenSource _gameLogCancellation = new();
+    private Mutex? _instanceMutex;
+    private EventWaitHandle? _activationEvent;
+    private RegisteredWaitHandle? _activationWait;
+    private bool _ownsInstance;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -27,6 +31,23 @@ public partial class App : System.Windows.Application
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("ru-RU");
         try
         {
+            // All installations for this Windows user share the same database and hotkey.
+            var instanceName = @"Local\SCNexus-" + System.Security.Principal.WindowsIdentity.GetCurrent().User?.Value;
+            _activationEvent = new EventWaitHandle(false, EventResetMode.AutoReset, instanceName + "-Activate");
+            _instanceMutex = new Mutex(false, instanceName);
+            try { _ownsInstance = _instanceMutex.WaitOne(0); }
+            catch (AbandonedMutexException) { _ownsInstance = true; }
+            if (!_ownsInstance)
+            {
+                _activationEvent.Set();
+                Shutdown();
+                return;
+            }
+            _activationWait = ThreadPool.RegisterWaitForSingleObject(_activationEvent, (_, _) =>
+            {
+                if (!Dispatcher.HasShutdownStarted)
+                    Dispatcher.BeginInvoke(() => (MainWindow as SCNexus.MainWindow)?.RestoreFromTray());
+            }, null, Timeout.Infinite, false);
             var collection = new ServiceCollection();
             collection.AddSingleton<SettingsService>();
             collection.AddSingleton(new HttpClient(new HttpClientHandler
@@ -98,6 +119,10 @@ public partial class App : System.Windows.Application
         _gameLogCancellation.Cancel();
         _gameLogCancellation.Dispose();
         _services?.Dispose();
+        _activationWait?.Unregister(null);
+        _activationEvent?.Dispose();
+        if (_ownsInstance) _instanceMutex?.ReleaseMutex();
+        _instanceMutex?.Dispose();
         base.OnExit(e);
     }
 }

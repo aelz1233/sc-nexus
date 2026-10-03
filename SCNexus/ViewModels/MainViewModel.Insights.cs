@@ -131,6 +131,7 @@ public partial class MainViewModel
     {
         foreach (var source in sources)
         {
+            if (source.Status is "Paused" or "Disabled" or "Updating" || source.Status.StartsWith("Waiting", StringComparison.Ordinal)) continue;
             if (!_knownSourceAvailability.TryGetValue(source.Name, out var previous))
             {
                 _knownSourceAvailability[source.Name] = source.IsAvailable;
@@ -138,7 +139,6 @@ public partial class MainViewModel
             }
             if (previous == source.IsAvailable) continue;
             _knownSourceAvailability[source.Name] = source.IsAvailable;
-            if (source.Status is "Paused" or "Disabled") continue;
             RaiseNotification($"source:{source.Name}:{source.IsAvailable}",
                 source.IsAvailable
                     ? (IsEnglish ? "Data source restored" : "Источник данных восстановлен")

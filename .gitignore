@@ -11,6 +11,7 @@ dist/
 .tools/
 publish/
 .catalog-probe/
+.audit-build/
 *.db
 *.db-shm
 *.db-wal

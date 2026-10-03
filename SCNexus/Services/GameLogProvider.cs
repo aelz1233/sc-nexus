@@ -116,8 +116,8 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
         var complete = endsWithLineBreak ? lines.Length : Math.Max(0, lines.Length - 1);
         for (var i = 0; i < complete; i++) yield return new LogLine(lines[i], cursor.Generation);
         var partial = endsWithLineBreak || lines.Length == 0 ? "" : lines[^1];
-        _cursors[path] = new Cursor(stream.Length, partial, creation, cursor.Generation);
-        if (!active && string.IsNullOrEmpty(partial)) _cursors[path] = new Cursor(stream.Length, "", creation, cursor.Generation);
+        _cursors[path] = new Cursor(stream.Position, partial, creation, cursor.Generation);
+        if (!active && string.IsNullOrEmpty(partial)) _cursors[path] = new Cursor(stream.Position, "", creation, cursor.Generation);
     }
 
     private void ParseLine(string line, string logIdentity, List<ValueObservation> values,

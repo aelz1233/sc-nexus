@@ -59,33 +59,45 @@ public sealed class FlightLogService(SettingsService settingsService)
     }
 
     public async Task<FlightRecord> FinishFlightAsync(int id, decimal investment, decimal revenue,
-        decimal expenses, decimal losses, DateTime? endedAtUtc = null)
+        decimal expenses, decimal losses, DateTime? endedAtUtc = null, bool updateBalance = false)
     {
         if (investment < 0 || revenue < 0 || expenses < 0 || losses < 0)
             throw new ArgumentException("Суммы не могут быть отрицательными.");
-        await using var db = settingsService.CreateDbContext();
-        var flight = await db.FlightRecords.FindAsync(id) ?? throw new InvalidOperationException("Рейс не найден.");
-        if (flight.EndedAtUtc != null) throw new InvalidOperationException("Рейс уже завершён.");
-        var end = endedAtUtc ?? DateTime.UtcNow;
-        if (end <= flight.StartedAtUtc) throw new ArgumentException("Время завершения должно быть позже начала.");
-        flight.Investment = investment;
-        flight.Revenue = revenue;
-        flight.Expenses = expenses;
-        flight.Losses = losses;
-        flight.EndedAtUtc = end;
-        await db.SaveChangesAsync();
-        return flight;
+        return await settingsService.InTransactionAsync(async db =>
+        {
+            var flight = await db.FlightRecords.FindAsync(id) ?? throw new InvalidOperationException("Рейс не найден.");
+            if (flight.EndedAtUtc != null) throw new InvalidOperationException("Рейс уже завершён.");
+            var end = endedAtUtc ?? DateTime.UtcNow;
+            if (end <= flight.StartedAtUtc) throw new ArgumentException("Время завершения должно быть позже начала.");
+            flight.Investment = investment;
+            flight.Revenue = revenue;
+            flight.Expenses = expenses;
+            flight.Losses = losses;
+            flight.EndedAtUtc = end;
+            if (updateBalance)
+            {
+                var settings = await db.PersonalSettings.SingleAsync(x => x.Id == 1);
+                settings.Balance += flight.Profit;
+            }
+            return flight;
+        });
     }
 
-    public async Task<FlightRecord?> DeleteFinishedFlightAsync(int id)
+    public async Task<FlightRecord?> DeleteFinishedFlightAsync(int id, bool updateBalance = false)
     {
-        await using var db = settingsService.CreateDbContext();
-        var flight = await db.FlightRecords.FindAsync(id);
-        if (flight is null) return null;
-        if (flight.EndedAtUtc is null)
-            throw new InvalidOperationException("Активный рейс нельзя удалить из статистики. Сначала заверши его.");
-        db.FlightRecords.Remove(flight);
-        await db.SaveChangesAsync();
-        return flight;
+        return await settingsService.InTransactionAsync<FlightRecord?>(async db =>
+        {
+            var flight = await db.FlightRecords.FindAsync(id);
+            if (flight is null) return null;
+            if (flight.EndedAtUtc is null)
+                throw new InvalidOperationException("Активный рейс нельзя удалить из статистики. Сначала заверши его.");
+            db.FlightRecords.Remove(flight);
+            if (updateBalance)
+            {
+                var settings = await db.PersonalSettings.SingleAsync(x => x.Id == 1);
+                settings.Balance -= flight.Profit;
+            }
+            return flight;
+        });
     }
 }

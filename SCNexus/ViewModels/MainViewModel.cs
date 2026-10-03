@@ -332,6 +332,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     public bool HasSelectedCatalogVehicle => SelectedCatalogVehicle is not null;
     partial void OnSelectedSystemChanged(string value)
     {
+        if (value is null) { SelectedSystem = "Все системы"; return; }
         if (!_selectingLocation)
         {
             _selectingLocation = true;
@@ -465,7 +466,8 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         if (!_loaded) return;
         _pendingSave?.Cancel();
         _pendingSave = new CancellationTokenSource();
-        var token = _pendingSave.Token;
+        var pending = _pendingSave;
+        var token = pending.Token;
         SaveStatus = "Сохранение…";
         try
         {
@@ -479,6 +481,11 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         {
             AppLogService.Write("Settings save", ex);
             SaveStatus = SettingsService.DescribeSaveFailure(ex);
+        }
+        finally
+        {
+            if (ReferenceEquals(_pendingSave, pending)) _pendingSave = null;
+            pending.Dispose();
         }
     }
 
@@ -654,8 +661,9 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         Flights.Clear();
         foreach (var flight in flights) Flights.Add(flight);
         RefreshFlightStatistics();
+        var previousActiveId = ActiveFlight?.Id;
         ActiveFlight = Flights.FirstOrDefault(x => x.EndedAtUtc is null);
-        if (ActiveFlight is { } active)
+        if (ActiveFlight is { } active && active.Id != previousActiveId)
         {
             FlightOrigin = active.Origin;
             FlightDestination = active.Destination;
@@ -695,17 +703,30 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         CurrentShip = ship.Name;
         CargoScu = ship.Ship.CargoScu;
         FlightStatus = $"{ship.Name} выбран для маршрутов.";
-        await SaveNowAsync();
+        try { await SaveNowAsync(); }
+        catch (Exception ex)
+        {
+            AppLogService.Write("Select ship", ex);
+            FlightStatus = IsEnglish ? "Could not save the selected ship. Try again." : "Не удалось сохранить выбранный корабль. Повтори действие.";
+        }
     }
 
     [RelayCommand]
     private async Task DeleteShipAsync(ShipSummary? ship)
     {
         if (ship is null) return;
-        await flightLogService.DeleteShipAsync(ship.Ship.Id);
-        if (CurrentShip == ship.Name) { CurrentShip = "Не выбран"; CargoScu = 0; }
-        await ReloadFlightLogAsync();
-        FlightStatus = "Корабль удалён из флота. История рейсов сохранена.";
+        try
+        {
+            await flightLogService.DeleteShipAsync(ship.Ship.Id);
+            if (CurrentShip == ship.Name) { CurrentShip = "Не выбран"; CargoScu = 0; }
+            await ReloadFlightLogAsync();
+            FlightStatus = "Корабль удалён из флота. История рейсов сохранена.";
+        }
+        catch (Exception ex)
+        {
+            AppLogService.Write("Delete ship", ex);
+            FlightStatus = IsEnglish ? "Could not delete the ship. Try again." : "Не удалось удалить корабль. Повтори действие.";
+        }
     }
 
     [RelayCommand]
@@ -744,10 +765,10 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         if (ActiveFlight is null) return;
         try
         {
-            var flight = await flightLogService.FinishFlightAsync(ActiveFlight.Id,
-                FlightInvestment, FlightRevenue, FlightExpenses, FlightLosses);
-            Balance += flight.Profit;
             await SaveNowAsync();
+            var flight = await flightLogService.FinishFlightAsync(ActiveFlight.Id,
+                FlightInvestment, FlightRevenue, FlightExpenses, FlightLosses, updateBalance: true);
+            Balance += flight.Profit;
             await ReloadFlightLogAsync();
             FlightStatus = $"Рейс завершён. Фактическая прибыль: {flight.ProfitDisplay}. Баланс обновлён.";
         }

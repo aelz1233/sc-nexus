@@ -40,10 +40,13 @@ public class UiCommandSmokeTests
     [Fact]
     public void VisibleButtonsReferenceExistingCommandsAndClickHandlers()
     {
-        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "SCNexus.slnx"))) directory = directory.Parent;
+        var root = directory?.FullName ?? throw new DirectoryNotFoundException("SCNexus.slnx was not found above the test output.");
         var views = new[]
         {
             (Path.Combine(root, "SCNexus", "MainWindow.xaml"), typeof(MainWindow)),
+            (Path.Combine(root, "SCNexus", "OverlayWindow.xaml"), typeof(OverlayWindow)),
             (Path.Combine(root, "SCNexus", "Controls", "ShipConfiguratorView.xaml"), typeof(ShipConfiguratorView))
         };
         var checkedActions = 0;

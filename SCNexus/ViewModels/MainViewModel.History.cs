@@ -86,10 +86,10 @@ public partial class MainViewModel
         if (answer != System.Windows.MessageBoxResult.Yes) return;
         try
         {
-            var deleted = await flightLogService.DeleteFinishedFlightAsync(flight.Id);
+            await SaveNowAsync();
+            var deleted = await flightLogService.DeleteFinishedFlightAsync(flight.Id, updateBalance: true);
             if (deleted is null) return;
             Balance -= deleted.Profit;
-            await SaveNowAsync();
             await ReloadFlightLogAsync();
             FlightStatus = $"Рейс удалён из статистики. Баланс скорректирован на {-deleted.Profit:+#,##0;-#,##0;0} aUEC.";
         }

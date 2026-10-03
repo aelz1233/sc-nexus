@@ -13,6 +13,17 @@ public static class LocalizationService
 {
     private static readonly Dictionary<string, string> English = new(StringComparer.Ordinal)
     {
+        ["Каталог кораблей загружается…"] = "Loading ship catalog…",
+        ["Локации загружаются…"] = "Loading locations…",
+        ["Проверяю игру…"] = "Checking game…",
+        ["Регион не определён"] = "Region unknown",
+        ["Не определён"] = "Unknown",
+        ["Нет данных"] = "No data",
+        ["Нет активного рейса"] = "No active trip",
+        ["Ищу журнал Star Citizen на компьютере…"] = "Looking for the Star Citizen log…",
+        ["Источники данных запускаются…"] = "Starting data sources…",
+        ["Автозаполнение включено: ожидаю запросы из Game.log."] = "Autofill enabled: waiting for trade requests in Game.log.",
+        ["UEX • ещё не загружено"] = "UEX • not loaded yet",
         ["ЛИЧНЫЙ КОМПАНЬОН"] = "PERSONAL COMPANION", ["НА ЭТОМ КОМПЬЮТЕРЕ"] = "ON THIS PC",
         ["Локальные настройки"] = "Local settings", ["Обзор"] = "Dashboard", ["Маршруты"] = "Routes",
         ["Флот"] = "Fleet", ["Конфигуратор"] = "Loadout", ["Рейсы"] = "Trips",
@@ -249,6 +260,8 @@ public static class LocalizationService
         , ["Ракеты и системы без проверенной совместимости в расчёт не входят. Энергия и охлаждение считаются только для подтверждённых сменных слотов, поэтому итоговую сборку проверь в игре."] = "Missiles and systems without verified compatibility are excluded. Power and cooling are calculated only for verified replaceable slots, so verify the final build in game."
     };
 
+    private static readonly KeyValuePair<string, string>[] OrderedEnglish = English.OrderByDescending(x => x.Key.Length).ToArray();
+
     public static bool IsEnglish { get; private set; }
 
     public static void SetLanguage(string language)
@@ -264,7 +277,7 @@ public static class LocalizationService
         if (!IsEnglish || string.IsNullOrWhiteSpace(value)) return value;
         if (English.TryGetValue(value, out var exact)) return exact;
         var result = value;
-        foreach (var pair in English.OrderByDescending(x => x.Key.Length))
+        foreach (var pair in OrderedEnglish)
             if (result.Contains(pair.Key, StringComparison.Ordinal)) result = result.Replace(pair.Key, pair.Value, StringComparison.Ordinal);
         return result;
     }

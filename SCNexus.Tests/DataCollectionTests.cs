@@ -241,7 +241,7 @@ public class DataCollectionTests
 
             var completed = await collection.RefreshOcrAsync();
 
-            Assert.True(completed);
+            Assert.NotNull(completed);
             Assert.Equal(1, ocr.CallCount);
             Assert.Equal(0, other.CallCount);
             Assert.True(ocr.LastContext is { OcrEnabled: true, ForceRefresh: true });

@@ -72,6 +72,52 @@ public class WindowRegressionTests
                     LocalizationService.SetLanguage("ru");
                     UiLocalization.Apply(window);
 
+                    // Exercise real templates at the supported minimum and normal window sizes.
+                    window.ShowActivated = false;
+                    window.Show();
+                    await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                    foreach (var language in new[] { "ru", "en" })
+                    foreach (var size in new[] { new Size(1100, 720), new Size(1440, 900) })
+                    foreach (var page in new[] { "Обзор", "Маршруты", "Флот", "Рейсы", "Инструменты", "Настройки" })
+                    {
+                        vm.Language = language;
+                        typeof(MainViewModel).GetMethod("Navigate", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                            .Invoke(vm, [page]);
+                        window.Width = size.Width;
+                        window.Height = size.Height;
+                        window.Measure(size);
+                        window.Arrange(new Rect(size));
+                        window.UpdateLayout();
+                        await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                        UiLocalization.Apply(window);
+                        Assert.Contains(VisualDescendants(window).OfType<TextBlock>(), x => x.IsVisible);
+                        Assert.All(VisualDescendants(window).OfType<System.Windows.Controls.Primitives.RangeBase>(), control =>
+                            Assert.False(double.IsNaN(control.Value)));
+                        if (size.Width == 1440)
+                        {
+                            var output = Path.Combine(AppContext.BaseDirectory, "audit-screenshots");
+                            Directory.CreateDirectory(output);
+                            var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(1440, 900, 96, 96, PixelFormats.Pbgra32);
+                            bitmap.Render((Visual)window.Content);
+                            var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                            encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+                            using var image = File.Create(Path.Combine(output, $"{language}-{page}.png"));
+                            encoder.Save(image);
+                        }
+                    }
+
+                    var overlay = new OverlayWindow { DataContext = vm };
+                    vm.OverlayExpanded = true;
+                    overlay.ApplySettings(vm);
+                    overlay.Show();
+                    overlay.UpdateLayout();
+                    await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                    Assert.Single(app.Windows.OfType<OverlayActionWindow>());
+                    overlay.Hide();
+                    Assert.False(app.Windows.OfType<OverlayActionWindow>().Single().IsVisible);
+                    overlay.Close();
+                    Assert.Empty(app.Windows.OfType<OverlayActionWindow>());
+
                     var closed = new TaskCompletionSource();
                     window.Closed += (_, _) => closed.TrySetResult();
                     // Uninitialized VM's save finishes synchronously: this previously re-entered Closing.
