@@ -20,7 +20,8 @@ public class WindowRegressionTests
         {
             var dispatcher = Dispatcher.CurrentDispatcher;
             SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(dispatcher));
-            var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            // Use production resources without providers, the user database or the instance mutex.
+            var app = new App(startServices: false) { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             app.InitializeComponent();
             dispatcher.UnhandledException += (_, e) => { e.Handled = true; completion.TrySetException(e.Exception); dispatcher.BeginInvokeShutdown(DispatcherPriority.Send); };
             dispatcher.BeginInvoke(async () =>
@@ -85,8 +86,7 @@ public class WindowRegressionTests
                             .Invoke(vm, [page]);
                         window.Width = size.Width;
                         window.Height = size.Height;
-                        window.Measure(size);
-                        window.Arrange(new Rect(size));
+                        // A shown Window is sized by its HWND; measuring it manually races display-mode changes.
                         window.UpdateLayout();
                         await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
                         UiLocalization.Apply(window);
@@ -106,13 +106,73 @@ public class WindowRegressionTests
                         }
                     }
 
+                    var shopping = new ComponentShoppingPlan("Balanced",
+                        [new(1, "Stanton", "Area18", "CenterMass", [new("FR-76", 2, 42000), new("XL-1", 1, 90000)], 174000),
+                         new(2, "Pyro", "Ruin Station", "Dumpers Depot", [new("Glacier", 2, 12000)], 24000)], 198000, 190000, 1);
+                    vm.TrackComponentShopping(shopping, "C2 Hercules Starlifter");
+                    var configurator = new SCNexus.Controls.ShipConfiguratorView();
+                    var tabs = (TabControl)configurator.FindName("ResultsTabs");
+                    var build = new ShipBuildResult("Build", [], 198000, 41.4, 0, 0, "Ready") { ShoppingPlans = [shopping] };
+                    ((TabItem)tabs.Items[0]).DataContext = build;
+                    ((TabItem)tabs.Items[1]).DataContext = build with { KnownCost = 250000 };
+                    tabs.Visibility = Visibility.Visible;
+                    configurator.Measure(new Size(1000, double.PositiveInfinity));
+                    configurator.Arrange(new Rect(0, 0, 1000, configurator.DesiredSize.Height));
+                    configurator.UpdateLayout();
+                    UiLocalization.Apply(configurator);
+                    Assert.Contains(VisualDescendants(tabs).OfType<TextBlock>(), x => x.Text == build.CostDisplay);
+                    Assert.Equal(FontWeights.Normal, ((TabItem)tabs.Items[0]).FontWeight);
+                    tabs.SelectedIndex = 1;
+                    configurator.UpdateLayout();
+                    Assert.Contains(VisualDescendants(tabs).OfType<TextBlock>(), x => x.Text == (build with { KnownCost = 250000 }).CostDisplay);
+                    var tabBitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(1000, (int)Math.Ceiling(configurator.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+                    tabBitmap.Render(configurator);
+                    var tabEncoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    tabEncoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(tabBitmap));
+                    using (var output = File.Create(Path.Combine(AppContext.BaseDirectory, "audit-screenshots", "configurator.png"))) tabEncoder.Save(output);
                     var overlay = new OverlayWindow { DataContext = vm };
+                    vm.IsGameRunning = true;
+                    vm.OverlayEditMode = true;
+                    vm.OverlayPreview = true;
+                    vm.ToggleOverlayFromHotkey();
+                    Assert.False(vm.OverlayEditMode);
+                    Assert.False(vm.OverlayPreview);
+                    Assert.True(vm.OverlaySuppressed);
+                    Assert.False(vm.OverlayHotkeyVisible);
+                    vm.ToggleOverlayFromHotkey();
+                    Assert.True(vm.OverlayHotkeyVisible);
+                    Assert.False(vm.OverlaySuppressed);
+                    vm.HideOverlayCommand.Execute(null);
+                    Assert.True(vm.OverlaySuppressed);
+                    Assert.False(vm.OverlayHotkeyVisible);
                     vm.OverlayExpanded = true;
                     overlay.ApplySettings(vm);
                     overlay.Show();
                     overlay.UpdateLayout();
                     await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
                     Assert.Single(app.Windows.OfType<OverlayActionWindow>());
+                    var toolbar = app.Windows.OfType<OverlayActionWindow>().Single();
+                    Assert.Contains(VisualDescendants(toolbar).OfType<Button>(), x => x.Command == vm.HideOverlayCommand);
+                    var mode = VisualDescendants(toolbar).OfType<Button>().Single(x => x.Command == vm.ToggleOverlayModeCommand);
+                    mode.Command.Execute(null);
+                    overlay.UpdateLayout();
+                    await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                    Assert.False(vm.OverlayExpanded);
+                    Assert.True(toolbar.IsVisible);
+                    Assert.DoesNotContain(VisualDescendants(toolbar).OfType<Button>(), x => x.IsVisible && x.Command == vm.DetectShipFromOverlayCommand);
+                    mode.Command.Execute(null);
+                    overlay.UpdateLayout();
+                    await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                    var overlayBitmap = new System.Windows.Media.Imaging.RenderTargetBitmap((int)Math.Ceiling(overlay.ActualWidth), (int)Math.Ceiling(overlay.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+                    vm.OverlayEditMode = true;
+                    overlay.ApplySettings(vm);
+                    overlay.UpdateLayout();
+                    overlayBitmap.Render(overlay);
+                    var overlayEncoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    overlayEncoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(overlayBitmap));
+                    using (var output = File.Create(Path.Combine(AppContext.BaseDirectory, "audit-screenshots", "overlay.png"))) overlayEncoder.Save(output);
+                    vm.OverlayEditMode = false;
+                    overlay.ApplySettings(vm);
                     overlay.Hide();
                     Assert.False(app.Windows.OfType<OverlayActionWindow>().Single().IsVisible);
                     overlay.Close();
@@ -138,7 +198,7 @@ public class WindowRegressionTests
         }) { IsBackground = true };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
-        await completion.Task.WaitAsync(TimeSpan.FromSeconds(15));
+        await completion.Task.WaitAsync(TimeSpan.FromSeconds(60));
     }
 
     private static IEnumerable<DependencyObject> LogicalDescendants(DependencyObject root)
@@ -149,6 +209,7 @@ public class WindowRegressionTests
             foreach (var descendant in LogicalDescendants(child)) yield return descendant;
         }
     }
+
 
     private static IEnumerable<DependencyObject> VisualDescendants(DependencyObject root)
     {

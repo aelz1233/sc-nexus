@@ -306,6 +306,7 @@ public sealed class SettingsService
                 current.OverlayShowFreshness = snapshot.OverlayShowFreshness;
                 current.OverlayHotkey = snapshot.OverlayHotkey;
                 current.ActiveVoyageJson = snapshot.ActiveVoyageJson;
+                current.ActiveShoppingJson = snapshot.ActiveShoppingJson;
                 current.LastSessionSummary = snapshot.LastSessionSummary;
                 current.LastSessionEndedAt = snapshot.LastSessionEndedAt;
             }
@@ -353,6 +354,7 @@ public sealed class SettingsService
             if (!names.Contains("OverlayShowFreshness")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayShowFreshness INTEGER NOT NULL DEFAULT 1");
             if (!names.Contains("OverlayHotkey")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayHotkey TEXT NOT NULL DEFAULT ''");
             if (!names.Contains("ActiveVoyageJson")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN ActiveVoyageJson TEXT NOT NULL DEFAULT ''");
+            if (!names.Contains("ActiveShoppingJson")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN ActiveShoppingJson TEXT NOT NULL DEFAULT ''");
             if (!names.Contains("LastSessionSummary")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN LastSessionSummary TEXT NOT NULL DEFAULT ''");
             if (!names.Contains("LastSessionEndedAt")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN LastSessionEndedAt TEXT NULL");
         }
@@ -389,6 +391,7 @@ public sealed class SettingsService
         settings.OverlayAnchor ??= "BottomRight";
         settings.OverlayHotkey ??= "";
         settings.ActiveVoyageJson ??= "";
+        settings.ActiveShoppingJson ??= "";
         settings.LastSessionSummary ??= "";
     }
 

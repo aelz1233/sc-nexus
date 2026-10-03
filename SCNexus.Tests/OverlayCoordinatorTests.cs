@@ -5,6 +5,25 @@ namespace SCNexus.Tests;
 
 public class OverlayCoordinatorTests
 {
+    [Fact]
+    public void GamePollingAndWindowsMessageDoNotToggleTwiceForOnePress()
+    {
+        var gate = new OverlayCoordinator.HotkeyActivationGate();
+        Assert.True(gate.TryActivate(1000));
+        Assert.False(gate.TryActivate(1025));
+        Assert.False(gate.TryActivate(1050));
+        Assert.True(gate.TryActivate(1300));
+    }
+
+    [Theory]
+    [InlineData(0x4000u, false, false, false, false, true)]
+    [InlineData(0x4000u, true, false, false, false, false)]
+    [InlineData(0x4006u, true, false, true, false, true)]
+    [InlineData(0x4006u, true, true, true, false, false)]
+    [InlineData(0x4006u, true, false, false, false, false)]
+    public void PollingRequiresExactlyTheAssignedModifiers(uint flags, bool ctrl, bool alt, bool shift, bool win, bool expected)
+        => Assert.Equal(expected, OverlayCoordinator.ModifiersMatch(flags, ctrl, alt, shift, win));
+
     [Theory]
     [InlineData("F9", 0x4000u, 0x78u)]
     [InlineData("Ctrl+Shift+O", 0x4006u, 0x4Fu)]

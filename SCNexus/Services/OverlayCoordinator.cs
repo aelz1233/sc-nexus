@@ -1,8 +1,10 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Threading;
 using SCNexus.ViewModels;
 
 namespace SCNexus.Services;
@@ -22,6 +24,15 @@ public sealed class OverlayCoordinator : IDisposable
     private HwndSource? _source;
     private IntPtr _ownerHandle;
     private bool _hotkeyRegistered;
+    private readonly DispatcherTimer _keyTimer = new(DispatcherPriority.Input) { Interval = TimeSpan.FromMilliseconds(25) };
+    private uint _modifiers;
+    private uint _virtualKey;
+    private bool _keyWasDown;
+    private IntPtr _lastForeground;
+    private bool _gameForeground;
+    private readonly HotkeyActivationGate _activationGate = new();
+
+    public OverlayCoordinator() => _keyTimer.Tick += PollGameHotkey;
 
     public void Attach(MainViewModel viewModel, Window owner)
     {
@@ -51,6 +62,7 @@ public sealed class OverlayCoordinator : IDisposable
         _source = HwndSource.FromHwnd(_ownerHandle);
         _source?.AddHook(WindowMessageHook);
         RegisterSelectedHotkey();
+        _keyTimer.Start();
     }
 
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
@@ -59,6 +71,7 @@ public sealed class OverlayCoordinator : IDisposable
             or nameof(MainViewModel.IsGameRunning) or nameof(MainViewModel.OverlayHotkeyVisible)
             or nameof(MainViewModel.OverlaySuppressed) or nameof(MainViewModel.IsShipDetectionCapturing)) Reevaluate();
         else if (e.PropertyName == nameof(MainViewModel.OverlayHotkey)) RegisterSelectedHotkey();
+        else if (e.PropertyName == nameof(MainViewModel.IsOverlayHotkeyCapturing)) RegisterSelectedHotkey();
         else if (e.PropertyName is nameof(MainViewModel.OverlayExpanded) or nameof(MainViewModel.OverlayOpacity)
                  or nameof(MainViewModel.OverlayTextOpacity) or nameof(MainViewModel.OverlayScale)
                  or nameof(MainViewModel.OverlayAnchor) or nameof(MainViewModel.OverlayCustomLeft)
@@ -82,6 +95,8 @@ public sealed class OverlayCoordinator : IDisposable
             return;
         }
         UnregisterSelectedHotkey();
+        _keyWasDown = true; // Wait for release after assigning a key.
+        if (_viewModel.IsOverlayHotkeyCapturing) return;
         if (string.IsNullOrWhiteSpace(_viewModel.OverlayHotkey))
         {
             _viewModel.SetOverlayHotkeyRegistrationState("none");
@@ -94,6 +109,8 @@ public sealed class OverlayCoordinator : IDisposable
             return;
         }
         _hotkeyRegistered = RegisterHotKey(_ownerHandle, HotkeyId, modifiers, virtualKey);
+        _modifiers = modifiers;
+        _virtualKey = virtualKey;
         _viewModel.SetOverlayHotkeyRegistrationState(_hotkeyRegistered
             ? "active"
             : Marshal.GetLastWin32Error() == 1409 ? "busy" : "invalid");
@@ -111,11 +128,62 @@ public sealed class OverlayCoordinator : IDisposable
     {
         if (message == WmHotkey && wParam.ToInt32() == HotkeyId && _viewModel is not null)
         {
-            _viewModel.ToggleOverlayFromHotkey();
+            ActivateHotkey();
             handled = true;
         }
         return IntPtr.Zero;
     }
+
+    private void PollGameHotkey(object? sender, EventArgs e)
+    {
+        var inGame = _viewModel?.IsGameRunning == true;
+        _keyTimer.Interval = TimeSpan.FromMilliseconds(inGame ? 25 : 250);
+        if (!_hotkeyRegistered || _viewModel is null || _viewModel.IsOverlayHotkeyCapturing) return;
+        // Read only the assigned chord. Some games consume WM_HOTKEY; no keyboard hook is needed.
+        var down = IsKeyDown((int)_virtualKey) && ModifiersMatch(_modifiers,
+            IsKeyDown(0x11), IsKeyDown(0x12), IsKeyDown(0x10), IsKeyDown(0x5B) || IsKeyDown(0x5C));
+        if (inGame && down && !_keyWasDown && IsGameForeground()) ActivateHotkey();
+        _keyWasDown = down;
+    }
+
+    private bool IsGameForeground()
+    {
+        var foreground = GetForegroundWindow();
+        if (foreground == _lastForeground) return _gameForeground;
+        _lastForeground = foreground;
+        _gameForeground = false;
+        GetWindowThreadProcessId(foreground, out var processId);
+        try
+        {
+            using var process = Process.GetProcessById((int)processId);
+            _gameForeground = process.ProcessName.Equals("StarCitizen", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or Win32Exception) { }
+        return _gameForeground;
+    }
+
+    private void ActivateHotkey()
+    {
+        if (_viewModel is { IsOverlayHotkeyCapturing: false } && _activationGate.TryActivate(Environment.TickCount64))
+            _viewModel.ToggleOverlayFromHotkey();
+    }
+
+    internal static bool ModifiersMatch(uint modifiers, bool ctrl, bool alt, bool shift, bool win) =>
+        ((modifiers & ModControl) != 0) == ctrl && ((modifiers & ModAlt) != 0) == alt &&
+        ((modifiers & ModShift) != 0) == shift && ((modifiers & ModWin) != 0) == win;
+
+    internal sealed class HotkeyActivationGate
+    {
+        private long? _lastActivation;
+        public bool TryActivate(long timestamp)
+        {
+            if (_lastActivation is { } previous && timestamp - previous < 180) return false;
+            _lastActivation = timestamp;
+            return true;
+        }
+    }
+
+    private static bool IsKeyDown(int key) => GetAsyncKeyState(key) < 0;
 
     internal static bool TryParseHotkey(string? value, out uint modifiers, out uint virtualKey)
     {
@@ -182,6 +250,7 @@ public sealed class OverlayCoordinator : IDisposable
 
     private void DetachWindowSource()
     {
+        _keyTimer.Stop();
         if (_owner is not null) _owner.SourceInitialized -= OnOwnerSourceInitialized;
         UnregisterSelectedHotkey();
         _source?.RemoveHook(WindowMessageHook);
@@ -208,4 +277,8 @@ public sealed class OverlayCoordinator : IDisposable
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool UnregisterHotKey(IntPtr window, int id);
+
+    [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int key);
+    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
 }

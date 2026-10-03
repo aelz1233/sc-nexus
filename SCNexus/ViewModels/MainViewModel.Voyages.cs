@@ -236,6 +236,7 @@ public partial class MainViewModel
     {
         if (ActiveVoyagePlan is not { Stops.Count: > 0 } plan || ActiveVoyageCompleted) return;
         var changed = false;
+        var previousStopIndex = ActiveVoyageStopIndex;
         var detectedLocation = snapshot.Player.CurrentLocation?.Value;
         if (!string.IsNullOrWhiteSpace(detectedLocation))
         {
@@ -264,7 +265,7 @@ public partial class MainViewModel
                  commodity.Contains(x.Commodity, StringComparison.OrdinalIgnoreCase))).ToArray();
             if (matches.Length == 0 && string.IsNullOrWhiteSpace(commodity))
                 matches = expected.Where(x => x.Action == action).Take(1).ToArray();
-            foreach (var match in matches) _completedVoyageActions.Add(match.Key);
+            foreach (var match in matches) changed |= _completedVoyageActions.Add(match.Key);
             if (expected.Length == 0 || expected.Any(x => !_completedVoyageActions.Contains(x.Key))) continue;
             if (ActiveVoyageStopIndex + 1 < plan.Stops.Count) ActiveVoyageStopIndex++;
             else ActiveVoyageCompleted = true;
@@ -273,6 +274,7 @@ public partial class MainViewModel
         }
         if (!changed) return;
         RefreshActiveVoyageProperties();
+        if (previousStopIndex != ActiveVoyageStopIndex || ActiveVoyageCompleted)
         RaiseNotification($"voyage:{ActiveVoyageStopIndex}:{ActiveVoyageCompleted}",
             ActiveVoyageCompleted ? (IsEnglish ? "Route completed" : "Маршрут завершён")
                 : (IsEnglish ? "Next route stop" : "Следующая остановка маршрута"),
@@ -339,6 +341,8 @@ public partial class MainViewModel
             ActiveVoyageStopIndex = Math.Clamp(state.StopIndex, 0, state.Plan.Stops.Count - 1);
             ActiveVoyageCompleted = state.Completed;
             _activeVoyageStartedUtc = state.StartedAtUtc;
+            _completedVoyageActions.Clear();
+            foreach (var key in state.CompletedActions ?? []) _completedVoyageActions.Add(key);
             RefreshActiveVoyageProperties();
         }
         catch (JsonException) { }
@@ -348,12 +352,13 @@ public partial class MainViewModel
     {
         if (ActiveVoyagePlan is null) return "";
         try { return JsonSerializer.Serialize(new VoyageGuidanceState(ActiveVoyagePlan, ActiveVoyageStopIndex,
-            ActiveVoyageCompleted, _activeVoyageStartedUtc)); }
+            ActiveVoyageCompleted, _activeVoyageStartedUtc, _completedVoyageActions.ToArray())); }
         catch (NotSupportedException) { return ""; }
     }
 
     private void RefreshActiveVoyageProperties()
     {
+        RefreshOverlayChecklist();
         OnPropertyChanged(nameof(HasActiveVoyage));
         OnPropertyChanged(nameof(ActiveVoyageStop));
         OnPropertyChanged(nameof(ActiveVoyageStopDisplay));

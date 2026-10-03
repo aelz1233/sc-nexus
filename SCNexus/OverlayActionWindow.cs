@@ -13,7 +13,7 @@ internal sealed class OverlayActionWindow : Window
 {
     private HwndSource? _source;
 
-    public OverlayActionWindow()
+    public OverlayActionWindow(DataTemplate template)
     {
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
@@ -23,17 +23,9 @@ internal sealed class OverlayActionWindow : Window
         ShowActivated = false;
         Focusable = false;
         Topmost = true;
-        var button = new Button
-        {
-            Background = new SolidColorBrush(Color.FromRgb(27, 67, 82)),
-            Foreground = new SolidColorBrush(Color.FromRgb(234, 245, 244)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(105, 207, 192)),
-            Padding = new Thickness(10, 6, 10, 6), Focusable = false,
-            Margin = new Thickness(0)
-        };
-        button.SetBinding(ContentControl.ContentProperty, new Binding(nameof(MainViewModel.OverlayDetectShipButtonText)));
-        button.SetBinding(Button.CommandProperty, new Binding(nameof(MainViewModel.DetectShipFromOverlayCommand)));
-        Content = new Viewbox { Child = button, Stretch = Stretch.Fill };
+        var actions = new ContentControl { ContentTemplate = template, Focusable = false };
+        actions.SetBinding(ContentControl.ContentProperty, new Binding());
+        Content = new Viewbox { Child = actions, Stretch = Stretch.Fill };
         SourceInitialized += (_, _) =>
         {
             var handle = new WindowInteropHelper(this).Handle;

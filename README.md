@@ -118,7 +118,16 @@ To identify a ship:
 3. Expand the in-game SC Nexus overlay and select **Force ship detection**. Switch to Star Citizen within three seconds; the game must be the foreground window.
 4. Read the result below the button. Catalog matches on fleet screens are added to the detected fleet. OCR changes the current ship only with an explicit **Current Ship** label and an exact catalog match; it cannot infer which ship you are flying from a list of ships.
 
-The force button runs one OCR scan even if periodic OCR is disabled. The overlay remains click-through outside that single button, so normal game input is not blocked. OCR can fail on a hidden or minimized game window, low-contrast text, unsupported UI languages, or screens without a recognizable model name.
+The force button runs one OCR scan even if periodic OCR is disabled. The overlay remains click-through outside its controls and checklist. OCR can fail on a hidden or minimized game window, low-contrast text, unsupported UI languages, or screens without a recognizable model name.
+
+### Overlay controls and checklists
+
+- Assign a shortcut in **Settings → Game overlay**. No shortcut is enabled by default. Nexus uses a Windows hotkey plus a read-only check of the assigned chord while Star Citizen is active; it does not install keyboard hooks in the game. Use borderless/windowed mode and run both applications with the same Windows privileges if the shortcut only works outside the game.
+- Switch between compact and expanded views or hide the panel from its controls. Clicks elsewhere pass through to the game.
+- The expanded view includes route progress, a trip checklist, source timestamps, Nexus balance, and mission objectives when available. Old mission observations are marked as history.
+- In the loadout configurator choose a shopping plan and **Track purchases in overlay**. Check purchased components, confirm the stop, and continue to the next store. Previous stops remain accessible for corrections. The checklist and current stop survive restarts.
+- If both a trade route and a component purchase plan are active, use the checklist selector to switch between them. Checkmarks do not spend money or confirm that components were installed. Install purchased parts through Vehicle Loadout in the game.
+- Shopping plans offer lowest price, fewer flights, and a balanced option. Stop order is a proximity heuristic, not a guaranteed fastest route or a live stock reservation.
 
 ## Data sources
 

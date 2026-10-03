@@ -159,6 +159,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         OverlayHotkey = settings.OverlayHotkey ?? "";
         RestoreLastSessionSummary(settings.LastSessionSummary, settings.LastSessionEndedAt);
         RestoreActiveVoyage(settings.ActiveVoyageJson);
+        RestoreShoppingGuidance(settings.ActiveShoppingJson);
         LocalizationService.SetLanguage(Language);
         gameLogService.GameDirectoryOverride = GameDirectoryPath;
         await ReloadFlightLogAsync();
@@ -300,7 +301,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         AutoFillStatus = $"Подставлена сумма {candidate.AmountDisplay} из журнала. Поле можно исправить вручную.";
     }
 
-    partial void OnBalanceChanged(decimal value) { OnPropertyChanged(nameof(BalanceDisplay)); OnPropertyChanged(nameof(HaulingBudgetDisplay)); OnPropertyChanged(nameof(TradeBudgetHint)); QueueSave(); RecalculateHauling(); }
+    partial void OnBalanceChanged(decimal value) { OnPropertyChanged(nameof(BalanceDisplay)); OnPropertyChanged(nameof(OverlayBalanceDisplay)); OnPropertyChanged(nameof(HaulingBudgetDisplay)); OnPropertyChanged(nameof(TradeBudgetHint)); QueueSave(); RecalculateHauling(); }
     partial void OnCurrentShipChanged(string value) => QueueSave();
     partial void OnCurrentSystemChanged(string value) { OnPropertyChanged(nameof(LocationDisplay)); OnPropertyChanged(nameof(HaulingStartDisplay)); QueueSave(); RecalculateHauling(); }
     partial void OnCurrentLocationChanged(string value) { OnPropertyChanged(nameof(LocationDisplay)); OnPropertyChanged(nameof(HaulingStartDisplay)); QueueSave(); RecalculateHauling(); }
@@ -534,6 +535,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             OverlayShowFreshness = OverlayShowFreshness,
             OverlayHotkey = OverlayHotkey,
             ActiveVoyageJson = SerializeActiveVoyage(),
+            ActiveShoppingJson = SerializeShoppingGuidance(),
             LastSessionSummary = LastSessionSummaryForStorage,
             LastSessionEndedAt = LastSessionEndedAtForStorage
         };

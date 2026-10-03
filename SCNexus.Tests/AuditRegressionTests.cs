@@ -10,6 +10,49 @@ namespace SCNexus.Tests;
 
 public class AuditRegressionTests
 {
+    [Fact]
+    public void ComponentChecklistRestoresProgressAndDoesNotSpendBalance()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        using var client = new HttpClient();
+        try
+        {
+            MainViewModel Create()
+            {
+                var settings = new SettingsService(Path.Combine(directory, "nexus.db"));
+                var data = new GameDataService(client, Path.Combine(directory, "cache"));
+                return new MainViewModel(settings, new TradingService(data, new RouteService()), new FlightLogService(settings),
+                    data, new GameLogService(directory), new HaulingService(), new UpdateService());
+            }
+            var vm = Create();
+            vm.Balance = 10000;
+            var item = new ComponentShoppingItem("FR-76", 2, 100);
+            var plan = new ComponentShoppingPlan("Balanced",
+                [new(1, "Stanton", "Area18", "Shop A", [item], 200),
+                 new(2, "Pyro", "Ruin Station", "Shop B", [new("XL-1", 1, 500)], 500)], 700, 700, 0);
+            vm.TrackComponentShopping(plan, "C2");
+            Assert.False(vm.CompleteChecklistStopCommand.CanExecute(null));
+            vm.OverlayChecklist.Single().IsDone = true;
+            Assert.True(item.IsPurchased);
+            Assert.True(vm.CompleteChecklistStopCommand.CanExecute(null));
+            vm.CompleteChecklistStopCommand.Execute(null);
+            Assert.True(vm.OverlayChecklistDanger);
+            Assert.Equal(10000, vm.Balance);
+            var saved = typeof(MainViewModel).GetMethod("SerializeShoppingGuidance", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(vm, null);
+            var restored = Create();
+            typeof(MainViewModel).GetMethod("RestoreShoppingGuidance", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(restored, [saved]);
+            Assert.True(restored.OverlayChecklistDanger);
+            Assert.Contains("XL-1", restored.OverlayChecklist.Single().Text);
+            restored.PreviousChecklistStopCommand.Execute(null);
+            Assert.True(restored.OverlayChecklist.Single().IsDone);
+            restored.OverlayChecklist.Single().IsDone = false;
+            Assert.False(restored.CompleteChecklistStopCommand.CanExecute(null));
+            restored.CloseShoppingGuidanceCommand.Execute(null);
+            Assert.False(restored.HasShoppingGuidance);
+        }
+        finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+    }
+
     private static readonly VehicleCatalogItem[] Vehicles =
     [
         new() { Id = 1, Name = "Guardian", IsSpaceship = 1 },

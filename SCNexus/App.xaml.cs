@@ -17,10 +17,15 @@ public partial class App : System.Windows.Application
     private EventWaitHandle? _activationEvent;
     private RegisteredWaitHandle? _activationWait;
     private bool _ownsInstance;
+    private readonly bool _startServices;
+
+    public App() : this(true) { }
+    internal App(bool startServices) => _startServices = startServices;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (!_startServices) return;
         DispatcherUnhandledException += (_, args) => AppLogService.Write("UI", args.Exception);
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
         {

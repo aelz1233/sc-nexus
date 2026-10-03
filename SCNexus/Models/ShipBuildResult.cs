@@ -48,8 +48,20 @@ public sealed record ShipBuildLine(
     });
 }
 
-public sealed record ComponentShoppingItem(string Name, int Quantity, decimal UnitPrice)
+public sealed record ComponentShoppingItem(string Name, int Quantity, decimal UnitPrice) : System.ComponentModel.INotifyPropertyChanged
 {
+    private bool _isPurchased;
+    public bool IsPurchased
+    {
+        get => _isPurchased;
+        set
+        {
+            if (_isPurchased == value) return;
+            _isPurchased = value;
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsPurchased)));
+        }
+    }
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
     public string Display => LocalizationService.T(Quantity > 1
         ? $"{Name} ×{Quantity} · {UnitPrice:N0} aUEC за шт."
         : $"{Name} · {UnitPrice:N0} aUEC");
@@ -98,6 +110,11 @@ public sealed record ComponentShoppingPlan(
             ? "Balances price, stop count, current position, and safe locations."
             : "Учитывает цену, число остановок, текущую позицию и безопасность точек."
     };
+    public string PathDisplay => string.Join(" → ", Stops.Select(x => $"{x.Location} ({x.System})").Distinct());
+    public string StartButtonText => LocalizationService.IsEnglish ? "Track purchases in overlay" : "Закупка в оверлее";
+    public string RouteCaveat => LocalizationService.IsEnglish
+        ? "Stop order uses location and system proximity, not flight times. Confirm stock and prices in game. Checkmarks track purchases; they do not change your balance."
+        : "Порядок учитывает близость локаций и систем, но не время полёта. Проверь цены и наличие в игре. Галочки отмечают покупку, но не меняют баланс.";
 }
 
 public sealed record ShipBuildResult(

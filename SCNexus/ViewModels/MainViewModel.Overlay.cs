@@ -65,6 +65,19 @@ public partial class MainViewModel
     public string OverlayModeDisplay => OverlayExpanded
         ? (IsEnglish ? "Expanded" : "Расширенный")
         : (IsEnglish ? "Compact" : "Компактный");
+    public string OverlayModeButtonText => OverlayExpanded
+        ? (IsEnglish ? "Compact view" : "Компактный вид") : (IsEnglish ? "More details" : "Подробнее");
+    public string OverlayHideButtonText => IsEnglish ? "Hide" : "Скрыть";
+    public string OverlayControlHint => OverlayEditMode
+        ? (IsEnglish ? "Drag the panel · finish positioning in Settings" : "Перетащи панель · заверши размещение в настройках")
+        : string.IsNullOrWhiteSpace(OverlayHotkey) ? (IsEnglish ? "Shortcut not assigned" : "Бинд не назначен")
+        : $"{OverlayHotkey} · {(IsEnglish ? "show / hide" : "показать / скрыть")}";
+    public string OverlayCompatibilityHint => IsEnglish
+        ? "Use Borderless or Windowed mode in Star Citizen. A shortcut also checks the assigned keys while the game is active. If it works only outside the game, check that the game and Nexus run with the same Windows privileges."
+        : "В Star Citizen выбери оконный режим или окно без рамки. При активной игре Nexus дополнительно проверяет назначенные клавиши. Если бинд работает только вне игры, проверь, что игра и Nexus запущены с одинаковыми правами Windows.";
+    public string OverlayBalanceDisplay => IsEnglish ? $"Nexus balance: {BalanceDisplay}" : $"Баланс Nexus: {BalanceDisplay}";
+    public bool OverlayHasRoute => HasActiveVoyage || HasActiveFlight;
+    public bool OverlayHasMission => _lastDataSnapshot.Missions.Any(x => x.Status.Value.Equals("active", StringComparison.OrdinalIgnoreCase));
     public string OverlayPreviewButtonText => OverlayPreview
         ? (IsEnglish ? "Hide preview" : "Скрыть пример")
         : (IsEnglish ? "Show preview" : "Показать пример");
@@ -82,9 +95,11 @@ public partial class MainViewModel
             var value = observed?.Value ?? CurrentShip;
             if (string.IsNullOrWhiteSpace(value) || value is "Не выбран" or "Not selected")
                 value = IsEnglish ? "Ship not detected" : "Корабль не определён";
-            return observed is null ? value : $"{value} • {observed.SourceDisplay} • {observed.AgeDisplay}";
+            return value;
         }
     }
+    public string OverlayShipSourceDisplay => _lastDataSnapshot.Player.CurrentShip is { } ship
+        ? $"{SourceName(ship.Source)} • {ship.AgeDisplay}" : (IsEnglish ? "Selected in Nexus" : "Выбран в Nexus");
     public string OverlayLocationDisplay
     {
         get
@@ -95,9 +110,11 @@ public partial class MainViewModel
             if (string.IsNullOrWhiteSpace(value) || value is "Не указана" or "Not specified")
                 return IsEnglish ? "Location not detected" : "Локация не определена";
             var place = string.IsNullOrWhiteSpace(system) ? value : $"{system} · {value}";
-            return location is null ? place : $"{place} • {location.SourceDisplay} • {location.AgeDisplay}";
+            return place;
         }
     }
+    public string OverlayLocationSourceDisplay => _lastDataSnapshot.Player.CurrentLocation is { } location
+        ? $"{SourceName(location.Source)} • {location.AgeDisplay}" : (IsEnglish ? "Selected in Nexus" : "Выбрана в Nexus");
     public string OverlayRouteHeading => HasActiveVoyage
         ? (IsEnglish ? "ACTIVE ROUTE" : "АКТИВНЫЙ МАРШРУТ")
         : HasActiveFlight ? (IsEnglish ? "ACTIVE TRIP" : "АКТИВНЫЙ РЕЙС")
@@ -108,11 +125,25 @@ public partial class MainViewModel
         : (IsEnglish ? "Choose a route in Nexus" : "Выбери маршрут в Nexus");
     public string OverlayActionDisplay => HasActiveVoyage
         ? LocalizationService.T(ActiveVoyageActionDisplay)
-        : (IsEnglish ? "Route guidance will appear here." : "Здесь появятся действия по маршруту.");
+        : HasActiveFlight ? (IsEnglish ? "Confirm actual amounts in the journal after delivery." : "После доставки проверь фактические суммы в журнале.") : "";
     public string OverlayCargoDisplay => HasActiveVoyage ? LocalizationService.T(ActiveVoyageCargoDisplay) : "";
     public string OverlayProfitDisplay => HasActiveVoyage ? ActiveVoyageProfitDisplay : "";
     public string OverlayNextDisplay => HasActiveVoyage ? LocalizationService.T(ActiveVoyageNextDisplay) : "";
-    public string OverlayMissionDisplay => LiveMissionDisplay;
+    public string OverlayMissionDisplay
+    {
+        get
+        {
+            var mission = _lastDataSnapshot.Missions.Where(x => x.Status.Value.Equals("active", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(x => x.Status.Timestamp).FirstOrDefault();
+            if (mission is null) return "";
+            var session = _lastDataSnapshot.Sessions.Where(x => x.EndedAt is null).OrderByDescending(x => x.StartedAt.Value).FirstOrDefault();
+            var historic = session is null || mission.Status.Timestamp < session.StartedAt.Value;
+            var label = historic ? (IsEnglish ? "From history" : "Из истории") : (IsEnglish ? "Mission" : "Миссия");
+            var objective = mission.Objective?.Value;
+            return $"{label}: {mission.Name.Value}\n{SourceName(mission.Status.Source)} • {mission.Status.AgeDisplay}" +
+                (string.IsNullOrWhiteSpace(objective) ? "" : $"\n{objective}");
+        }
+    }
     public string OverlayFreshnessDisplay
     {
         get
@@ -143,6 +174,17 @@ public partial class MainViewModel
     private void ToggleOverlayMode() => OverlayExpanded = !OverlayExpanded;
 
     [RelayCommand]
+    private void HideOverlay()
+    {
+        _overlayHotkeyVisible = false;
+        _overlaySuppressed = true;
+        OverlayEditMode = false;
+        OverlayPreview = false;
+        OnPropertyChanged(nameof(OverlayHotkeyVisible));
+        OnPropertyChanged(nameof(OverlaySuppressed));
+    }
+
+    [RelayCommand]
     private void ToggleOverlayEditor()
     {
         OverlayEditMode = !OverlayEditMode;
@@ -167,8 +209,9 @@ public partial class MainViewModel
     internal void ToggleOverlayFromHotkey()
     {
         var automaticVisible = OverlayEnabled && IsGameRunning;
-        var currentlyVisible = OverlayPreview || _overlayHotkeyVisible ||
+        var currentlyVisible = OverlayEditMode || OverlayPreview || _overlayHotkeyVisible ||
             (automaticVisible && !_overlaySuppressed);
+        OverlayEditMode = false;
         OverlayPreview = false;
         _overlayHotkeyVisible = !currentlyVisible;
         _overlaySuppressed = currentlyVisible && automaticVisible;
@@ -191,6 +234,7 @@ public partial class MainViewModel
     partial void OnOverlayExpandedChanged(bool value)
     {
         OnPropertyChanged(nameof(OverlayModeDisplay));
+        OnPropertyChanged(nameof(OverlayModeButtonText));
         NotifyOverlayChanged();
         QueueSave();
     }
@@ -222,12 +266,16 @@ public partial class MainViewModel
     partial void OnOverlayHotkeyChanged(string value)
     {
         OnPropertyChanged(nameof(OverlayHotkeyCaptureText));
+        OnPropertyChanged(nameof(OverlayControlHint));
         QueueSave();
     }
     partial void OnIsOverlayHotkeyCapturingChanged(bool value) =>
         OnPropertyChanged(nameof(OverlayHotkeyCaptureText));
-    partial void OnOverlayEditModeChanged(bool value) =>
+    partial void OnOverlayEditModeChanged(bool value)
+    {
         OnPropertyChanged(nameof(OverlayEditorButtonText));
+        OnPropertyChanged(nameof(OverlayControlHint));
+    }
 
     partial void OnIsGameRunningChanged(bool value)
     {
@@ -242,7 +290,16 @@ public partial class MainViewModel
     {
         OnPropertyChanged(nameof(OverlayEnvironmentDisplay));
         OnPropertyChanged(nameof(OverlayShipDisplay));
+        OnPropertyChanged(nameof(OverlayShipSourceDisplay));
         OnPropertyChanged(nameof(OverlayLocationDisplay));
+        OnPropertyChanged(nameof(OverlayLocationSourceDisplay));
+        OnPropertyChanged(nameof(OverlayBalanceDisplay));
+        OnPropertyChanged(nameof(OverlayHasRoute));
+        OnPropertyChanged(nameof(OverlayHasMission));
+        OnPropertyChanged(nameof(OverlayControlHint));
+        OnPropertyChanged(nameof(OverlayModeButtonText));
+        OnPropertyChanged(nameof(OverlayHideButtonText));
+        OnPropertyChanged(nameof(OverlayCompatibilityHint));
         OnPropertyChanged(nameof(OverlayRouteHeading));
         OnPropertyChanged(nameof(OverlayStopDisplay));
         OnPropertyChanged(nameof(OverlayActionDisplay));

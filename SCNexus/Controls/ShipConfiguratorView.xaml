@@ -34,6 +34,8 @@
                         <TextBlock Grid.Column="1" Text="{Binding SummaryDisplay}" FontWeight="SemiBold" Margin="16,0,0,0" />
                     </Grid>
                     <TextBlock Text="{Binding LogicDisplay}" Style="{StaticResource Hint}" Margin="0,4,0,0" />
+                    <TextBlock Text="{Binding PathDisplay}" TextWrapping="Wrap" Margin="0,7,0,0" />
+                    <Button Content="{Binding StartButtonText}" Click="OnTrackShoppingClick" CommandParameter="{Binding}" HorizontalAlignment="Left" Margin="0,8,0,0" />
                     <Expander Header="Остановки и список покупок" IsExpanded="False" Margin="0,7,0,0">
                         <ItemsControl ItemsSource="{Binding Stops}" Margin="0,7,0,0">
                             <ItemsControl.ItemTemplate>
@@ -43,7 +45,7 @@
                                             <TextBlock Text="{Binding Heading}" FontWeight="SemiBold" TextWrapping="Wrap" />
                                             <TextBlock Text="⚠ ОПАСНО: Pyro" Foreground="#FF9A8F" Visibility="{Binding IsPyro, Converter={StaticResource BoolVisibility}}" Margin="0,3,0,0" />
                                             <ItemsControl ItemsSource="{Binding Items}" Margin="0,5,0,0">
-                                                <ItemsControl.ItemTemplate><DataTemplate><CheckBox Content="{Binding Display}" Margin="0,2" /></DataTemplate></ItemsControl.ItemTemplate>
+                                                <ItemsControl.ItemTemplate><DataTemplate><CheckBox IsChecked="{Binding IsPurchased, Mode=TwoWay}" Margin="0,2"><TextBlock Text="{Binding Display}" TextWrapping="Wrap" /></CheckBox></DataTemplate></ItemsControl.ItemTemplate>
                                             </ItemsControl>
                                             <TextBlock Text="{Binding CostDisplay}" Style="{StaticResource Hint}" Margin="0,4,0,0" />
                                         </StackPanel>
@@ -52,6 +54,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </Expander>
+                    <TextBlock Text="{Binding RouteCaveat}" Style="{StaticResource Hint}" Margin="0,5,0,0" />
                 </StackPanel>
             </Border>
         </DataTemplate>

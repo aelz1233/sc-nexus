@@ -33,6 +33,18 @@ public class VoyageGuidanceTests
             Trades = [Trade("sale-1", "sale", "Laranite", "Everus Harbor")]
         });
         Assert.Equal(1, vm.ActiveVoyageStopIndex);
+        Assert.Equal(2, vm.OverlayChecklist.Count);
+        Assert.True(vm.OverlayChecklist[0].IsDone);
+        Assert.False(vm.OverlayChecklist[1].IsDone);
+        Assert.False(vm.CompleteChecklistStopCommand.CanExecute(null));
+        var serialized = typeof(MainViewModel).GetMethod("SerializeActiveVoyage", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(vm, null);
+        var restored = CreateViewModel();
+        typeof(MainViewModel).GetMethod("RestoreActiveVoyage", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(restored, [serialized]);
+        Assert.True(restored.OverlayChecklist[0].IsDone);
+        restored.OverlayChecklist[1].IsDone = true;
+        Assert.True(restored.CompleteChecklistStopCommand.CanExecute(null));
+        restored.CompleteChecklistStopCommand.Execute(null);
+        Assert.Equal(2, restored.ActiveVoyageStopIndex);
 
         vm.UpdateVoyageProgress(new DataCollectionSnapshot
         {

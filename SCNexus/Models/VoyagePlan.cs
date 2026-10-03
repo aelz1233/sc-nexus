@@ -34,4 +34,4 @@ public sealed record VoyagePlan(string Mode, IReadOnlyList<HaulingRoute> Trades,
 }
 
 public sealed record VoyageGuidanceState(VoyagePlan Plan, int StopIndex, bool Completed,
-    DateTimeOffset StartedAtUtc);
+    DateTimeOffset StartedAtUtc, IReadOnlyList<string>? CompletedActions = null);

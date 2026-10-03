@@ -136,6 +136,7 @@ public class SettingsServiceTests
             settings.OverlayOpacity = .75;
             settings.OverlayHotkey = "Ctrl+Alt+O";
             settings.ActiveVoyageJson = "{\"route\":1}";
+            settings.ActiveShoppingJson = "{\"shopping\":1}";
             await service.SaveAsync(settings);
             Assert.Equal(696, (await service.LoadAsync()).CargoScu);
             Assert.Equal("Stanton", (await service.LoadAsync()).CurrentSystem);
@@ -151,6 +152,7 @@ public class SettingsServiceTests
             Assert.Equal(.75, saved.OverlayOpacity, 2);
             Assert.Equal("Ctrl+Alt+O", saved.OverlayHotkey);
             Assert.Equal("{\"route\":1}", saved.ActiveVoyageJson);
+            Assert.Equal("{\"shopping\":1}", saved.ActiveShoppingJson);
         }
         finally
         {

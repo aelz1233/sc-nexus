@@ -113,6 +113,13 @@ public partial class ShipConfiguratorView : System.Windows.Controls.UserControl
         if (sender is Button { CommandParameter: ShipBuildResult result }) CopyBuild(result);
     }
 
+    private void OnTrackShoppingClick(object sender, RoutedEventArgs e)
+    {
+        if (_main is null || sender is not Button { CommandParameter: ComponentShoppingPlan plan }) return;
+        _main.TrackComponentShopping(plan, (ShipPicker.SelectedItem as ShipSummary)?.Name ?? "");
+        StatusText.Text = LocalizationService.IsEnglish ? "Purchase checklist is ready in the overlay." : "Чек-лист закупки открыт в оверлее.";
+    }
+
     private void CopyBuild(ShipBuildResult? result)
     {
         if (result is null) return;

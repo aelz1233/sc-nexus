@@ -34,6 +34,7 @@ public sealed class PersonalSettings
     public bool OverlayShowFreshness { get; set; } = true;
     public string OverlayHotkey { get; set; } = "";
     public string ActiveVoyageJson { get; set; } = "";
+    public string ActiveShoppingJson { get; set; } = "";
     public string LastSessionSummary { get; set; } = "";
     public DateTimeOffset? LastSessionEndedAt { get; set; }
 }

@@ -36,6 +36,8 @@ public partial class OverlayWindow : Window
     public void ApplySettings(MainViewModel viewModel)
     {
         var scale = Math.Clamp(viewModel.OverlayScale, .75, 1.5);
+        MaxHeight = Math.Max(200, SystemParameters.WorkArea.Height - 36);
+        OverlayScaleHost.MaxHeight = MaxHeight;
         OverlayScaleHost.Width = BaseWidth * scale;
         Width = BaseWidth * scale;
         OverlayChrome.Background = new SolidColorBrush(Color.FromArgb(
@@ -86,12 +88,13 @@ public partial class OverlayWindow : Window
         SetWindowLongPtr(handle, GwlExStyle, new IntPtr(style));
         Focusable = editable;
         Cursor = editable ? Cursors.SizeAll : Cursors.Arrow;
-        DetectShipButton.Opacity = editable ? 1 : 0;
+        ActionsHost.Opacity = editable ? 1 : 0;
         UpdateActionWindow();
     }
 
     private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        if (e.Handled) return;
         if (e.LeftButton != MouseButtonState.Pressed || DataContext is not MainViewModel { OverlayEditMode: true } vm)
             return;
         _dragging = true;
@@ -106,15 +109,15 @@ public partial class OverlayWindow : Window
 
     private void UpdateActionWindow()
     {
-        if (!IsVisible || DataContext is not MainViewModel { OverlayEditMode: false, OverlayExpanded: true } vm ||
-            !DetectShipButton.IsVisible || DetectShipButton.ActualWidth <= 0)
+        if (!IsVisible || DataContext is not MainViewModel { OverlayEditMode: false } vm ||
+            !ActionsHost.IsVisible || ActionsHost.ActualWidth <= 0)
         {
             _actionWindow?.Hide();
             return;
         }
-        _actionWindow ??= new OverlayActionWindow { Owner = this, DataContext = vm };
-        var bounds = DetectShipButton.TransformToAncestor(this).TransformBounds(
-            new Rect(DetectShipButton.RenderSize));
+        _actionWindow ??= new OverlayActionWindow(ActionsHost.ContentTemplate) { Owner = this, DataContext = vm };
+        var bounds = ActionsHost.TransformToAncestor(this).TransformBounds(
+            new Rect(ActionsHost.RenderSize));
         _actionWindow.Left = Left + bounds.Left;
         _actionWindow.Top = Top + bounds.Top;
         _actionWindow.Width = bounds.Width;
