@@ -57,7 +57,7 @@
         </DataTemplate>
 
         <DataTemplate x:Key="BuildResultTemplate">
-            <StackPanel Margin="0,12,0,0">
+            <StackPanel>
                 <Grid Margin="2,0,2,10">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                     <StackPanel>
@@ -140,7 +140,7 @@
             </Border>
         </Expander>
 
-        <TabControl x:Name="ResultsTabs" Visibility="Collapsed">
+        <TabControl x:Name="ResultsTabs" Visibility="Collapsed" FontWeight="Normal" Foreground="#EAF0F6">
             <TabItem x:Name="BudgetTab" Header="Лучшее за бюджет">
                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource BuildResultTemplate}" />
             </TabItem>

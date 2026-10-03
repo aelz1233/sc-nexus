@@ -139,6 +139,13 @@ public class AuditRegressionTests
                 command.CommandText = "CREATE TABLE OtherData (Id INTEGER)";
                 await command.ExecuteNonQueryAsync();
             }
+            await using (var connection = new SqliteConnection($"Data Source={path};Pooling=False"))
+            {
+                await connection.OpenAsync();
+                await using var checkpoint = connection.CreateCommand();
+                checkpoint.CommandText = "PRAGMA wal_checkpoint(TRUNCATE)";
+                await checkpoint.ExecuteNonQueryAsync();
+            }
             SqliteConnection.ClearAllPools();
             await File.WriteAllTextAsync(path, "corrupt original");
             var recovered = new SettingsService(path);
