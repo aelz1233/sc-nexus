@@ -17,8 +17,13 @@ public class SettingsServiceTests
             var settings = await service.LoadAsync();
             Assert.Equal(5, settings.OcrIntervalSeconds);
             settings.OcrIntervalSeconds = 10;
+            settings.AutoFleetOcrEnabled = false;
+            settings.FleetOcrAutoScroll = false;
             await service.SaveAsync(settings);
-            Assert.Equal(10, (await new SettingsService(path).LoadAsync()).OcrIntervalSeconds);
+            var saved = await new SettingsService(path).LoadAsync();
+            Assert.Equal(10, saved.OcrIntervalSeconds);
+            Assert.False(saved.AutoFleetOcrEnabled);
+            Assert.False(saved.FleetOcrAutoScroll);
             await using (var connection = new SqliteConnection($"Data Source={path};Pooling=False"))
             {
                 await connection.OpenAsync();

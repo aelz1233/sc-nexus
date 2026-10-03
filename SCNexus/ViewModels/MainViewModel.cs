@@ -141,6 +141,9 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         MonitorIntervalSeconds = MonitorIntervals.Contains(settings.MonitorIntervalSeconds) ? settings.MonitorIntervalSeconds : 15;
         ShowRouteDetails = settings.ShowRouteDetails;
         OcrEnabled = settings.OcrEnabled;
+        AutoFleetOcrEnabled = settings.AutoFleetOcrEnabled;
+        FleetOcrAutoScroll = settings.FleetOcrAutoScroll;
+        dataCollectionService?.SetFleetScanning(AutoFleetOcrEnabled, FleetOcrAutoScroll);
         OcrIntervalSeconds = Math.Clamp(settings.OcrIntervalSeconds, 5, 30);
         dataCollectionService?.SetOcrInterval(OcrIntervalSeconds);
         Language = settings.Language is "en" ? "en" : "ru";
@@ -521,6 +524,8 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             MonitorIntervalSeconds = Math.Clamp(MonitorIntervalSeconds, 15, 60),
             ShowRouteDetails = ShowRouteDetails,
             OcrEnabled = OcrEnabled,
+            AutoFleetOcrEnabled = AutoFleetOcrEnabled,
+            FleetOcrAutoScroll = FleetOcrAutoScroll,
             OcrIntervalSeconds = OcrIntervalSeconds,
             Language = Language,
             OverlayEnabled = OverlayEnabled,

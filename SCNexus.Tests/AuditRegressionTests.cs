@@ -61,7 +61,6 @@ public class AuditRegressionTests
     ];
 
     [Theory]
-    [InlineData("Vehicle Loadout\nGuardian MX")]
     [InlineData("Fleet Manager\nGuardian MX\nStored")]
     public void OcrFleetDoesNotInventCurrentShipOrShorterVariant(string text)
     {
@@ -73,13 +72,16 @@ public class AuditRegressionTests
     }
 
     [Theory]
-    [InlineData("Current Ship: Guardian MX", "Guardian MX")]
+    [InlineData("Current Ship: Guardian MX", null)]
+    [InlineData("Vehicle Loadout\nGuardian MX", null)]
+    [InlineData("Мой флот\nGuardian MX", null)]
     [InlineData("Current Ship: Vehicle Loadout", null)]
     [InlineData("Guardian MX", null)]
-    public void OcrRequiresKnownModelAndExplicitCurrentShipLabel(string text, string? expected)
+    public void OcrDoesNotSelectCurrentShipFromNonTerminalScreens(string text, string? expected)
     {
         var result = OcrProvider.ParseText(text, Vehicles, DateTimeOffset.UtcNow);
         Assert.Equal(expected, result.Values.FirstOrDefault(x => x.Key == "player.ship")?.Value);
+        Assert.Empty(result.Records);
     }
 
     [Fact]

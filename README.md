@@ -121,18 +121,20 @@ Use **Settings → Check for updates** to check GitHub. Confirm the update to do
 
 OCR is an optional fallback when a value cannot be reliably obtained from `Game.log`, local game data, or APIs. It captures only the visible Star Citizen window, sends the image to the Windows OCR engine locally, and releases the image immediately after recognition. No image is uploaded or kept by SC Nexus.
 
-To identify a ship:
+In **Settings → Data and automation**, choose an OCR interval of **5 / 10 / 20 / 30 seconds** (default: **5**), automatic reading of visible ASOP rows, and list scrolling for button scans.
+
+To scan your fleet:
 
 1. Open Star Citizen and keep its window visible.
-2. Open **Vehicle Loadout**, **ASOP**, **Fleet Manager**, a retrieval screen, or a HUD panel that displays the ship model name.
-3. Expand the in-game SC Nexus overlay and select **Force ship detection**. Switch to Star Citizen within three seconds; the game must be the foreground window.
-4. Read the result below the button. Catalog matches on fleet screens are added to the detected fleet. OCR changes the current ship only with an explicit **Current Ship** label and an exact catalog match; it cannot infer which ship you are flying from a list of ships.
+2. Open the interactive **ASOP terminal** and clear its search/filter.
+3. Expand the in-game SC Nexus overlay and select **Scan ASOP**. Switch to Star Citizen within three seconds; the game must be the foreground window.
+4. Read the result below the button. Recognized ship models and categories are added to your fleet.
 
-In an interactive **ASOP** list, the force button reads the visible rows, scrolls to the top, then down through the list (up to 60 scroll steps / 100 seconds). Clear ASOP search filters first and keep the cursor still during the scan. **Esc**, switching away from the game, or losing the terminal stops scanning. Already recognized entries are kept; interrupted scans may be incomplete. An unchanged list is a stopping heuristic, not proof that every ship was found.
+With list scrolling enabled, the **Scan ASOP** button reads the visible rows, scrolls to the top, then down through the list (up to 60 scroll steps / 100 seconds). Clear ASOP search filters first and keep the cursor still during the scan. **Esc**, switching away from the game, or losing the terminal stops scanning. Already recognized entries are kept; interrupted scans may be incomplete. An unchanged list is a stopping heuristic, not proof that every ship was found.
 
 **Locked / Заблокировано** entries are excluded. Rows whose status cannot be read are also skipped. Claim, destroyed and delivery entries are included when recognized. Models are deduplicated; an unlocked copy is kept even when another copy of that model is locked. Categories use UEX metadata with name-based rules as a fallback. Existing ship notes are preserved; scanning does not delete existing fleet entries.
 
-English and Russian Windows OCR are used together when installed. For Russian terminal statuses, install Russian OCR in Windows language settings. On other screens the button performs a single scan, even if periodic OCR is disabled. No retrieve, claim or purchase buttons are pressed. The overlay remains click-through outside its controls and checklist. OCR can fail on a hidden/minimized window, unreadable text or unsupported languages.
+English and Russian Windows OCR are used together when installed. For Russian terminal statuses, install Russian OCR in Windows language settings. The button works independently of periodic OCR. No retrieve, claim or purchase buttons are pressed. The overlay remains click-through outside its controls and checklist. OCR can fail on a hidden/minimized window, unreadable text or unsupported languages.
 
 ### Overlay controls and checklists
 

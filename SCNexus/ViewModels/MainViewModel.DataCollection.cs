@@ -19,6 +19,10 @@ public partial class MainViewModel
     private ObservedValue<string>? _lastAppliedSystem;
     private ObservedValue<string>? _lastAppliedShip;
     [ObservableProperty] private bool ocrEnabled;
+    [ObservableProperty] private bool autoFleetOcrEnabled = true;
+    [ObservableProperty] private bool fleetOcrAutoScroll = true;
+    public string AutoFleetOcrLabel => IsEnglish ? "Automatically read visible ships in ASOP" : "Автоматически читать видимые корабли в ASOP";
+    public string FleetOcrScrollLabel => IsEnglish ? "Scroll the ASOP list when scanning by button" : "Прокручивать список ASOP при сканировании по кнопке";
     [ObservableProperty] private int ocrIntervalSeconds = 5;
     public int[] OcrIntervals { get; } = [5, 10, 20, 30];
     public string OcrIntervalLabel => IsEnglish ? "OCR interval, seconds" : "Интервал OCR, секунды";
@@ -28,13 +32,13 @@ public partial class MainViewModel
     [ObservableProperty] private string shipDetectionStatus = "";
 
     public bool IsEnglish => Language == "en";
-    public string OcrShipDetectionTitle => IsEnglish ? "OCR ship detection" : "OCR и обнаружение корабля";
-    public string FleetScanHint => IsEnglish ? "ASOP: automatic list scrolling. Esc to stop. Locked or unreadable entries are skipped."
-        : "ASOP: автоматическая прокрутка списка. Esc — стоп. Заблокированные и нераспознанные строки пропускаются.";
+    public string OcrShipDetectionTitle => IsEnglish ? "ASOP fleet scanning" : "Сканирование флота в ASOP";
+    public string FleetScanHint => IsEnglish ? "ASOP terminal: visible rows automatically; optional list scrolling by button. Esc to stop."
+        : "Терминал ASOP: видимые строки автоматически; прокрутка по кнопке настраивается. Esc — стоп.";
     public string OcrShipDetectionGuide => IsEnglish
-        ? "Open the interactive ASOP fleet list and clear its search/filter first. Press Force ship detection and switch to the game within 3 seconds. Nexus reads the list, scrolls to the top and then down. Do not move the cursor during scanning; Esc, leaving the game or closing the terminal stops it. Locked entries and duplicates are excluded; claim/delivery entries are included. Ship categories come from the catalog. Other screens use one scan. No retrieve, claim or purchase buttons are pressed; the current ship still requires an explicit Current Ship label. Russian ASOP statuses require the Russian Windows OCR language."
-        : "Открой список флота в ASOP в режиме взаимодействия и сбрось его поиск/фильтры. Нажми «Принудительно обнаружить корабль» и за 3 секунды переключись в игру. Nexus прочитает список, прокрутит его вверх, затем вниз. Не двигай курсор во время проверки; Esc, уход из игры или закрытие терминала останавливают её. Заблокированные строки и повторы исключаются; восстановление и доставка учитываются. Категория берётся из каталога. На других экранах выполняется один скан. Кнопки вызова, восстановления и покупки не нажимаются; текущий корабль требует явной подписи Current Ship. Для русских статусов ASOP нужен русский язык Windows OCR.";
-    public string OverlayDetectShipButtonText => IsEnglish ? "Force ship detection" : "Принудительно обнаружить корабль";
+        ? "Open the interactive ASOP terminal and clear its search/filter. Automatic OCR reads visible ship rows at the selected interval. To scan by button, press Scan ASOP and switch to the game within 3 seconds. Enable list scrolling to scan all pages. Esc, leaving the game or closing the terminal stops scrolling. Locked entries, unreadable statuses and duplicates are skipped. Claim/delivery entries are included. Ship categories come from the catalog. Russian terminal statuses require the Russian Windows OCR language."
+        : "Открой терминал ASOP в режиме взаимодействия и сбрось поиск/фильтры. Автоматический OCR читает видимые строки с выбранным интервалом. Для проверки по кнопке нажми «Сканировать ASOP» и за 3 секунды переключись в игру. Включи прокрутку списка для проверки всех страниц. Esc, уход из игры или закрытие терминала останавливают прокрутку. Заблокированные строки, нераспознанные статусы и повторы пропускаются; восстановление и доставка учитываются. Категория берётся из каталога. Для русских статусов терминала нужен русский язык Windows OCR.";
+    public string OverlayDetectShipButtonText => IsEnglish ? "Scan ASOP" : "Сканировать ASOP";
     public string[] Languages { get; } = ["Русский", "English"];
     public string SelectedLanguage
     {
@@ -296,7 +300,7 @@ public partial class MainViewModel
             return;
         }
 
-        ShipDetectionStatus = IsEnglish ? "Switch to Star Citizen. Scanning in 3 seconds; ASOP will scroll automatically. Esc stops." : "Переключись в Star Citizen. Через 3 секунды проверка; список ASOP прокрутится автоматически. Esc — стоп.";
+        ShipDetectionStatus = IsEnglish ? "Open ASOP in Star Citizen. Scanning in 3 seconds. Esc to stop." : "Открой ASOP в Star Citizen. Проверка через 3 секунды. Esc — стоп.";
         DataProviderResult? result;
         try
         {
@@ -356,14 +360,22 @@ public partial class MainViewModel
                     ? "Switch to Star Citizen before scanning. It must be the foreground window."
                     : "Перед сканированием переключись в Star Citizen. Окно игры должно быть активным.",
                 "No text recognized" => IsEnglish
-                    ? "No text was recognized. Open a ship screen with the model name and try again."
-                    : "Текст не распознан. Открой экран корабля с названием модели и повтори.",
+                    ? "No text was recognized. Open the ASOP terminal and try again."
+                    : "Текст не распознан. Открой терминал ASOP и повтори.",
                 "Ship catalog unavailable" => IsEnglish ? "Ship catalog is unavailable. Connect to the internet and retry."
                     : "Каталог кораблей недоступен. Подключись к интернету и повтори.",
                 _ => IsEnglish
-                    ? "A ship name was not found. Open Vehicle Loadout, ASOP, Fleet Manager, or a HUD panel and try again."
-                    : "Название корабля не найдено. Открой Vehicle Loadout, ASOP, «Мой флот» или HUD и повтори."
+                    ? "Open the ASOP terminal with readable ship names and statuses, then try again."
+                    : "Открой терминал ASOP с читаемыми названиями и статусами кораблей и повтори."
             };
+    }
+
+    partial void OnAutoFleetOcrEnabledChanged(bool value) => UpdateFleetOcrSettings();
+    partial void OnFleetOcrAutoScrollChanged(bool value) => UpdateFleetOcrSettings();
+    private void UpdateFleetOcrSettings()
+    {
+        dataCollectionService?.SetFleetScanning(AutoFleetOcrEnabled, FleetOcrAutoScroll);
+        QueueSave();
     }
 
     partial void OnOcrIntervalSecondsChanged(int value)

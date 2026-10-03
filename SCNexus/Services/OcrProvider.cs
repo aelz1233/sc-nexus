@@ -21,6 +21,8 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
     public DataSourceKind Source => DataSourceKind.Ocr;
     public int Priority => 5;
     public int IntervalSeconds { get; set; } = 5;
+    public bool AutoFleetEnabled { get; set; } = true;
+    public bool ScrollFleetOnRequest { get; set; } = true;
     public TimeSpan RefreshInterval => TimeSpan.FromSeconds(Math.Clamp(IntervalSeconds, 5, 30));
 
     public async Task<DataProviderResult> CollectAsync(DataProviderContext context, CancellationToken token)
@@ -34,13 +36,13 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
         var text = string.Join("\n", lines.Select(x => x.Text));
         try
         {
-            if (FleetScreenPattern().IsMatch(text) || ShipPattern().IsMatch(text))
+            if (AutoFleetEnabled && FleetTerminalPattern().IsMatch(text))
                 _vehicles ??= await gameDataService.GetVehiclesAsync(token);
         }
         catch (HttpRequestException) { }
         catch (InvalidDataException) { }
         if (GetForegroundWindow() != window) return new DataProviderResult { Status = "Waiting for Star Citizen foreground window" };
-        return ConfirmBalance(ParseLines(lines, _vehicles ?? [], DateTimeOffset.UtcNow));
+        return ConfirmBalance(ParseLines(lines, AutoFleetEnabled ? _vehicles ?? [] : [], DateTimeOffset.UtcNow));
     }
 
     internal static DataProviderResult ParseText(string text, IReadOnlyList<VehicleCatalogItem> vehicles, DateTimeOffset now)
@@ -60,20 +62,14 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
             values.Add(new("player.balance", mobiBalance.ToString(CultureInfo.InvariantCulture), DataSourceKind.Ocr, now, .78, "aUEC"));
         AddTextValue(LocationPattern(), "player.location", text, now, values, .68);
         var records = new List<TypedObservation>();
-        var current = ShipPattern().Match(text);
-        var currentModel = current.Success ? vehicles.FirstOrDefault(v => v.IsSpaceship == 1 &&
-            (v.Name.Equals(current.Groups["value"].Value.Trim(), StringComparison.OrdinalIgnoreCase) ||
-             v.NameFull.Equals(current.Groups["value"].Value.Trim(), StringComparison.OrdinalIgnoreCase))) : null;
-        if (currentModel is not null)
-            values.Add(new ValueObservation("player.ship", currentModel.Name, DataSourceKind.Ocr, now, .82));
-        if (FleetScreenPattern().IsMatch(text) || currentModel is not null)
+        if (FleetTerminalPattern().IsMatch(text))
         {
             foreach (var vehicle in ReadFleetScreen(lines, vehicles).Rows.Where(x => !x.Locked && x.StatusRecognized).Select(x => x.Vehicle).DistinctBy(x => x.Id))
             {
                 var id = "ocr-ship-" + vehicle.Id;
                 var detected = new DetectedShip
                 {
-                    Id = id, Name = new ObservedValue<string>(vehicle.Name, DataSourceKind.Ocr, now, .82), IsCurrent = vehicle == currentModel,
+                    Id = id, Name = new ObservedValue<string>(vehicle.Name, DataSourceKind.Ocr, now, .82),
                     Role = new ObservedValue<string>(VehicleCatalog.InferRole(vehicle), DataSourceKind.Uex, now, .95)
                 };
                 records.Add(new TypedObservation("ship", id, detected, DataSourceKind.Ocr, now, .82));
@@ -159,9 +155,6 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
     {
         var window = GetForegroundWindow();
         if (window == IntPtr.Zero || !IsStarCitizen(window)) return new() { Status = "Waiting for Star Citizen foreground window" };
-        try { _vehicles ??= await gameDataService.GetVehiclesAsync(token); }
-        catch (Exception ex) when (ex is HttpRequestException or InvalidDataException or InvalidOperationException) { }
-        if (_vehicles is not { Count: > 0 }) return new() { Status = "Ship catalog unavailable" };
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(token);
         stop.CancelAfter(TimeSpan.FromSeconds(100));
         var watching = WatchForStopAsync(window, stop);
@@ -169,17 +162,15 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
         {
             var firstLines = await CaptureAndRecognizeAsync(window, stop.Token);
             stop.Token.ThrowIfCancellationRequested();
+            if (!FleetTerminalPattern().IsMatch(string.Join("\n", firstLines.Select(x => x.Text))))
+                return new() { Status = "Open ASOP terminal" };
+            try { _vehicles ??= await gameDataService.GetVehiclesAsync(stop.Token); }
+            catch (Exception ex) when (ex is HttpRequestException or InvalidDataException or InvalidOperationException) { }
+            if (_vehicles is not { Count: > 0 }) return new() { Status = "Ship catalog unavailable" };
             var first = ReadFleetScreen(firstLines, _vehicles);
-            if (!first.IsTerminal || first.Rows.Count == 0)
-            {
-                var result = ConfirmBalance(ParseLines(firstLines, _vehicles, DateTimeOffset.UtcNow));
-                if (result.Values.Any(x => x.Key == "player.balance"))
-                {
-                    await Task.Delay(600, stop.Token);
-                    result = ConfirmBalance(ParseLines(await CaptureAndRecognizeAsync(window, stop.Token), _vehicles, DateTimeOffset.UtcNow));
-                }
-                return result;
-            }
+            if (!first.IsTerminal) return new() { Status = "Open ASOP terminal" };
+            if (!ScrollFleetOnRequest || first.Rows.Count == 0)
+                return ParseLines(firstLines, _vehicles, DateTimeOffset.UtcNow);
             var scanned = await FleetTerminalScan.RunAsync(first,
                 async cancellation => ReadFleetScreen(await CaptureAndRecognizeAsync(window, cancellation), _vehicles),
                 async (page, direction, cancellation) =>
@@ -340,8 +331,6 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
 
     [GeneratedRegex(@"(?:Balance|Wallet|Баланс)[ \t]*[:\-]?[ \t]*(?<value>[0-9][0-9 \t .,]*)[ \t]*aUEC", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex BalancePattern();
     [GeneratedRegex(@"(?:Current\s+Location|Location|Текущая\s+локация|Локация)\s*[:\-]?\s*(?<value>[^\r\n]{2,80})", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex LocationPattern();
-    [GeneratedRegex(@"^(?:Current[ \t]+Ship|Текущий[ \t]+корабль)[ \t]*[:\-][ \t]*(?<value>[^\r\n]{2,80})$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Multiline)] private static partial Regex ShipPattern();
-    [GeneratedRegex(@"(\bASOP\b|Vehicle\s+Loadout|Fleet\s+Manager|Retrieve\s+Vehicle|Мой\s+флот|Менеджер\s+парка\s+техники)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex FleetScreenPattern();
     [GeneratedRegex(@"(\bASOP\b|Fleet\s+Manager|Vehicle\s+Retrieval|Менеджер\s+парка\s+техники)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex FleetTerminalPattern();
     [GeneratedRegex(@"(\bLOCKED\b|ЗАБЛОКИРОВА[НH][ОOНHАAЫЬ]*)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex LockedPattern();
     [GeneratedRegex(@"\b(Stored|Storage|Claim|Claiming|Delivery|Delivering|Destroyed|Retrieve|Retrieving|Ready|Unlocked)\b|ХРАНИТСЯ|ХРАНЕНИ[ЕИЯ]|ДОСТАВ|ВОССТАНОВ|ВОЗМЕСТИТЬ|УНИЧТОЖ|ВЫЗВАТЬ|ПОЛУЧИТЬ|ИЗВЛЕЧЬ|ГОТОВ|ДОСТУП(?:ЕН|НО)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex AvailableStatusPattern();

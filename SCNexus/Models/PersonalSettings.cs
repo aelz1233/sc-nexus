@@ -18,6 +18,8 @@ public sealed class PersonalSettings
     public int MonitorIntervalSeconds { get; set; } = 15;
     public bool ShowRouteDetails { get; set; } = true;
     public bool OcrEnabled { get; set; }
+    public bool AutoFleetOcrEnabled { get; set; } = true;
+    public bool FleetOcrAutoScroll { get; set; } = true;
     public int OcrIntervalSeconds { get; set; } = 5;
     public string Language { get; set; } = "ru";
     public bool OverlayEnabled { get; set; } = true;

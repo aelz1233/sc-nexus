@@ -18,6 +18,15 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
     public DataCollectionSnapshot Current { get; private set; } = new();
     public event EventHandler<DataCollectionSnapshot>? SnapshotUpdated;
 
+    public void SetFleetScanning(bool automatic, bool scroll)
+    {
+        foreach (var provider in _providers.OfType<OcrProvider>())
+        {
+            provider.AutoFleetEnabled = automatic;
+            provider.ScrollFleetOnRequest = scroll;
+        }
+    }
+
     public void SetOcrInterval(int seconds)
     {
         foreach (var provider in _providers.OfType<OcrProvider>()) provider.IntervalSeconds = Math.Clamp(seconds, 5, 30);

@@ -293,6 +293,8 @@ public sealed class SettingsService
                 current.MonitorIntervalSeconds = snapshot.MonitorIntervalSeconds;
                 current.ShowRouteDetails = snapshot.ShowRouteDetails;
                 current.OcrEnabled = snapshot.OcrEnabled;
+                current.AutoFleetOcrEnabled = snapshot.AutoFleetOcrEnabled;
+                current.FleetOcrAutoScroll = snapshot.FleetOcrAutoScroll;
                 current.OcrIntervalSeconds = Math.Clamp(snapshot.OcrIntervalSeconds, 5, 30);
                 current.Language = snapshot.Language;
                 current.OverlayEnabled = snapshot.OverlayEnabled;
@@ -341,6 +343,8 @@ public sealed class SettingsService
             if (!names.Contains("MonitorEnabled")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN MonitorEnabled INTEGER NOT NULL DEFAULT 1");
             if (!names.Contains("MonitorIntervalSeconds")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN MonitorIntervalSeconds INTEGER NOT NULL DEFAULT 15");
             if (!names.Contains("ShowRouteDetails")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN ShowRouteDetails INTEGER NOT NULL DEFAULT 1");
+            if (!names.Contains("AutoFleetOcrEnabled")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN AutoFleetOcrEnabled INTEGER NOT NULL DEFAULT 1");
+            if (!names.Contains("FleetOcrAutoScroll")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN FleetOcrAutoScroll INTEGER NOT NULL DEFAULT 1");
             if (!names.Contains("OcrIntervalSeconds")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OcrIntervalSeconds INTEGER NOT NULL DEFAULT 5");
             if (!names.Contains("OcrEnabled")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OcrEnabled INTEGER NOT NULL DEFAULT 0");
             if (!names.Contains("Language")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN Language TEXT NOT NULL DEFAULT 'ru'");
