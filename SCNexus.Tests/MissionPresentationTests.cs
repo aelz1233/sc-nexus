@@ -59,6 +59,7 @@ public class MissionPresentationTests
     [Theory]
     [InlineData("Vaughn_Stanton1_Assassination_Intro", "Vaughn · Устранение цели · Stanton")]
     [InlineData("Unknown_Contract_Name", "Unknown Contract Name")]
+    [InlineData("RED WIND: ВОЗВРАЩЕНИЕ ПАКЕТА", "Red Wind: Возвращение пакета")]
     public void MissionNamesRemainReadableWithoutInventingAnOfficialTitle(string raw, string expected)
         => Assert.Equal(expected, MissionState.FormatName(raw, false));
 
@@ -81,6 +82,29 @@ public class MissionPresentationTests
             var result = await provider.CollectAsync(new(directory, new(), DateTimeOffset.UtcNow, false), default);
             Assert.Equal(new[] { "active", "active", "completed", "completed" },
                 result.Records.Where(x => x.Kind == "mission").Select(x => ((MissionState)x.Value).Status.Value));
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+
+    [Theory]
+    [InlineData("Принят контракт", "RED WIND: ВОЗВРАЩЕНИЕ ПАКЕТА")]
+    [InlineData("Contract accepted", "RED WIND: PACKAGE RECOVERY")]
+    public async Task AcceptedNotificationProvidesOfficialTitleAndLaterMarkersKeepIt(string prefix, string title)
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        const string id = "e0d51f47-0bc6-4ed6-9c6b-7e5ff16397c6";
+        try
+        {
+            await File.WriteAllLinesAsync(Path.Combine(directory, "Game.log"),
+            [
+                $"<2026-10-03T03:56:16.033Z> <SHUDEvent_OnNotification> Added notification \"{prefix}: {title} <EM4>[+100 реп]</EM4>: \" [29] to queue. MissionId: [{id}], ObjectiveId: []",
+                $"<2026-10-03T03:56:17.000Z> Creating objective marker: missionId [{id}], generator name [RedWind_RecoverItem], contract [RedWind_RecoverPackage_Stanton_1Box]"
+            ]);
+            var result = await new GameLogProvider(new GameLogService(directory)).CollectAsync(new(directory, new(), DateTimeOffset.UtcNow, false), default);
+            var mission = (MissionState)result.Records.Last(x => x.Kind == "mission").Value;
+            Assert.Equal(title, mission.Name.Value);
+            Assert.Equal("active", mission.Status.Value);
         }
         finally { Directory.Delete(directory, true); }
     }

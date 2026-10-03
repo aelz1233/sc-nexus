@@ -81,6 +81,13 @@ public sealed class MissionState
     public string DisplayName => FormatName(Name.Value, CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en");
     internal static string FormatName(string name, bool english)
     {
+        if (name.Contains(':') && name == name.ToUpperInvariant())
+        {
+            var titleParts = name.Split(':', 2, StringSplitOptions.TrimEntries);
+            var title = titleParts[1].ToLowerInvariant();
+            return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(titleParts[0].ToLowerInvariant()) + ": " +
+                (title.Length == 0 ? "" : char.ToUpperInvariant(title[0]) + title[1..]);
+        }
         if (name.StartsWith("Mission ", StringComparison.OrdinalIgnoreCase))
             return english ? "Mission (name unavailable)" : "Миссия (название не определено)";
         var parts = new List<string>();
@@ -100,6 +107,8 @@ public sealed class MissionState
     public string ObjectiveDisplay => string.IsNullOrWhiteSpace(Objective?.Value) ? "" :
         Objective.Value.Contains("KillShip", StringComparison.OrdinalIgnoreCase)
             ? (CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en" ? "Destroy the target ship" : "Уничтожить корабль цели")
+            : Objective.Value.Contains("RecoverItem", StringComparison.OrdinalIgnoreCase)
+                ? (CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en" ? "Recover the package" : "Забрать посылку")
             : Guid.TryParse(Objective.Value, out _) ? "" : Objective.Value.Replace('_', ' ');
     public string StatusDisplay => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en" ? Status.Value : Status.Value switch
     {

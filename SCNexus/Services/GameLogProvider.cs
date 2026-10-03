@@ -246,10 +246,11 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
             var id = marker.Groups["id"].Value;
             var name = marker.Groups["name"].Value;
             var objective = marker.Groups["objective"].Value;
+            var previous = _missions.GetValueOrDefault(id);
             var state = new MissionState
             {
-                Id = id, Name = new ObservedValue<string>(name, Source, timestamp, .9),
-                Status = new ObservedValue<string>("active", Source, timestamp, .9),
+                Id = id, Name = previous?.Name.Confidence > .9 ? previous.Name : new ObservedValue<string>(name, Source, timestamp, .9),
+                Status = new ObservedValue<string>(previous?.Status.Value is "completed" or "failed" or "abandoned" ? previous.Status.Value : "active", Source, timestamp, .9),
                 Objective = string.IsNullOrWhiteSpace(objective) ? null : new ObservedValue<string>(objective, Source, timestamp, .82)
             };
             _missions[id] = state;
@@ -290,6 +291,22 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
             };
             _missions[id] = state;
             records.Add(new TypedObservation("mission", id, state, Source, timestamp, .96));
+        }
+        var accepted = AcceptedMissionPattern().Match(line);
+        if (accepted.Success && Guid.TryParse(accepted.Groups["id"].Value, out var missionGuid) && missionGuid != Guid.Empty)
+        {
+            var id = accepted.Groups["id"].Value;
+            var title = Regex.Replace(accepted.Groups["title"].Value, @"<[^>]+>.*?</[^>]+>", "").Trim(' ', ':');
+            if (title.Length == 0) return;
+            var previous = _missions.GetValueOrDefault(id);
+            var state = new MissionState
+            {
+                Id = id, Name = new(title, Source, timestamp, .98),
+                Status = new(previous?.Status.Value is "completed" or "failed" or "abandoned" ? previous.Status.Value : "active", Source, timestamp, .96),
+                Objective = previous?.Objective
+            };
+            _missions[id] = state;
+            records.Add(new("mission", id, state, Source, timestamp, .96));
         }
     }
 
@@ -372,6 +389,7 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
     [GeneratedRegex(@"Creating objective marker:\s*missionId \[(?<id>[0-9a-f-]{36})\].*?generator name \[(?<objective>[^\]]+)\].*?contract \[(?<name>[^\]]+)\]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex MissionMarkerPattern();
     [GeneratedRegex(@"<ObjectiveUpserted>.*?mission_id (?<id>[0-9a-f-]{36})\s+-\s+objective_id (?<objective>[^\s]+)\s+-\s+state (?<state>[A-Z_]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex ObjectivePattern();
     [GeneratedRegex(@"<MissionEnded>.*?mission_id (?<id>[0-9a-f-]{36})\s+-\s+mission_state (?<state>[A-Z_]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex MissionEndedPattern();
+    [GeneratedRegex("Added notification \"(?:Принят контракт|Contract accepted|Accepted contract):\\s*(?<title>.*?)\".*?MissionId:\\s*\\[(?<id>[0-9a-f-]{36})\\]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex AcceptedMissionPattern();
     [GeneratedRegex(@"(?:\bBalance|\bWallet|Баланс|Кошел[её]к)[ \t]*[:=][ \t]*(?<value>[0-9][0-9, .]*)[ \t]*aUEC\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex CurrencyPattern();
     [GeneratedRegex(@"Game Version Identifier:\s*(?<value>[a-z0-9-]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex BuildPattern();
     [GeneratedRegex(@"(<Actor Death>|CActor::Kill:.*(?:killed|destroyed)|player.*(?:died|dead))", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex DeathPattern();
