@@ -257,7 +257,7 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
     [GeneratedRegex(@"(\bASOP\b|Vehicle\s+Loadout|Fleet\s+Manager|Retrieve\s+Vehicle|Мой\s+флот|Менеджер\s+парка\s+техники)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex FleetScreenPattern();
     [GeneratedRegex(@"(\bASOP\b|Fleet\s+Manager|Vehicle\s+Retrieval|Менеджер\s+парка\s+техники)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex FleetTerminalPattern();
     [GeneratedRegex(@"(\bLOCKED\b|ЗАБЛОКИРОВА[НH][ОOНHАAЫЬ]*)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex LockedPattern();
-    [GeneratedRegex(@"\b(Stored|Storage|Claim|Claiming|Delivery|Delivering|Destroyed|Retrieve|Retrieving|Ready|Unlocked)\b|ХРАНИТСЯ|ХРАНЕНИ[ЕИЯ]|ДОСТАВ|ВОССТАНОВ|УНИЧТОЖ|ВЫЗВАТЬ|ПОЛУЧИТЬ|ГОТОВ|ДОСТУПЕН", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex AvailableStatusPattern();
+    [GeneratedRegex(@"\b(Stored|Storage|Claim|Claiming|Delivery|Delivering|Destroyed|Retrieve|Retrieving|Ready|Unlocked)\b|ХРАНИТСЯ|ХРАНЕНИ[ЕИЯ]|ДОСТАВ|ВОССТАНОВ|ВОЗМЕСТИТЬ|УНИЧТОЖ|ВЫЗВАТЬ|ПОЛУЧИТЬ|ИЗВЛЕЧЬ|ГОТОВ|ДОСТУП(?:ЕН|НО)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex AvailableStatusPattern();
 
     [StructLayout(LayoutKind.Sequential)] private struct POINT { public int X; public int Y; }
     [StructLayout(LayoutKind.Sequential)] private struct INPUT { public uint Type; public MOUSEINPUT Mouse; }

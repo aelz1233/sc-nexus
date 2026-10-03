@@ -34,6 +34,13 @@ public class FleetTerminalScanTests
     }
 
     [Fact]
+    public void RussianClaimIsIncludedButLockedOverridesAvailableAndRetrieve()
+    {
+        var result = OcrProvider.ParseText("МЕНЕДЖЕР ПАРКА ТЕХНИКИ\nGuardian MX\nВозместить\nC1 Spirit — 2\nЗАБЛОКИРОВАНО Доступно Извлечь\nVulture\nНа хранении", Ships, DateTimeOffset.UtcNow);
+        Assert.Equal(new[] { "Guardian MX", "Vulture" }, result.Records.Select(x => ((DetectedShip)x.Value).Name.Value));
+    }
+
+    [Fact]
     public void UnreadableStatusIsNotTreatedAsUnlocked()
     {
         var result = OcrProvider.ParseText("ASOP\nGuardian MX\n???\nC1 Spirit\nStored", Ships, DateTimeOffset.UtcNow);
