@@ -83,7 +83,7 @@ public class DataCollectionTests
         {
             await File.WriteAllLinesAsync(Path.Combine(directory, "Game.log"),
             [
-                "<2026-10-01T20:56:41.291Z> 23,800,000 aUEC",
+                "<2026-10-01T20:56:41.291Z> Balance: 23,800,000 aUEC",
                 "<2026-10-01T22:29:38.410Z> [Notice] <RequestLocationInventory> Player[Test] requested inventory for Location[Stanton2_Orison] [Inventory]",
                 "<2026-10-01T22:43:59.110Z> [Notice] <CLocalMissionPhaseMarker::CreateMarker> Creating objective marker: missionId [f3fd326d-1ac1-4cda-837c-a7c1541b0aba], generator name [BountyHuntersGuild_KIllShip], contract [BountyHuntersGuild_Bounty_Stanton_Easy_0], objectiveId [bab951fe-3b6c-c746-b83d-7c214c834726]",
                 "<2026-10-01T22:46:00.770Z> [Notice] <MissionEnded> Received MissionEnded push message for: mission_id f3fd326d-1ac1-4cda-837c-a7c1541b0aba - mission_state MISSION_STATE_COMPLETED [Missions]"

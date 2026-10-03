@@ -77,7 +77,7 @@ public partial class MainViewModel
         : "В Star Citizen выбери оконный режим или окно без рамки. При активной игре Nexus дополнительно проверяет назначенные клавиши. Если бинд работает только вне игры, проверь, что игра и Nexus запущены с одинаковыми правами Windows.";
     public string OverlayBalanceDisplay => IsEnglish ? $"Nexus balance: {BalanceDisplay}" : $"Баланс Nexus: {BalanceDisplay}";
     public bool OverlayHasRoute => HasActiveVoyage || HasActiveFlight;
-    public bool OverlayHasMission => _lastDataSnapshot.Missions.Any(x => x.Status.Value.Equals("active", StringComparison.OrdinalIgnoreCase));
+    public bool OverlayHasMission => CurrentMissions.Length > 0;
     public string OverlayPreviewButtonText => OverlayPreview
         ? (IsEnglish ? "Hide preview" : "Скрыть пример")
         : (IsEnglish ? "Show preview" : "Показать пример");
@@ -109,7 +109,7 @@ public partial class MainViewModel
             var value = location?.Value ?? CurrentLocation;
             if (string.IsNullOrWhiteSpace(value) || value is "Не указана" or "Not specified")
                 return IsEnglish ? "Location not detected" : "Локация не определена";
-            var place = string.IsNullOrWhiteSpace(system) ? value : $"{system} · {value}";
+            var place = string.IsNullOrWhiteSpace(system) ? ReadableLocation(value) : $"{system} · {ReadableLocation(value)}";
             return place;
         }
     }
@@ -133,14 +133,11 @@ public partial class MainViewModel
     {
         get
         {
-            var mission = _lastDataSnapshot.Missions.Where(x => x.Status.Value.Equals("active", StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(x => x.Status.Timestamp).FirstOrDefault();
+            var mission = CurrentMissions.FirstOrDefault();
             if (mission is null) return "";
-            var session = _lastDataSnapshot.Sessions.Where(x => x.EndedAt is null).OrderByDescending(x => x.StartedAt.Value).FirstOrDefault();
-            var historic = session is null || mission.Status.Timestamp < session.StartedAt.Value;
-            var label = historic ? (IsEnglish ? "From history" : "Из истории") : (IsEnglish ? "Mission" : "Миссия");
-            var objective = mission.Objective?.Value;
-            return $"{label}: {mission.Name.Value}\n{SourceName(mission.Status.Source)} • {mission.Status.AgeDisplay}" +
+            var label = IsEnglish ? $"Missions: {CurrentMissions.Length}" : $"Миссий: {CurrentMissions.Length}";
+            var objective = mission.ObjectiveDisplay;
+            return $"{label} • {mission.DisplayName}\n{SourceName(mission.Status.Source)} • {mission.Status.AgeDisplay}" +
                 (string.IsNullOrWhiteSpace(objective) ? "" : $"\n{objective}");
         }
     }

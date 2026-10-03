@@ -44,20 +44,35 @@ public partial class MainViewModel
     public ObservableCollection<MissionState> DetectedMissions { get; } = [];
     public int DetectedDeaths { get; private set; }
     public int DetectedMovements { get; private set; }
+    private bool IsCurrentSessionObservation(DateTimeOffset timestamp) => IsGameRunning && _sessionStartedAt is { } start &&
+        timestamp >= start && timestamp <= DateTimeOffset.UtcNow.AddSeconds(5);
+    private MissionState[] CurrentMissions => _lastDataSnapshot.Missions.Where(x =>
+        x.Status.Value.Equals("active", StringComparison.OrdinalIgnoreCase) && x.Status.Confidence >= .75 &&
+        IsCurrentSessionObservation(x.Status.Timestamp)).OrderByDescending(x => x.Status.Timestamp).ToArray();
+    private static string ReadableLocation(string value) => System.Text.RegularExpressions.Regex.Replace(value,
+        @"\bRR\s+(HUR|ARC|MIC|CRU)\s+L(\d+)\b", "$1-L$2", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     public string LiveLocationDisplay => _lastDataSnapshot.Player.CurrentLocation is { } location
-        ? $"{location.Value} • {location.SourceDisplay} • {location.AgeDisplay}"
+        ? $"{(IsCurrentSessionObservation(location.Timestamp) ? "" : IsEnglish ? "Last known: " : "Последняя известная: ")}{ReadableLocation(location.Value)} • {location.SourceDisplay} • {location.AgeDisplay}"
         : IsEnglish ? "Location has not been detected yet" : "Локация пока не определена";
     public string LiveServerDisplay => GameShard is "Не определён" or "Unknown"
         ? (IsEnglish ? "Join the universe to detect the server" : "Зайди во вселенную, чтобы определить сервер")
-        : $"{GameRegion} • {GameShard}";
+        : $"{GameRegion}" + (_lastDataSnapshot.Values.TryGetValue("game.shard", out var shard) && !IsCurrentSessionObservation(shard.Timestamp)
+            ? (IsEnglish ? " • previous session" : " • прошлая сессия") : "");
+    public string LiveMissionTitle => IsEnglish ? $"Current missions: {CurrentMissions.Length}" : $"Миссии сейчас: {CurrentMissions.Length}";
+    public string LiveMissionHint => CurrentMissions.FirstOrDefault() is { } mission
+        ? $"{mission.Status.SourceDisplay} • {mission.Status.AgeDisplay}" + (CurrentMissions.Length > 3
+            ? (IsEnglish ? " • more in Journal" : " • остальные в журнале") : "")
+        : IsEnglish ? "No confirmation in this session. Older entries remain in Journal."
+            : "В этой сессии подтверждения нет. Старые записи сохранены в журнале.";
+    public string LiveMissionRawNames => string.Join("\n", CurrentMissions.Select(x => x.Name.Value));
     public string LiveMissionDisplay
     {
         get
         {
-            var mission = _lastDataSnapshot.Missions.FirstOrDefault(x =>
-                x.Status.Value.Equals("active", StringComparison.OrdinalIgnoreCase));
-            return mission is null ? (IsEnglish ? "No active mission detected" : "Активная миссия не обнаружена")
-                : $"{mission.Name.Value} • {mission.StatusDisplay} • {mission.Status.AgeDisplay}";
+            var missions = CurrentMissions;
+            return missions.Length == 0 ? (IsEnglish ? "No confirmed active missions" : "Нет подтверждённых активных миссий")
+                : string.Join("\n\n", missions.Take(3).Select(x => x.DisplayName +
+                    (string.IsNullOrEmpty(x.ObjectiveDisplay) ? "" : "\n" + x.ObjectiveDisplay)));
         }
     }
 
@@ -191,6 +206,9 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(LiveLocationDisplay));
         OnPropertyChanged(nameof(LiveServerDisplay));
         OnPropertyChanged(nameof(LiveMissionDisplay));
+        OnPropertyChanged(nameof(LiveMissionTitle));
+        OnPropertyChanged(nameof(LiveMissionHint));
+        OnPropertyChanged(nameof(LiveMissionRawNames));
     }
 
     private static bool IsFresh<T>(ObservedValue<T> value, TimeSpan maximumAge) =>

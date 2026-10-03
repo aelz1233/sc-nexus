@@ -56,6 +56,7 @@ public partial class MainViewModel
         if (running)
         {
             _sessionStartedAt ??= FindSessionStart(snapshot);
+            if (snapshot.Values.ContainsKey("game.process.started")) _sessionStartedAt = FindSessionStart(snapshot);
             ApplySessionReport(snapshot, _sessionStartedAt.Value, DateTimeOffset.UtcNow, active: true);
         }
         else if (_sessionWasRunning && _sessionStartedAt is { } started)
@@ -86,7 +87,16 @@ public partial class MainViewModel
 
     private static DateTimeOffset FindSessionStart(DataCollectionSnapshot snapshot)
     {
-        var candidate = snapshot.Sessions.OrderByDescending(x => x.StartedAt.Value).FirstOrDefault()?.StartedAt.Value;
+        DateTimeOffset? processStart = snapshot.Values.TryGetValue("game.process.started", out var process) &&
+            DateTimeOffset.TryParse(process.Value, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.RoundtripKind, out var parsed) && parsed <= DateTimeOffset.UtcNow
+            ? parsed : null;
+        if (processStart is null && snapshot.Values.TryGetValue("game.running", out var running) &&
+            running.Source == DataSourceKind.LocalGameData && running.Value.Equals("true", StringComparison.OrdinalIgnoreCase))
+            processStart = running.Timestamp;
+        var candidate = snapshot.Sessions.Where(x => x.EndedAt is null && x.StartedAt.Value <= DateTimeOffset.UtcNow &&
+            (processStart is null || x.StartedAt.Value >= processStart)).OrderByDescending(x => x.StartedAt.Value).FirstOrDefault()?.StartedAt.Value;
+        if (processStart is not null) return candidate ?? processStart.Value;
         if (candidate is null || candidate > DateTimeOffset.UtcNow ||
             DateTimeOffset.UtcNow - candidate > TimeSpan.FromDays(2)) return DateTimeOffset.UtcNow;
         return candidate.Value;

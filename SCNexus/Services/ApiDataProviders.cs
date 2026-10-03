@@ -88,7 +88,8 @@ public sealed class NexusHistoryProvider(DataHistoryService history) : IDataProv
     public async Task<DataProviderResult> CollectAsync(DataProviderContext context, CancellationToken token)
     {
         var rows = await history.LoadRecoverySnapshotAsync(800, token);
-        var values = rows.Where(x => x.Kind == "value").GroupBy(x => x.RecordKey)
+        // Legacy balances may have been inferred from transfer/price notifications. Never replay them as a wallet value.
+        var values = rows.Where(x => x.Kind == "value" && x.RecordKey != "player.balance").GroupBy(x => x.RecordKey)
             .Select(x => x.OrderByDescending(y => y.TimestampUtc).First())
             .Select(x => DataHistoryService.TryReadValue(x, out var value, out var unit, out var version)
                 ? new ValueObservation(x.RecordKey, value, Source, x.TimestampUtc, Math.Min(.6, x.Confidence * .7), unit, version) : null)

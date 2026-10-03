@@ -78,10 +78,33 @@ public sealed class MissionState
     public required ObservedValue<string> Name { get; init; }
     public required ObservedValue<string> Status { get; init; }
     public ObservedValue<string>? Objective { get; init; }
+    public string DisplayName => FormatName(Name.Value, CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en");
+    internal static string FormatName(string name, bool english)
+    {
+        if (name.StartsWith("Mission ", StringComparison.OrdinalIgnoreCase))
+            return english ? "Mission (name unavailable)" : "Миссия (название не определено)";
+        var parts = new List<string>();
+        if (name.StartsWith("Vaughn_", StringComparison.OrdinalIgnoreCase)) parts.Add("Vaughn");
+        else if (name.StartsWith("BountyHuntersGuild_", StringComparison.OrdinalIgnoreCase))
+            parts.Add(english ? "Bounty Hunters Guild" : "Гильдия охотников за головами");
+        if (parts.Count == 0) return name.Replace('_', ' ').Trim();
+        if (name.Contains("Assassination", StringComparison.OrdinalIgnoreCase))
+            parts.Add(english ? "Target elimination" : "Устранение цели");
+        else if (name.Contains("Bounty", StringComparison.OrdinalIgnoreCase))
+            parts.Add(english ? "Bounty contract" : "Охота за головами");
+        else return name.Replace('_', ' ').Trim();
+        foreach (var system in new[] { "Stanton", "Pyro", "Nyx" })
+            if (name.Contains(system, StringComparison.OrdinalIgnoreCase)) parts.Add(system);
+        return string.Join(" · ", parts);
+    }
+    public string ObjectiveDisplay => string.IsNullOrWhiteSpace(Objective?.Value) ? "" :
+        Objective.Value.Contains("KillShip", StringComparison.OrdinalIgnoreCase)
+            ? (CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en" ? "Destroy the target ship" : "Уничтожить корабль цели")
+            : Guid.TryParse(Objective.Value, out _) ? "" : Objective.Value.Replace('_', ' ');
     public string StatusDisplay => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en" ? Status.Value : Status.Value switch
     {
         "active" => "активна", "completed" => "завершена", "failed" => "провалена",
-        "abandoned" => "отменена", _ => Status.Value
+        "abandoned" => "отменена", "unknown" => "не подтверждена", _ => Status.Value
     };
 }
 

@@ -31,7 +31,9 @@ public partial class MainViewModel
     public string FleetSummary => IsEnglish
         ? $"Ships in fleet: {Ships.Count} · {Ships.Sum(x => x.Ship.CargoScu):N0} SCU total"
         : $"Кораблей во флоте: {Ships.Count} · {Ships.Sum(x => x.Ship.CargoScu):N0} SCU всего";
-    public string TradeBudgetHint => Reserve > Balance ? "Резерв больше баланса — денег на закупку нет." : $"На закупку: {Math.Max(0, Balance - Reserve):N0} aUEC";
+    public string TradeBudgetHint => IsEnglish
+        ? $"Trading budget: {Math.Max(0, Balance - Reserve):N0} aUEC · Nexus balance: {Balance:N0} · Reserve: {Reserve:N0}"
+        : $"На закупку: {Math.Max(0, Balance - Reserve):N0} aUEC · Баланс Nexus: {Balance:N0} · Резерв: {Reserve:N0}";
     public string PageTitle => LocalizationService.T(ActivePage == "Рейсы" ? "Журнал" : ActivePage);
     public string PageDescription => LocalizationService.T(ActivePage switch
     {

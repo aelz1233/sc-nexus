@@ -16,6 +16,7 @@ namespace SCNexus.Services;
 public sealed partial class OcrProvider(GameDataService gameDataService) : IDataProvider
 {
     private IReadOnlyList<VehicleCatalogItem>? _vehicles;
+    private ValueObservation? _previousBalance;
     public string Name => "Screen OCR";
     public DataSourceKind Source => DataSourceKind.Ocr;
     public int Priority => 5;
@@ -29,11 +30,16 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
             return new DataProviderResult { Status = "Waiting for Star Citizen foreground window" };
         var lines = await CaptureAndRecognizeAsync(window, token);
         if (lines.Count == 0) return new DataProviderResult { Status = "No text recognized" };
-        try { _vehicles ??= await gameDataService.GetVehiclesAsync(token); }
+        var text = string.Join("\n", lines.Select(x => x.Text));
+        try
+        {
+            if (FleetScreenPattern().IsMatch(text) || ShipPattern().IsMatch(text))
+                _vehicles ??= await gameDataService.GetVehiclesAsync(token);
+        }
         catch (HttpRequestException) { }
         catch (InvalidDataException) { }
         if (GetForegroundWindow() != window) return new DataProviderResult { Status = "Waiting for Star Citizen foreground window" };
-        return ParseLines(lines, _vehicles ?? [], DateTimeOffset.UtcNow);
+        return ConfirmBalance(ParseLines(lines, _vehicles ?? [], DateTimeOffset.UtcNow));
     }
 
     internal static DataProviderResult ParseText(string text, IReadOnlyList<VehicleCatalogItem> vehicles, DateTimeOffset now)
@@ -46,10 +52,11 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
         var balance = BalancePattern().Match(text);
         if (balance.Success)
         {
-            var cleaned = balance.Groups["value"].Value.Replace(" ", "").Replace(" ", "").Replace(",", "").Replace(".", "");
-            if (decimal.TryParse(cleaned, NumberStyles.Integer, CultureInfo.InvariantCulture, out var amount))
+            if (BalanceText.TryParse(balance.Groups["value"].Value, out var amount))
                 values.Add(new ValueObservation("player.balance", amount.ToString(CultureInfo.InvariantCulture), DataSourceKind.Ocr, now, .78, "aUEC"));
         }
+        else if (ReadMobiGlasBalance(lines) is { } mobiBalance)
+            values.Add(new("player.balance", mobiBalance.ToString(CultureInfo.InvariantCulture), DataSourceKind.Ocr, now, .78, "aUEC"));
         AddTextValue(LocationPattern(), "player.location", text, now, values, .68);
         var records = new List<TypedObservation>();
         var current = ShipPattern().Match(text);
@@ -79,6 +86,30 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
     }
 
     internal sealed record ScreenLine(string Text, Rect Bounds);
+
+    internal static decimal? ReadMobiGlasBalance(IReadOnlyList<ScreenLine> lines)
+    {
+        var home = lines.FirstOrDefault(x => Regex.IsMatch(x.Text.Trim(), @"^(HOME|ГЛАВНАЯ)$", RegexOptions.IgnoreCase));
+        if (home is null || !lines.Any(x => Regex.IsMatch(x.Text, @"\b(HEALTH|CRIMESTAT|UEE)\b|ЗДОР|КРИМСТАТ", RegexOptions.IgnoreCase))) return null;
+        var tolerance = Math.Max(40, home.Bounds.Height * 4);
+        var candidates = lines.Where(x => x.Bounds.Right < home.Bounds.Left && x.Bounds.Left > home.Bounds.Left - tolerance * 8 &&
+            x.Bounds.Top >= home.Bounds.Top - tolerance && x.Bounds.Top <= home.Bounds.Bottom &&
+            Regex.IsMatch(x.Text.Trim(), @"^\d+(?:[,\.\s]\d{3})*(?:[,.]\d{2})?$"))
+            .Select(x => BalanceText.TryParse(x.Text, out var value) ? (decimal?)value : null).Where(x => x is not null).Distinct().ToArray();
+        return candidates.Length == 1 ? candidates[0] : null;
+    }
+
+    internal DataProviderResult ConfirmBalance(DataProviderResult result)
+    {
+        var balance = result.Values.FirstOrDefault(x => x.Key == "player.balance");
+        var previous = _previousBalance;
+        _previousBalance = balance;
+        if (balance is null || previous is null || balance.Value != previous.Value ||
+            balance.Timestamp - previous.Timestamp < TimeSpan.FromMilliseconds(400) ||
+            balance.Timestamp - previous.Timestamp > TimeSpan.FromSeconds(45)) return result;
+        return new() { Values = result.Values.Select(x => x == balance ? x with { Confidence = .94 } : x).ToArray(),
+            Records = result.Records, Status = result.Status, FleetScan = result.FleetScan };
+    }
 
     internal static FleetScreen ReadFleetScreen(IReadOnlyList<ScreenLine> lines, IReadOnlyList<VehicleCatalogItem> vehicles)
     {
@@ -136,7 +167,16 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
             var firstLines = await CaptureAndRecognizeAsync(window, stop.Token);
             stop.Token.ThrowIfCancellationRequested();
             var first = ReadFleetScreen(firstLines, _vehicles);
-            if (!first.IsTerminal || first.Rows.Count == 0) return ParseLines(firstLines, _vehicles, DateTimeOffset.UtcNow);
+            if (!first.IsTerminal || first.Rows.Count == 0)
+            {
+                var result = ConfirmBalance(ParseLines(firstLines, _vehicles, DateTimeOffset.UtcNow));
+                if (result.Values.Any(x => x.Key == "player.balance"))
+                {
+                    await Task.Delay(600, stop.Token);
+                    result = ConfirmBalance(ParseLines(await CaptureAndRecognizeAsync(window, stop.Token), _vehicles, DateTimeOffset.UtcNow));
+                }
+                return result;
+            }
             var scanned = await FleetTerminalScan.RunAsync(first,
                 async cancellation => ReadFleetScreen(await CaptureAndRecognizeAsync(window, cancellation), _vehicles),
                 async (page, direction, cancellation) =>
@@ -199,32 +239,7 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
             var source = Imaging.CreateBitmapSourceFromHBitmap(bitmap, IntPtr.Zero, Int32Rect.Empty,
                 BitmapSizeOptions.FromEmptyOptions());
             source.Freeze();
-            await using var encoded = new MemoryStream();
-            var encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(source));
-            encoder.Save(encoded);
-            encoded.Position = 0;
-            token.ThrowIfCancellationRequested();
-            using var random = encoded.AsRandomAccessStream();
-            var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(random);
-            var ratio = Math.Min(1d, (double)OcrEngine.MaxImageDimension / Math.Max(decoder.PixelWidth, decoder.PixelHeight));
-            var transform = new BitmapTransform { ScaledWidth = (uint)Math.Max(1, decoder.PixelWidth * ratio), ScaledHeight = (uint)Math.Max(1, decoder.PixelHeight * ratio) };
-            using var softwareBitmap = await decoder.GetSoftwareBitmapAsync(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied,
-                transform, ExifOrientationMode.IgnoreExifOrientation, ColorManagementMode.DoNotColorManage);
-            var engine = OcrEngine.TryCreateFromLanguage(new Windows.Globalization.Language("en-US")) ?? OcrEngine.TryCreateFromUserProfileLanguages();
-            if (engine is null) throw new InvalidOperationException("Windows OCR language is not installed");
-            var results = new List<OcrResult> { await engine.RecognizeAsync(softwareBitmap) };
-            // ASOP may use Russian labels while ship models remain Latin. Both passes share one image.
-            if (!engine.RecognizerLanguage.LanguageTag.StartsWith("ru", StringComparison.OrdinalIgnoreCase) && OcrEngine.TryCreateFromLanguage(new Windows.Globalization.Language("ru-RU")) is { } russian)
-                results.Add(await russian.RecognizeAsync(softwareBitmap));
-            token.ThrowIfCancellationRequested();
-            return results.SelectMany(x => x.Lines).Select(line =>
-            {
-                var bounds = Rect.Empty;
-                foreach (var word in line.Words) bounds.Union(new Rect(word.BoundingRect.X / ratio, word.BoundingRect.Y / ratio,
-                    word.BoundingRect.Width / ratio, word.BoundingRect.Height / ratio));
-                return new ScreenLine(line.Text, bounds);
-            }).Where(x => !x.Bounds.IsEmpty).OrderBy(x => x.Bounds.Top).ToArray();
+            return await RecognizeScreenAsync(source, token);
         }
         finally
         {
@@ -233,6 +248,58 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
             DeleteDC(memoryDc);
             ReleaseDC(IntPtr.Zero, screenDc);
         }
+    }
+
+    internal static async Task<IReadOnlyList<ScreenLine>> RecognizeScreenAsync(BitmapSource source, CancellationToken token)
+    {
+        var lines = (await RecognizeBitmapAsync(source, token)).ToList();
+        var home = lines.FirstOrDefault(x => Regex.IsMatch(x.Text.Trim(), @"^(HOME|ГЛАВНАЯ)$", RegexOptions.IgnoreCase));
+        if (home is null) return lines;
+        var tolerance = Math.Max(40, home.Bounds.Height * 4);
+        var left = Math.Max(0, (int)(home.Bounds.Left - tolerance * 8));
+        var top = Math.Max(0, (int)(home.Bounds.Top - tolerance));
+        var right = Math.Min(source.PixelWidth, (int)(home.Bounds.Right + tolerance * 3));
+        var bottom = Math.Min(source.PixelHeight, (int)home.Bounds.Bottom + 20);
+        if (right <= left || bottom <= top) return lines;
+        var crop = new CroppedBitmap(source, new Int32Rect(left, top, right - left, bottom - top));
+        var enlarged = new TransformedBitmap(crop, new System.Windows.Media.ScaleTransform(3, 3));
+        enlarged.Freeze();
+        var detail = await RecognizeBitmapAsync(enlarged, token);
+        // Replace coarse OCR in the wallet region; mixing both passes would retain misread amounts.
+        lines.RemoveAll(x => x.Bounds.Left >= left && x.Bounds.Right < home.Bounds.Left && x.Bounds.Top >= top && x.Bounds.Bottom <= bottom);
+        lines.AddRange(detail.Select(x => new ScreenLine(x.Text, new Rect(left + x.Bounds.X / 3,
+            top + x.Bounds.Y / 3, x.Bounds.Width / 3, x.Bounds.Height / 3))));
+        return lines.OrderBy(x => x.Bounds.Top).ToArray();
+    }
+
+    private static async Task<IReadOnlyList<ScreenLine>> RecognizeBitmapAsync(BitmapSource source, CancellationToken token)
+    {
+        await using var encoded = new MemoryStream();
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(source));
+        encoder.Save(encoded);
+        encoded.Position = 0;
+        token.ThrowIfCancellationRequested();
+        using var random = encoded.AsRandomAccessStream();
+        var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(random);
+        var ratio = Math.Min(1d, (double)OcrEngine.MaxImageDimension / Math.Max(decoder.PixelWidth, decoder.PixelHeight));
+        var transform = new BitmapTransform { ScaledWidth = (uint)Math.Max(1, decoder.PixelWidth * ratio), ScaledHeight = (uint)Math.Max(1, decoder.PixelHeight * ratio) };
+        using var softwareBitmap = await decoder.GetSoftwareBitmapAsync(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied,
+            transform, ExifOrientationMode.IgnoreExifOrientation, ColorManagementMode.DoNotColorManage);
+        var engine = OcrEngine.TryCreateFromLanguage(new Windows.Globalization.Language("en-US")) ?? OcrEngine.TryCreateFromUserProfileLanguages();
+        if (engine is null) throw new InvalidOperationException("Windows OCR language is not installed");
+        var results = new List<OcrResult> { await engine.RecognizeAsync(softwareBitmap) };
+        // ASOP may use Russian labels while ship models remain Latin. Both passes share one image.
+        if (!engine.RecognizerLanguage.LanguageTag.StartsWith("ru", StringComparison.OrdinalIgnoreCase) && OcrEngine.TryCreateFromLanguage(new Windows.Globalization.Language("ru-RU")) is { } russian)
+            results.Add(await russian.RecognizeAsync(softwareBitmap));
+        token.ThrowIfCancellationRequested();
+        return results.SelectMany(x => x.Lines).Select(line =>
+        {
+            var bounds = Rect.Empty;
+            foreach (var word in line.Words) bounds.Union(new Rect(word.BoundingRect.X / ratio, word.BoundingRect.Y / ratio,
+                word.BoundingRect.Width / ratio, word.BoundingRect.Height / ratio));
+            return new ScreenLine(line.Text, bounds);
+        }).Where(x => !x.Bounds.IsEmpty).OrderBy(x => x.Bounds.Top).ToArray();
     }
 
     private static void AddTextValue(Regex pattern, string key, string text, DateTimeOffset now,

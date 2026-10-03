@@ -141,8 +141,8 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
         AddBracketValue("player.balance", "balance", line, timestamp, values, .92);
         AddBracketValue("game.build", "build", line, timestamp, values, .92);
         var currency = CurrencyPattern().Match(line);
-        if (currency.Success)
-            values.Add(new ValueObservation("player.balance", currency.Groups["value"].Value.Replace(",", "").Replace(" ", ""), Source, timestamp, .9, "aUEC"));
+        if (currency.Success && BalanceText.TryParse(currency.Groups["value"].Value, out var balanceAmount))
+            values.Add(new ValueObservation("player.balance", balanceAmount.ToString(CultureInfo.InvariantCulture), Source, timestamp, .95, "aUEC"));
         var build = BuildPattern().Match(line);
         if (build.Success)
             values.Add(new ValueObservation("game.build", build.Groups["value"].Value, Source, timestamp, .94));
@@ -262,11 +262,14 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
             var status = CleanMissionState(objectiveEvent.Groups["state"].Value);
             var objective = objectiveEvent.Groups["objective"].Value;
             var previous = _missions.GetValueOrDefault(id);
+            // An objective's completion/failure does not end the whole contract.
+            var missionStatus = previous?.Status.Value ??
+                (status is "active" or "in_progress" ? "active" : "unknown");
             var state = new MissionState
             {
                 Id = id,
                 Name = previous?.Name ?? new ObservedValue<string>($"Mission {id[..8]}", Source, timestamp, .65),
-                Status = new ObservedValue<string>(status, Source, timestamp, .95),
+                Status = new ObservedValue<string>(missionStatus, Source, timestamp, .95),
                 Objective = new ObservedValue<string>(objective, Source, timestamp, .85)
             };
             _missions[id] = state;
@@ -302,7 +305,15 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
     {
         var match = Regex.Match(line, $@"\b{Regex.Escape(bracket)}\[(?<value>[^\]]+)\]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         if (match.Success && IsUsefulName(match.Groups["value"].Value))
-            values.Add(new ValueObservation(key, match.Groups["value"].Value.Trim(), DataSourceKind.GameLog, timestamp, confidence));
+        {
+            var value = match.Groups["value"].Value.Trim();
+            if (key == "player.balance")
+            {
+                if (!BalanceText.TryParse(value, out var amount)) return;
+                value = amount.ToString(CultureInfo.InvariantCulture);
+            }
+            values.Add(new ValueObservation(key, value, DataSourceKind.GameLog, timestamp, confidence));
+        }
     }
 
     private static DateTimeOffset? ReadTimestamp(string line)
@@ -361,7 +372,7 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
     [GeneratedRegex(@"Creating objective marker:\s*missionId \[(?<id>[0-9a-f-]{36})\].*?generator name \[(?<objective>[^\]]+)\].*?contract \[(?<name>[^\]]+)\]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex MissionMarkerPattern();
     [GeneratedRegex(@"<ObjectiveUpserted>.*?mission_id (?<id>[0-9a-f-]{36})\s+-\s+objective_id (?<objective>[^\s]+)\s+-\s+state (?<state>[A-Z_]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex ObjectivePattern();
     [GeneratedRegex(@"<MissionEnded>.*?mission_id (?<id>[0-9a-f-]{36})\s+-\s+mission_state (?<state>[A-Z_]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex MissionEndedPattern();
-    [GeneratedRegex(@"(?<value>[0-9][0-9, .]{2,})\s*aUEC\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex CurrencyPattern();
+    [GeneratedRegex(@"(?:\bBalance|\bWallet|Баланс|Кошел[её]к)[ \t]*[:=][ \t]*(?<value>[0-9][0-9, .]*)[ \t]*aUEC\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex CurrencyPattern();
     [GeneratedRegex(@"Game Version Identifier:\s*(?<value>[a-z0-9-]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex BuildPattern();
     [GeneratedRegex(@"(<Actor Death>|CActor::Kill:.*(?:killed|destroyed)|player.*(?:died|dead))", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex DeathPattern();
 }

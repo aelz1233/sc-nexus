@@ -115,6 +115,10 @@ Use **Settings → Check for updates** to check GitHub. Confirm the update to do
 
 ## OCR and ship detection
 
+**Balance:** enable OCR in Settings and keep the mobiGlas wallet bar (near **Home**) visible with the game in the foreground. Nexus enlarges this region and requires two matching recent readings before changing its balance. Ambiguous results are skipped. Transfer notifications and prices are not balances. A previously saved Nexus balance is kept until a reliable new reading or a manual correction is available.
+
+**Missions:** the dashboard and overlay show active statuses confirmed during the current game session. Older entries remain in Journal. Known log identifiers use readable labels; hover for the original identifier. Game logs do not guarantee a complete list of contracts or their official titles.
+
 OCR is an optional fallback when a value cannot be reliably obtained from `Game.log`, local game data, or APIs. It captures only the visible Star Citizen window, sends the image to the Windows OCR engine locally, and releases the image immediately after recognition. No image is uploaded or kept by SC Nexus.
 
 To identify a ship:

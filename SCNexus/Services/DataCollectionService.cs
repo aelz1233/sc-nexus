@@ -223,8 +223,7 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
     private ObservedValue<decimal>? Decimal(string key)
     {
         if (!_values.TryGetValue(key, out var item)) return null;
-        var cleaned = new string(item.Value.Where(x => char.IsDigit(x) || x is '.' or ',' or '-').ToArray()).Replace(',', '.');
-        return decimal.TryParse(cleaned, NumberStyles.Number, CultureInfo.InvariantCulture, out var value)
+        return decimal.TryParse(item.Value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var value)
             ? new ObservedValue<decimal>(value, item.Source, item.Timestamp, item.Confidence) : null;
     }
 

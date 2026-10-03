@@ -119,13 +119,14 @@
                             <Border Grid.Column="2" Style="{StaticResource Card}" Margin="0">
                                 <StackPanel>
                                     <TextBlock Text="Сервер и регион" Style="{StaticResource FieldLabel}" />
-                                    <TextBlock Text="{Binding LiveServerDisplay}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding LiveServerDisplay}" ToolTip="{Binding GameShard}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
                             <Border Grid.Column="4" Style="{StaticResource Card}" Margin="0">
                                 <StackPanel>
-                                    <TextBlock Text="Активная миссия" Style="{StaticResource FieldLabel}" />
-                                    <TextBlock Text="{Binding LiveMissionDisplay}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding LiveMissionTitle}" Style="{StaticResource FieldLabel}" />
+                                    <TextBlock Text="{Binding LiveMissionDisplay}" ToolTip="{Binding LiveMissionRawNames}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding LiveMissionHint}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,8,0,0" />
                                 </StackPanel>
                             </Border>
                         </Grid>
@@ -584,7 +585,7 @@
                                         <ItemsControl.ItemTemplate><DataTemplate>
                                             <Grid Margin="0,0,0,6">
                                                 <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding Name.Value}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding DisplayName}" ToolTip="{Binding Name.Value}" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Grid.Column="1" Text="{Binding StatusDisplay}" Foreground="{StaticResource Muted}" Margin="12,0,0,0" />
                                             </Grid>
                                         </DataTemplate></ItemsControl.ItemTemplate>
