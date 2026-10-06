@@ -48,6 +48,14 @@ public class FleetTerminalScanTests
     }
 
     [Fact]
+    public void FuzzyShipNameSurvivesSmallOcrErrors()
+    {
+        var result = OcrProvider.ParseText("Fleet Manag3r\nGuardlan MX\nStored\nCrusader C1 Sp1rit\nClaim", Ships, DateTimeOffset.UtcNow);
+        Assert.Equal(new[] { "Guardian MX", "C1 Spirit" },
+            result.Records.Select(x => ((DetectedShip)x.Value).Name.Value));
+    }
+
+    [Fact]
     public void ShopHeadingIsNotEvidenceOfPlayerFleet()
     {
         Assert.Empty(OcrProvider.ParseText("Корабли\nКупить\nGuardian MX", Ships, DateTimeOffset.UtcNow).Records);
