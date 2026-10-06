@@ -11,7 +11,7 @@ namespace SCNexus.Services;
 /// <summary>Ship ports and item statistics from Star Citizen Wiki API; shop prices are supplied by UEX.</summary>
 public sealed class ShipComponentCatalogService
 {
-    private const int CatalogSchemaVersion = 3;
+    private const int CatalogSchemaVersion = 2;
     private const string Api = "https://api.star-citizen.wiki/api/";
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromHours(12);
     private static readonly TimeSpan MaximumPriceAge = TimeSpan.FromDays(45);
