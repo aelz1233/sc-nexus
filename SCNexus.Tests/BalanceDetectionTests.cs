@@ -24,6 +24,8 @@ public class BalanceDetectionTests
     [InlineData("ГЛАВНАЯ")]
     [InlineData("ГЛАВНМ")]
     [InlineData("HOME")]
+    [InlineData("H0ME")]
+    [InlineData("ГЛАВН")]
     public void MobiGlasBalanceRequiresKnownLayoutAndAUniqueAmount(string home)
     {
         var lines = new List<OcrProvider.ScreenLine>
@@ -36,8 +38,20 @@ public class BalanceDetectionTests
         };
         Assert.Equal(35087892m, OcrProvider.ReadMobiGlasBalance(lines));
         lines.Add(new("99,999", new Rect(200, 120, 90, 20)));
-        Assert.Null(OcrProvider.ReadMobiGlasBalance(lines));
+        Assert.Equal(35087892m, OcrProvider.ReadMobiGlasBalance(lines));
         Assert.Null(OcrProvider.ReadMobiGlasBalance(lines.Where(x => x.Text != home).ToArray()));
+    }
+
+    [Fact]
+    public void MobiGlasBalanceToleratesCommonOcrDigitErrors()
+    {
+        var lines = new List<OcrProvider.ScreenLine>
+        {
+            new("HEALTH", new Rect(300, 0, 100, 20)),
+            new("H0ME", new Rect(560, 140, 70, 20)),
+            new("35,O87,89l", new Rect(350, 118, 90, 20))
+        };
+        Assert.Equal(35087891m, OcrProvider.ReadMobiGlasBalance(lines));
     }
 
     [Fact]
