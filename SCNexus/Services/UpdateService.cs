@@ -16,6 +16,8 @@ public sealed record UpdateRelease(Version Version, string PageUrl, UpdateAsset 
 public sealed class UpdateService
 {
     private const string LatestReleaseUrl = "https://api.github.com/repos/aelz1233/sc-nexus/releases/latest";
+    private const string PublicVersionUrl = "https://raw.githubusercontent.com/aelz1233/sc-nexus/main/VERSION";
+    private const string PublicReleaseBaseUrl = "https://github.com/aelz1233/sc-nexus/releases";
     private readonly string _tokenPath;
     private readonly string _latestReleaseUrl;
     private readonly string _stateDirectory;
@@ -92,8 +94,24 @@ public sealed class UpdateService
         catch { response.Dispose(); throw; }
     }
 
+    private bool UsesPublicFeed => _latestReleaseUrl.Equals(LatestReleaseUrl, StringComparison.OrdinalIgnoreCase);
+
     public async Task<UpdateRelease> GetLatestAsync(CancellationToken cancellationToken = default)
     {
+        if (UsesPublicFeed)
+        {
+            using var versionResponse = await SendAsync(PublicVersionUrl, null, false, HttpCompletionOption.ResponseContentRead, cancellationToken);
+            var tag = (await versionResponse.Content.ReadAsStringAsync(cancellationToken)).Trim().TrimStart('v', 'V');
+            if (!Version.TryParse(tag, out var version)) throw new InvalidDataException("В VERSION указан неверный номер версии.");
+            var normalizedVersion = version.ToString(3);
+            var installerName = $"SCNexus-Setup-{normalizedVersion}-win-x64.exe";
+            var downloadBase = $"{PublicReleaseBaseUrl}/download/v{normalizedVersion}";
+            return new(version,
+                $"{PublicReleaseBaseUrl}/tag/v{normalizedVersion}",
+                new UpdateAsset(installerName, $"{downloadBase}/{installerName}", 0),
+                new UpdateAsset("SHA256SUMS.txt", $"{downloadBase}/SHA256SUMS.txt", 0));
+        }
+
         var token = ReadToken();
         using var response = await SendAsync(_latestReleaseUrl, token, false, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -117,10 +135,14 @@ public sealed class UpdateService
         foreach (var asset in new[] { release.Checksums, release.Installer })
         {
             var uri = new Uri(asset.ApiUrl);
-            if (uri.Scheme != Uri.UriSchemeHttps || !uri.Host.Equals(apiHost, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("Адрес файла обновления не принадлежит GitHub API.");
+            var trustedHost = uri.Host.Equals(apiHost, StringComparison.OrdinalIgnoreCase) ||
+                (UsesPublicFeed && uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase));
+            if (uri.Scheme != Uri.UriSchemeHttps || !trustedHost)
+                throw new InvalidDataException("Адрес файла обновления не принадлежит доверенному GitHub-хосту.");
         }
-        using var checksumResponse = await SendAsync(release.Checksums.ApiUrl, token, true, HttpCompletionOption.ResponseContentRead, cancellationToken);
+        var checksumUri = new Uri(release.Checksums.ApiUrl);
+        var checksumToken = checksumUri.Host.Equals(apiHost, StringComparison.OrdinalIgnoreCase) ? token : null;
+        using var checksumResponse = await SendAsync(release.Checksums.ApiUrl, checksumToken, true, HttpCompletionOption.ResponseContentRead, cancellationToken);
         var checksumText = await checksumResponse.Content.ReadAsStringAsync(cancellationToken);
         var expected = checksumText.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(x => x.Split(' ', StringSplitOptions.RemoveEmptyEntries))
@@ -135,7 +157,9 @@ public sealed class UpdateService
         var temporary = path + ".download";
         try
         {
-            using var installerResponse = await SendAsync(release.Installer.ApiUrl, token, true, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            var installerUri = new Uri(release.Installer.ApiUrl);
+            var installerToken = installerUri.Host.Equals(apiHost, StringComparison.OrdinalIgnoreCase) ? token : null;
+            using var installerResponse = await SendAsync(release.Installer.ApiUrl, installerToken, true, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             await using var source = await installerResponse.Content.ReadAsStreamAsync(cancellationToken);
             await using (var target = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true))
             {
