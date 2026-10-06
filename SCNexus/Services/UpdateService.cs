@@ -101,12 +101,12 @@ public sealed class UpdateService
         if (UsesPublicFeed)
         {
             using var versionResponse = await SendAsync(PublicVersionUrl, null, false, HttpCompletionOption.ResponseContentRead, cancellationToken);
-            var tag = (await versionResponse.Content.ReadAsStringAsync(cancellationToken)).Trim().TrimStart('v', 'V');
-            if (!Version.TryParse(tag, out var version)) throw new InvalidDataException("В VERSION указан неверный номер версии.");
-            var normalizedVersion = version.ToString(3);
+            var publicTag = (await versionResponse.Content.ReadAsStringAsync(cancellationToken)).Trim().TrimStart('v', 'V');
+            if (!Version.TryParse(publicTag, out var publicVersion)) throw new InvalidDataException("В VERSION указан неверный номер версии.");
+            var normalizedVersion = publicVersion.ToString(3);
             var installerName = $"SCNexus-Setup-{normalizedVersion}-win-x64.exe";
             var downloadBase = $"{PublicReleaseBaseUrl}/download/v{normalizedVersion}";
-            return new(version,
+            return new(publicVersion,
                 $"{PublicReleaseBaseUrl}/tag/v{normalizedVersion}",
                 new UpdateAsset(installerName, $"{downloadBase}/{installerName}", 0),
                 new UpdateAsset("SHA256SUMS.txt", $"{downloadBase}/SHA256SUMS.txt", 0));
