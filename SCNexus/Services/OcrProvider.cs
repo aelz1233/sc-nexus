@@ -57,7 +57,7 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
         var balance = BalancePattern().Match(text);
         if (balance.Success)
         {
-            if (BalanceText.TryParse(balance.Groups["value"].Value, out var amount))
+            if (TryParseOcrAmount(balance.Groups["value"].Value, out var amount))
                 values.Add(new ValueObservation("player.balance", amount.ToString(CultureInfo.InvariantCulture), DataSourceKind.Ocr, now, .78, "aUEC"));
         }
         else if (ReadMobiGlasBalance(lines) is { } mobiBalance)
@@ -98,18 +98,54 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
         return candidates.Length == 1 ? candidates[0] : null;
     }
 
-    private static bool IsHomeLabel(string text) => Regex.IsMatch(text.Trim(), @"^(HOME|ГЛАВН[А-Я]{1,2})$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static bool IsHomeLabel(string text)
+    {
+        var normalized = Regex.Replace(text.Trim().ToUpperInvariant(), @"[^A-ZА-ЯЁ0-9]", "");
+        return normalized is "HOME" or "H0ME" ||
+            (normalized.StartsWith("ГЛАВН", StringComparison.Ordinal) && normalized.Length is >= 5 and <= 9);
+    }
+
+    private static bool TryParseOcrAmount(string text, out decimal amount)
+    {
+        amount = 0;
+        if (!Regex.IsMatch(text, @"\d")) return false;
+        var cleaned = Regex.Replace(text, @"(?i)\ba\s*u\s*e\s*c\b|\buec\b", "");
+        cleaned = new string(cleaned.Select(c => c switch
+        {
+            'O' or 'o' => '0',
+            'I' or 'i' or 'l' or '|' => '1',
+            '\u00A0' => ' ',
+            _ => c
+        }).Where(c => char.IsDigit(c) || char.IsWhiteSpace(c) || c is ',' or '.').ToArray());
+        return BalanceText.TryParse(cleaned, out amount);
+    }
 
     internal static decimal? ReadMobiGlasBalance(IReadOnlyList<ScreenLine> lines)
     {
         var home = lines.FirstOrDefault(x => IsHomeLabel(x.Text));
-        if (home is null || !lines.Any(x => Regex.IsMatch(x.Text, @"\b(HEALTH|CRIMESTAT|UEE)\b|ЗДОР|КРИМСТАТ", RegexOptions.IgnoreCase))) return null;
+        if (home is null || !lines.Any(x => Regex.IsMatch(x.Text,
+            @"\b(HEALTH|CRIMESTAT|UEE|MOBIGLAS)\b|ЗДОР|КРИМСТАТ|МОБИГЛАС", RegexOptions.IgnoreCase))) return null;
+
         var tolerance = Math.Max(40, home.Bounds.Height * 4);
-        var candidates = lines.Where(x => x.Bounds.Right < home.Bounds.Left && x.Bounds.Left > home.Bounds.Left - tolerance * 8 &&
-            x.Bounds.Top >= home.Bounds.Top - tolerance && x.Bounds.Top <= home.Bounds.Bottom &&
-            Regex.IsMatch(x.Text.Trim(), @"^\d+(?:[,\.\s]\d{3})*(?:[,.]\d{2})?$"))
-            .Select(x => BalanceText.TryParse(x.Text, out var value) ? (decimal?)value : null).Where(x => x is not null).Distinct().ToArray();
-        return candidates.Length == 1 ? candidates[0] : null;
+        var homeCenterY = home.Bounds.Top + home.Bounds.Height / 2;
+        var candidates = lines
+            .Where(x => x.Bounds.Left < home.Bounds.Left &&
+                x.Bounds.Right > home.Bounds.Left - tolerance * 9 &&
+                Math.Abs((x.Bounds.Top + x.Bounds.Height / 2) - homeCenterY) <= tolerance * 1.35)
+            .Select(x => TryParseOcrAmount(x.Text, out var value)
+                ? new { Value = value, Score = Math.Abs((x.Bounds.Top + x.Bounds.Height / 2) - homeCenterY) * 3 +
+                    Math.Max(0, home.Bounds.Left - x.Bounds.Right), Bounds = x.Bounds }
+                : null)
+            .Where(x => x is not null)
+            .GroupBy(x => x!.Value)
+            .Select(g => g.OrderBy(x => x!.Score).First()!)
+            .OrderBy(x => x.Score)
+            .ToArray();
+
+        if (candidates.Length == 0) return null;
+        if (candidates.Length > 1 && candidates[1].Score <= candidates[0].Score + Math.Max(20, tolerance * .45))
+            return null;
+        return candidates[0].Value;
     }
 
     internal DataProviderResult ConfirmBalance(DataProviderResult result)
@@ -124,6 +160,58 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
             Records = result.Records, Status = result.Status, FleetScan = result.FleetScan };
     }
 
+    private static string NormalizeFleetName(string text)
+    {
+        text = LockedPattern().Replace(text, " ");
+        text = AvailableStatusPattern().Replace(text, " ");
+        text = Regex.Replace(text, @"\s+(?:[-—×x]\s*\d+|\(\d+\))\s*$", "", RegexOptions.IgnoreCase);
+        return new string(text.ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
+    }
+
+    private static int EditDistance(string left, string right)
+    {
+        if (left.Length == 0) return right.Length;
+        if (right.Length == 0) return left.Length;
+        var previous = Enumerable.Range(0, right.Length + 1).ToArray();
+        var current = new int[right.Length + 1];
+        for (var i = 1; i <= left.Length; i++)
+        {
+            current[0] = i;
+            for (var j = 1; j <= right.Length; j++)
+                current[j] = Math.Min(Math.Min(current[j - 1] + 1, previous[j] + 1),
+                    previous[j - 1] + (left[i - 1] == right[j - 1] ? 0 : 1));
+            (previous, current) = (current, previous);
+        }
+        return previous[right.Length];
+    }
+
+    private static VehicleCatalogItem? FindFuzzyFleetVehicle(string text, IReadOnlyList<VehicleCatalogItem> vehicles)
+    {
+        var normalized = NormalizeFleetName(text);
+        if (normalized.Length < 4) return null;
+
+        var matches = new List<(VehicleCatalogItem Vehicle, int Distance, int AliasLength)>();
+        foreach (var vehicle in vehicles.Where(x => x.IsSpaceship == 1 && x.Name.Length >= 4).DistinctBy(x => x.Id))
+        {
+            foreach (var alias in new[] { vehicle.NameFull, vehicle.Name }.Where(x => !string.IsNullOrWhiteSpace(x)))
+            {
+                var normalizedAlias = NormalizeFleetName(alias!);
+                if (normalizedAlias.Length < 4) continue;
+                var distance = normalized.Contains(normalizedAlias, StringComparison.Ordinal) ? 0 : EditDistance(normalized, normalizedAlias);
+                var allowed = normalizedAlias.Length <= 6 ? 1 : normalizedAlias.Length <= 12 ? 2 : 3;
+                if (Math.Abs(normalized.Length - normalizedAlias.Length) <= allowed + 1 && distance <= allowed)
+                    matches.Add((vehicle, distance, normalizedAlias.Length));
+            }
+        }
+
+        if (matches.Count == 0) return null;
+        var ordered = matches.OrderBy(x => x.Distance).ThenByDescending(x => x.AliasLength).ToArray();
+        if (ordered.Length > 1 && ordered[0].Distance == ordered[1].Distance &&
+            ordered[0].Vehicle.Id != ordered[1].Vehicle.Id && ordered[0].AliasLength == ordered[1].AliasLength)
+            return null;
+        return ordered[0].Vehicle;
+    }
+
     internal static FleetScreen ReadFleetScreen(IReadOnlyList<ScreenLine> lines, IReadOnlyList<VehicleCatalogItem> vehicles)
     {
         var text = string.Join("\n", lines.Select(x => x.Text));
@@ -135,12 +223,16 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
         foreach (var line in lines.OrderBy(x => x.Bounds.Top))
         {
             var remaining = line.Text;
+            var matched = false;
             foreach (var entry in patterns)
             {
                 if (!entry.Pattern.IsMatch(remaining)) continue;
                 candidates.Add((entry.Vehicle, line.Bounds));
                 remaining = entry.Pattern.Replace(remaining, match => new string(' ', match.Length));
+                matched = true;
             }
+            if (!matched && FindFuzzyFleetVehicle(line.Text, vehicles) is { } fuzzy)
+                candidates.Add((fuzzy, line.Bounds));
         }
         var anchors = new List<(VehicleCatalogItem Vehicle, Rect Bounds)>();
         foreach (var candidate in candidates.OrderBy(x => x.Bounds.Top).ThenByDescending(x => x.Vehicle.Name.Length))
@@ -174,7 +266,7 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
         var watching = WatchForStopAsync(window, stop);
         try
         {
-            var firstLines = await CaptureAndRecognizeAsync(window, stop.Token);
+            var firstLines = await CaptureAndRecognizeAsync(window, stop.Token, fleetDetail: true);
             stop.Token.ThrowIfCancellationRequested();
             if (!FleetTerminalPattern().IsMatch(string.Join("\n", firstLines.Select(x => x.Text))))
                 return new() { Status = "Open ASOP terminal" };
@@ -186,7 +278,7 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
             if (!ScrollFleetOnRequest || first.Rows.Count == 0)
                 return ParseLines(firstLines, _vehicles, DateTimeOffset.UtcNow);
             var scanned = await FleetTerminalScan.RunAsync(first,
-                async cancellation => ReadFleetScreen(await CaptureAndRecognizeAsync(window, cancellation), _vehicles),
+                async cancellation => ReadFleetScreen(await CaptureAndRecognizeAsync(window, cancellation, fleetDetail: true), _vehicles),
                 async (page, direction, cancellation) =>
                 {
                     cancellation.ThrowIfCancellationRequested();
@@ -231,7 +323,7 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
         catch (OperationCanceledException) { }
     }
 
-    private static async Task<IReadOnlyList<ScreenLine>> CaptureAndRecognizeAsync(IntPtr window, CancellationToken token)
+    private static async Task<IReadOnlyList<ScreenLine>> CaptureAndRecognizeAsync(IntPtr window, CancellationToken token, bool fleetDetail = false)
     {
         token.ThrowIfCancellationRequested();
         if (GetForegroundWindow() != window || !GetClientRect(window, out var client) || client.Width <= 0 || client.Height <= 0) return [];
@@ -247,7 +339,7 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
             var source = Imaging.CreateBitmapSourceFromHBitmap(bitmap, IntPtr.Zero, Int32Rect.Empty,
                 BitmapSizeOptions.FromEmptyOptions());
             source.Freeze();
-            return await RecognizeScreenAsync(source, token);
+            return await RecognizeScreenAsync(source, token, fleetDetail);
         }
         finally
         {
@@ -258,9 +350,29 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
         }
     }
 
-    internal static async Task<IReadOnlyList<ScreenLine>> RecognizeScreenAsync(BitmapSource source, CancellationToken token)
+    internal static async Task<IReadOnlyList<ScreenLine>> RecognizeScreenAsync(BitmapSource source, CancellationToken token, bool fleetDetail = false)
     {
         var lines = (await RecognizeBitmapAsync(source, token)).ToList();
+
+        if (fleetDetail && FleetTerminalPattern().IsMatch(string.Join("\n", lines.Select(x => x.Text))) && source.PixelHeight >= 600)
+        {
+            var anchor = lines.FirstOrDefault(x => FleetTerminalPattern().IsMatch(x.Text));
+            var detailTop = Math.Max(0, (int)((anchor?.Bounds.Top ?? source.PixelHeight * .08) - 30));
+            var detailLeft = Math.Max(0, (int)(source.PixelWidth * .04));
+            var detailRight = Math.Min(source.PixelWidth, (int)(source.PixelWidth * .96));
+            var detailBottom = Math.Min(source.PixelHeight, (int)(source.PixelHeight * .94));
+            if (detailRight > detailLeft && detailBottom > detailTop)
+            {
+                var terminalCrop = new CroppedBitmap(source,
+                    new Int32Rect(detailLeft, detailTop, detailRight - detailLeft, detailBottom - detailTop));
+                var terminalZoom = new TransformedBitmap(terminalCrop, new System.Windows.Media.ScaleTransform(2.2, 2.2));
+                terminalZoom.Freeze();
+                var detailLines = await RecognizeBitmapAsync(terminalZoom, token);
+                lines.AddRange(detailLines.Select(x => new ScreenLine(x.Text,
+                    new Rect(detailLeft + x.Bounds.X / 2.2, detailTop + x.Bounds.Y / 2.2,
+                        x.Bounds.Width / 2.2, x.Bounds.Height / 2.2))));
+            }
+        }
         var rewardLabel = lines.FirstOrDefault(x => Regex.IsMatch(x.Text.Trim(), @"^(НАГРАДА|REWARD)$", RegexOptions.IgnoreCase));
         if (rewardLabel is not null)
         {
@@ -364,11 +476,11 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { return false; }
     }
 
-    [GeneratedRegex(@"(?:Balance|Wallet|Баланс)[ \t]*[:\-]?[ \t]*(?<value>[0-9][0-9 \t .,]*)[ \t]*aUEC", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex BalancePattern();
+    [GeneratedRegex(@"(?:Balance|Wallet|Баланс)[ \t]*[:\-]?[ \t]*(?<value>[0-9OoIl|][0-9OoIl| \t .,]*)[ \t]*(?:a\s*UEC|UEC)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex BalancePattern();
     [GeneratedRegex(@"(?:Current\s+Location|Location|Текущая\s+локация|Локация)\s*[:\-]?\s*(?<value>[^\r\n]{2,80})", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex LocationPattern();
-    [GeneratedRegex(@"(\bASOP\b|Fleet\s+Manager|Vehicle\s+Retrieval|Менеджер\s+парка\s+техники)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex FleetTerminalPattern();
+    [GeneratedRegex(@"(\bAS[O0]P\b|Fleet\s+Manag\w*|Vehicl[e3]\s+Retri\w*|Менеджер\s+парк\w*(?:\s+техники)?|ПАРК\w*\s+ТЕХНИКИ)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex FleetTerminalPattern();
     [GeneratedRegex(@"(\bLOCKED\b|ЗАБЛОКИРОВА[НH][ОOНHАAЫЬ]*)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex LockedPattern();
-    [GeneratedRegex(@"\b(Stored|Storage|Claim|Claiming|Delivery|Delivering|Destroyed|Retrieve|Retrieving|Ready|Unlocked)\b|ХРАНИТСЯ|ХРАНЕНИ[ЕИЯ]|ДОСТАВ|ВОССТАНОВ|ВОЗМЕСТИТЬ|УНИЧТОЖ|ВЫЗВАТЬ|ПОЛУЧИТЬ|ИЗВЛЕЧЬ|ГОТОВ|ДОСТУП(?:ЕН|НО)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex AvailableStatusPattern();
+    [GeneratedRegex(@"\b(Stor(?:ed|age|ing)?|Claim\w*|Deliver\w*|Destroyed|Retriev\w*|Ready|Unlocked|Available|Expedit\w*)\b|ХРАНИТСЯ|ХРАНЕНИ[ЕИЯ]|ДОСТАВ|ВОССТАНОВ|ВОЗМЕСТИТЬ|УНИЧТОЖ|ВЫЗВАТЬ|ПОЛУЧИТЬ|ИЗВЛЕЧЬ|ГОТОВ|ДОСТУП(?:ЕН|НО)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)] private static partial Regex AvailableStatusPattern();
 
     [StructLayout(LayoutKind.Sequential)] private struct POINT { public int X; public int Y; }
     [StructLayout(LayoutKind.Sequential)] private struct INPUT { public uint Type; public MOUSEINPUT Mouse; }
