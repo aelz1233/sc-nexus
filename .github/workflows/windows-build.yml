@@ -27,7 +27,10 @@ jobs:
       - name: Run tests
         run: dotnet test SCNexus.slnx -c Release -p:UseAppHost=false
       - name: Publish Windows application
-        run: dotnet publish SCNexus/SCNexus.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          dotnet publish SCNexus/SCNexus.csproj -c Release -r win-x64 --self-contained true -p:Version=$version -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
       - name: Build installer and portable archive
         shell: pwsh
         run: |
