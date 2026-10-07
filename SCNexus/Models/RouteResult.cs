@@ -9,6 +9,7 @@ public sealed record RouteResult(HaulingRoute? Direct, VoyagePlan? Plan)
     public string Commodity => string.Join(", ", Trades.Select(x => x.Commodity).Distinct());
     public string Origin => Plan?.Stops.FirstOrDefault()?.Terminal ?? Direct?.BuyAt ?? "";
     public string Destination => Plan?.Stops.LastOrDefault()?.Terminal ?? Direct?.SellAt ?? "";
+    public string RoutePath => $"{Origin} → {Destination}";
     public string Systems => Plan is { } p ? string.Join(" → ", p.Stops.Select(x => x.System).Distinct()) : $"{Direct?.BuySystem} → {Direct?.SellSystem}";
     public decimal Profit => Plan?.Profit ?? Direct?.Profit ?? 0;
     public decimal Investment => Plan?.Investment ?? Direct?.Investment ?? 0;
@@ -18,6 +19,14 @@ public sealed record RouteResult(HaulingRoute? Direct, VoyagePlan? Plan)
     public decimal FillPercent => Capacity > 0 ? Cargo * 100m / Capacity : 0;
     public string Load => $"{Cargo:N0} / {Capacity:N0}";
     public bool IsDangerous => Trades.Any(x => x.IsDangerous);
+    public bool IsNqaRisk => !Trades.Any(x => x.IsPyroRoute) && Trades.Any(x => x.Risky);
+    public string RiskTitle => Trades.Any(x => x.IsPyroRoute)
+        ? LocalizationService.T("Опасно")
+        : IsNqaRisk
+            ? LocalizationService.T("Повышенный риск")
+            : LocalizationService.T("Стандартный");
+    public string RiskDetail => Trades.Any(x => x.IsPyroRoute) ? "Pyro" : IsNqaRisk ? "NQA" : "";
+    public bool HasRiskDetail => !string.IsNullOrEmpty(RiskDetail);
     public string Risk => LocalizationService.T(Trades.Any(x => x.IsPyroRoute) ? "⚠ ОПАСНО: Pyro" : Trades.Any(x => x.Risky) ? "⚠ Терминал NQA" : "Без Pyro и NQA");
     public DateTimeOffset UpdatedAt => Trades.Count > 0 ? Trades.Min(x => x.UpdatedAt) : DateTimeOffset.MinValue;
     public string Freshness => LocalizationService.IsEnglish ? $"UEX · Oldest quote: {UpdatedAt.LocalDateTime:g}" : $"UEX · Самая старая котировка: {UpdatedAt.LocalDateTime:g}";

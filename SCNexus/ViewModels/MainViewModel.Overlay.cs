@@ -126,7 +126,8 @@ public partial class MainViewModel
     public string OverlayActionDisplay => HasActiveVoyage
         ? LocalizationService.T(ActiveVoyageActionDisplay)
         : HasActiveFlight ? (IsEnglish ? "Confirm actual amounts in the journal after delivery." : "После доставки проверь фактические суммы в журнале.") : "";
-    public string OverlayCargoDisplay => HasActiveVoyage ? LocalizationService.T(ActiveVoyageCargoDisplay) : "";
+    public string OverlayActionHeading => IsEnglish ? "NEXT ACTION" : "СЛЕДУЮЩЕЕ ДЕЙСТВИЕ";
+    public string OverlayActionPlanHint => HasActiveVoyage ? (IsEnglish ? "From the route plan" : "По плану маршрута") : "";
     public string OverlayProfitDisplay => HasActiveVoyage ? ActiveVoyageProfitDisplay : "";
     public string OverlayNextDisplay => HasActiveVoyage ? LocalizationService.T(ActiveVoyageNextDisplay) : "";
     public string OverlayMissionDisplay
@@ -300,7 +301,8 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(OverlayRouteHeading));
         OnPropertyChanged(nameof(OverlayStopDisplay));
         OnPropertyChanged(nameof(OverlayActionDisplay));
-        OnPropertyChanged(nameof(OverlayCargoDisplay));
+        OnPropertyChanged(nameof(OverlayActionHeading));
+        OnPropertyChanged(nameof(OverlayActionPlanHint));
         OnPropertyChanged(nameof(OverlayProfitDisplay));
         OnPropertyChanged(nameof(OverlayNextDisplay));
         OnPropertyChanged(nameof(OverlayMissionDisplay));

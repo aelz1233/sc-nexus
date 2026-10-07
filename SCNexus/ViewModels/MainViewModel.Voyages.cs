@@ -57,9 +57,15 @@ public partial class MainViewModel
         : ActiveVoyageCompleted ? 100 : 100d * (ActiveVoyageStopIndex + 1) / plan.Stops.Count;
     public string VoyageHelp => VoyageMode switch
     {
-        "Цепочка" => "Цепочка: в A покупаешь груз, в B продаёшь его и покупаешь следующий, в C снова продаёшь. Пример: A → B → C → D. Трюм освобождается при каждой продаже, выручку можно вложить дальше. «До точек закупки» — максимум покупок, финальная продажа считается отдельной остановкой.",
-        "Сбор груза" => "Сбор груза: покупаешь товары в A и B, везёшь их вместе и продаёшь всё в C. Пример: купить в A → докупить в B → разгрузить в C. До конечной точки продаж нет: все товары должны поместиться в один трюм, а закупки — в исходный бюджет.",
-        _ => "Прямой рейс: купить один товар в A и продать в B. Две остановки, одна покупка и одна продажа. Подходит для быстрого выбора следующего рейса."
+        "Цепочка" => IsEnglish
+            ? "Chain: buy cargo at A, sell it at B and buy the next item, then sell again at C. Example: A → B → C → D. The hold is cleared after each sale, so the proceeds can fund the next purchase. Purchase stops set the maximum buys; the final sale is a separate stop."
+            : "Цепочка: в A покупаешь груз, в B продаёшь его и покупаешь следующий, в C снова продаёшь. Пример: A → B → C → D. Трюм освобождается при каждой продаже, выручку можно вложить дальше. «До точек закупки» — максимум покупок, финальная продажа считается отдельной остановкой.",
+        "Сбор груза" => IsEnglish
+            ? "Cargo collection: buy items at A and B, carry them together and sell everything at C. Example: buy at A → add cargo at B → unload at C. There are no sales before the destination: all items must fit in one hold and purchases must fit the starting budget."
+            : "Сбор груза: покупаешь товары в A и B, везёшь их вместе и продаёшь всё в C. Пример: купить в A → докупить в B → разгрузить в C. До конечной точки продаж нет: все товары должны поместиться в один трюм, а закупки — в исходный бюджет.",
+        _ => IsEnglish
+            ? "Direct route: buy one commodity at A and sell it at B. Two stops, one purchase and one sale. Best for quickly choosing the next trip."
+            : "Прямой рейс: купить один товар в A и продать в B. Две остановки, одна покупка и одна продажа. Подходит для быстрого выбора следующего рейса."
     };
     private HashSet<string>? AllowedRouteSystems => RouteSystems.Count == 0 ? null : RouteSystems.Where(x => x.IsSelected).Select(x => x.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
     public string RouteSystemsSummary => RouteSystems.Count == 0 ? "Системы появятся после загрузки котировок." :

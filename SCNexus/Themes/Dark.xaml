@@ -1,19 +1,19 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <SolidColorBrush x:Key="Bg" Color="#181A1D" />
-    <SolidColorBrush x:Key="Panel" Color="#202327" />
-    <SolidColorBrush x:Key="Accent" Color="#70B5D9" />
-    <SolidColorBrush x:Key="Muted" Color="#ACB3BC" />
-    <SolidColorBrush x:Key="Text" Color="#ECEEF1" />
-    <SolidColorBrush x:Key="Border" Color="#454B54" />
-    <SolidColorBrush x:Key="Input" Color="#25292E" />
-    <SolidColorBrush x:Key="Hover" Color="#343B43" />
-    <SolidColorBrush x:Key="Selected" Color="#29495B" />
+    <SolidColorBrush x:Key="Bg" Color="#101719" />
+    <SolidColorBrush x:Key="Panel" Color="#172124" />
+    <SolidColorBrush x:Key="Accent" Color="#F08A4B" />
+    <SolidColorBrush x:Key="Muted" Color="#A8B4B2" />
+    <SolidColorBrush x:Key="Text" Color="#F1F4F2" />
+    <SolidColorBrush x:Key="Border" Color="#2B3A3D" />
+    <SolidColorBrush x:Key="Input" Color="#1C292C" />
+    <SolidColorBrush x:Key="Hover" Color="#233235" />
+    <SolidColorBrush x:Key="Selected" Color="#3E2A22" />
     <SolidColorBrush x:Key="OnAccent" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="Danger" Color="#FF9999" />
-    <SolidColorBrush x:Key="Warning" Color="#EDBF7A" />
-    <SolidColorBrush x:Key="SidebarBrush" Color="#1C1F23" />
-    <SolidColorBrush x:Key="HeroBrush" Color="#326781" />
-    <SolidColorBrush x:Key="BalanceBrush" Color="#25292E" />
-    <SolidColorBrush x:Key="HeroSurfaceBrush" Color="#202327" />
-    <SolidColorBrush x:Key="HeroTitleBrush" Color="#ECEEF1" />
+    <SolidColorBrush x:Key="Danger" Color="#FF8D72" />
+    <SolidColorBrush x:Key="Warning" Color="#F2B966" />
+    <SolidColorBrush x:Key="SidebarBrush" Color="#121B1D" />
+    <SolidColorBrush x:Key="HeroBrush" Color="#B85128" />
+    <SolidColorBrush x:Key="BalanceBrush" Color="#1C292C" />
+    <SolidColorBrush x:Key="HeroSurfaceBrush" Color="#172124" />
+    <SolidColorBrush x:Key="HeroTitleBrush" Color="#F1F4F2" />
 </ResourceDictionary>

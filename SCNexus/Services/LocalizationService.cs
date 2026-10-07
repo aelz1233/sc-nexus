@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
@@ -14,6 +15,20 @@ public static class LocalizationService
     private static readonly Dictionary<string, string> English = new(StringComparer.Ordinal)
     {
         ["Подробности"] = "Details",
+        ["ОПЕРАЦИИ ПОЛЁТА"] = "FLIGHT OPERATIONS",
+        ["ЛОКАЛЬНОЕ РАБОЧЕЕ ПРОСТРАНСТВО"] = "LOCAL WORKSPACE",
+        ["АКТИВНЫЙ КОРАБЛЬ"] = "ACTIVE SHIP",
+        ["ДОСТУПНЫЙ БАЛАНС"] = "AVAILABLE BALANCE",
+        ["Ищу установку игры…"] = "Searching for the game installation…",
+        ["Обновить цены"] = "Refresh prices",
+        ["Товар или точка"] = "Commodity or location",
+        ["Поиск: товар или точка"] = "Search: commodity or location",
+        ["Рейс"] = "Route",
+        ["Инвестиции"] = "Investment",
+        ["Риск"] = "Risk",
+        ["Опасно"] = "Danger",
+        ["Повышенный риск"] = "Elevated risk",
+        ["Стандартный"] = "Standard",
         ["Товар"] = "Commodity",
         ["Откуда"] = "From",
         ["Куда"] = "To",
@@ -330,21 +345,30 @@ public static class UiLocalization
         switch (item)
         {
             case TextBlock text:
-                Translate(item, text.Text, BindingOperations.IsDataBound(text, TextBlock.TextProperty),
+                Translate(item, TextBlock.TextProperty, text.Text, BindingOperations.IsDataBound(text, TextBlock.TextProperty),
                     x => text.SetCurrentValue(TextBlock.TextProperty, x),
                     () => text.GetBindingExpression(TextBlock.TextProperty)?.UpdateTarget());
                 break;
-            case ContentControl content when content.Content is string value:
-                Translate(item, value, BindingOperations.IsDataBound(content, ContentControl.ContentProperty),
-                    x => content.SetCurrentValue(ContentControl.ContentProperty, x),
-                    () => content.GetBindingExpression(ContentControl.ContentProperty)?.UpdateTarget());
-                break;
             case HeaderedContentControl header when header.Header is string value:
-                Translate(item, value, BindingOperations.IsDataBound(header, HeaderedContentControl.HeaderProperty),
+                Translate(item, HeaderedContentControl.HeaderProperty, value, BindingOperations.IsDataBound(header, HeaderedContentControl.HeaderProperty),
                     x => header.SetCurrentValue(HeaderedContentControl.HeaderProperty, x),
                     () => header.GetBindingExpression(HeaderedContentControl.HeaderProperty)?.UpdateTarget());
                 break;
+            case ContentControl content when content.Content is string value:
+                Translate(item, ContentControl.ContentProperty, value, BindingOperations.IsDataBound(content, ContentControl.ContentProperty),
+                    x => content.SetCurrentValue(ContentControl.ContentProperty, x),
+                    () => content.GetBindingExpression(ContentControl.ContentProperty)?.UpdateTarget());
+                break;
         }
+        if (item is FrameworkElement toolTipElement && toolTipElement.ToolTip is string toolTip)
+            Translate(item, FrameworkElement.ToolTipProperty, toolTip, BindingOperations.IsDataBound(toolTipElement, FrameworkElement.ToolTipProperty),
+                x => toolTipElement.SetCurrentValue(FrameworkElement.ToolTipProperty, x),
+                () => toolTipElement.GetBindingExpression(FrameworkElement.ToolTipProperty)?.UpdateTarget());
+        var automationName = AutomationProperties.GetName(item);
+        if (!string.IsNullOrWhiteSpace(automationName))
+            Translate(item, AutomationProperties.NameProperty, automationName, BindingOperations.IsDataBound(item, AutomationProperties.NameProperty),
+                x => item.SetCurrentValue(AutomationProperties.NameProperty, x),
+                () => BindingOperations.GetBindingExpression(item, AutomationProperties.NameProperty)?.UpdateTarget());
         var count = item is Visual or Visual3D ? VisualTreeHelper.GetChildrenCount(item) : 0;
         for (var i = 0; i < count; i++) Visit(VisualTreeHelper.GetChild(item, i));
         if (count == 0 && item is FrameworkElement element)
@@ -353,19 +377,22 @@ public static class UiLocalization
         }
     }
 
-    private static void Translate(DependencyObject owner, string current, bool isBound, Action<string> set,
+    private static void Translate(DependencyObject owner, DependencyProperty property, string current, bool isBound, Action<string> set,
         Action restoreBinding)
     {
         if (LocalizationService.IsEnglish)
         {
             var translated = LocalizationService.T(current);
             if (translated == current) return;
-            if (!isBound) Originals.GetValue(owner, _ => new Original(current));
+            if (!isBound) Originals.GetValue(owner, _ => new Original()).Values.TryAdd(property, current);
             set(translated);
         }
         else if (isBound) restoreBinding();
-        else if (Originals.TryGetValue(owner, out var original)) set(original.Value);
+        else if (Originals.TryGetValue(owner, out var original) && original.Values.TryGetValue(property, out var value)) set(value);
     }
 
-    private sealed record Original(string Value);
+    private sealed class Original
+    {
+        public Dictionary<DependencyProperty, string> Values { get; } = [];
+    }
 }

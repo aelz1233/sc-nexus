@@ -26,7 +26,11 @@ public partial class MainViewModel
         var previous = SelectedRouteResult;
         _routeResults = rows;
         OnPropertyChanged(nameof(RouteResults));
-        SelectedRouteResult = rows.FirstOrDefault(x => x == previous) ?? rows.FirstOrDefault();
+        SelectedRouteResult = previous?.Direct is { } direct
+            ? rows.FirstOrDefault(x => ReferenceEquals(x.Direct, direct)) ?? rows.FirstOrDefault()
+            : previous?.Plan is { } plan
+                ? rows.FirstOrDefault(x => ReferenceEquals(x.Plan, plan)) ?? rows.FirstOrDefault()
+                : rows.FirstOrDefault();
         OnPropertyChanged(nameof(SelectedRouteResult));
         OnPropertyChanged(nameof(NoRouteResults));
     }

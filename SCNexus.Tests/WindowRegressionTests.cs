@@ -1,5 +1,6 @@
 ﻿using System.Net.Http;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
@@ -73,14 +74,24 @@ public class WindowRegressionTests
                     vm.VoyageMode = "Прямой рейс";
                     vm.RouteSearch = "";
 
-                    LocalizationService.SetLanguage("en");
+                    vm.Language = "en";
                     UiLocalization.Apply(window);
                     Assert.Contains(LogicalDescendants(window).OfType<TextBlock>(), x => x.Text == "Dashboard");
+                    Assert.Equal("Danger", vm.RouteResults.Single(x => x.Commodity == "Laranite").RiskTitle);
+                    Assert.Equal("NEXT ACTION", vm.OverlayActionHeading);
+                    var localizedHint = new TextBox { ToolTip = "Товар или точка" };
+                    AutomationProperties.SetName(localizedHint, "Поиск: товар или точка");
+                    UiLocalization.Apply(localizedHint);
+                    Assert.Equal("Commodity or location", localizedHint.ToolTip);
+                    Assert.Equal("Search: commodity or location", AutomationProperties.GetName(localizedHint));
                     var pageTitle = LogicalDescendants(window).OfType<TextBlock>().Single(x =>
                         BindingOperations.GetBinding(x, TextBlock.TextProperty)?.Path.Path == "PageTitle");
                     Assert.NotNull(BindingOperations.GetBinding(pageTitle, TextBlock.TextProperty));
-                    LocalizationService.SetLanguage("ru");
+                    vm.Language = "ru";
                     UiLocalization.Apply(window);
+                    UiLocalization.Apply(localizedHint);
+                    Assert.Equal("Товар или точка", localizedHint.ToolTip);
+                    Assert.Equal("Поиск: товар или точка", AutomationProperties.GetName(localizedHint));
 
                     // Exercise real templates at the supported minimum and normal window sizes.
                     window.ShowActivated = false;
@@ -93,12 +104,14 @@ public class WindowRegressionTests
                     Assert.Equal(900000, ((RouteResult)resultsGrid.Items[0]).Profit);
                     resultsGrid.SelectedIndex = 0;
                     Assert.True(vm.SelectedRouteResult!.IsDangerous);
-                    var sorting = new DataGridSortingEventArgs(resultsGrid.Columns.Last());
+                    var profitColumn = resultsGrid.Columns.Single(x => x.SortMemberPath == nameof(RouteResult.Profit));
+                    var sorting = new DataGridSortingEventArgs(profitColumn);
                     var resultsControl = LogicalDescendants(window).OfType<SCNexus.Controls.RouteResultsView>().Single();
                     typeof(SCNexus.Controls.RouteResultsView).GetMethod("OnSorting", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(resultsControl, [resultsGrid, sorting]);
                     Assert.Equal(10000, ((RouteResult)resultsGrid.Items[0]).Profit);
                     typeof(SCNexus.Controls.RouteResultsView).GetMethod("OnSorting", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(resultsControl, [resultsGrid, sorting]);
                     Assert.Equal(900000, ((RouteResult)resultsGrid.Items[0]).Profit);
+                    var untranslatedEnglish = new HashSet<string>();
                     foreach (var light in new[] { false, true })
                     foreach (var language in new[] { "ru", "en" })
                     foreach (var size in new[] { new Size(1100, 720), new Size(1440, 900) })
@@ -106,7 +119,7 @@ public class WindowRegressionTests
                     {
                         vm.LightTheme = light;
                         ThemeService.Apply(light);
-                        Assert.Equal(light ? "#FFF3F4F6" : "#FF181A1D", ((SolidColorBrush)window.Background).Color.ToString());
+                        Assert.Equal(light ? "#FFF4F2EE" : "#FF101719", ((SolidColorBrush)window.Background).Color.ToString());
                         vm.Language = language;
                         typeof(MainViewModel).GetMethod("Navigate", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
                             .Invoke(vm, [page]);
@@ -119,6 +132,10 @@ public class WindowRegressionTests
                         await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
                         UiLocalization.Apply(window);
                         Assert.Contains(VisualDescendants(window).OfType<TextBlock>(), x => x.IsVisible);
+                        if (language == "en")
+                            untranslatedEnglish.UnionWith(VisualDescendants(window).OfType<TextBlock>()
+                                .Where(x => x.IsVisible && System.Text.RegularExpressions.Regex.IsMatch(x.Text ?? "", "[А-Яа-яЁё]"))
+                                .Select(x => x.Text));
                         Assert.All(VisualDescendants(window).OfType<System.Windows.Controls.Primitives.RangeBase>(), control =>
                             Assert.False(double.IsNaN(control.Value)));
                         if (size.Width == 1440)
@@ -144,6 +161,7 @@ public class WindowRegressionTests
                             encoder.Save(image);
                         }
                     }
+                    Assert.Empty(untranslatedEnglish);
 
                     var shopping = new ComponentShoppingPlan("Balanced",
                         [new(1, "Stanton", "Area18", "CenterMass", [new("FR-76", 2, 42000), new("XL-1", 1, 90000)], 174000),

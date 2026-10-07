@@ -394,6 +394,8 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(IsEnglish));
         OnPropertyChanged(nameof(SelectedLanguage));
         OnPropertyChanged(string.Empty);
+        RefreshRouteResults();
+        NotifyOverlayChanged();
         RefreshOverlayChecklist();
         QueueSave();
     }
