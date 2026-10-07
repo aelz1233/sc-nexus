@@ -40,8 +40,9 @@ public partial class OverlayWindow : Window
         OverlayScaleHost.MaxHeight = MaxHeight;
         OverlayScaleHost.Width = BaseWidth * scale;
         Width = BaseWidth * scale;
+        var background = ((SolidColorBrush)FindResource("Bg")).Color;
         OverlayChrome.Background = new SolidColorBrush(Color.FromArgb(
-            (byte)Math.Round(Math.Clamp(viewModel.OverlayOpacity, .65, 1) * 255), 10, 18, 28));
+            (byte)Math.Round(Math.Clamp(viewModel.OverlayOpacity, .65, 1) * 255), background.R, background.G, background.B));
         OverlayContent.Opacity = Math.Clamp(viewModel.OverlayTextOpacity, .65, 1);
         ApplyInteractionMode(viewModel.OverlayEditMode);
         PositionAtWorkAreaEdge();

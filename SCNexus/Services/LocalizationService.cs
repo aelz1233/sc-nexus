@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Windows;
@@ -23,6 +23,9 @@ public static class LocalizationService
         ["Поиск маршрута"] = "Find route",
         ["Товар, локация или система"] = "Commodity, location or system",
         ["Дополнительно"] = "More filters",
+        ["Начальная система"] = "Starting system",
+        ["Бюджет и ограничения"] = "Budget and restrictions",
+        ["Разрешённые системы на всём маршруте"] = "Allowed systems along the entire route",
         ["Подобрать"] = "Find routes",
         ["Режим"] = "Mode",
         ["Старт"] = "Start",

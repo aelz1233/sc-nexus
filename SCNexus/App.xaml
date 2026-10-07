@@ -19,19 +19,22 @@
         </Style>
         <Style TargetType="ScrollBar">
             <Setter Property="Background" Value="{DynamicResource Bg}" />
-            <Setter Property="Width" Value="10" />
-            <Setter Property="MinWidth" Value="10" />
+            <Setter Property="Width" Value="14" />
+            <Setter Property="MinWidth" Value="14" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ScrollBar">
                         <Grid Background="{TemplateBinding Background}">
-                            <Track x:Name="PART_Track" IsDirectionReversed="True" Orientation="{TemplateBinding Orientation}">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True" Orientation="{TemplateBinding Orientation}"
+                                   Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                                   Value="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                   ViewportSize="{TemplateBinding ViewportSize}">
                                 <Track.DecreaseRepeatButton><RepeatButton x:Name="Decrease" Command="ScrollBar.PageUpCommand" Style="{StaticResource ScrollPageButton}" /></Track.DecreaseRepeatButton>
                                 <Track.Thumb>
-                                    <Thumb>
+                                    <Thumb x:Name="ScrollThumb" MinHeight="24">
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
-                                                <Border x:Name="Grip" Background="{DynamicResource Hover}" CornerRadius="8" Margin="2" />
+                                                <Border x:Name="Grip" Background="{DynamicResource Muted}" CornerRadius="4" Margin="3,2" />
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Grip" Property="Background" Value="{DynamicResource Accent}" /></Trigger>
                                                     <Trigger Property="IsDragging" Value="True"><Setter TargetName="Grip" Property="Background" Value="{DynamicResource Accent}" /></Trigger>
@@ -45,6 +48,8 @@
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="Orientation" Value="Horizontal">
+                                <Setter TargetName="ScrollThumb" Property="MinHeight" Value="0" />
+                                <Setter TargetName="ScrollThumb" Property="MinWidth" Value="24" />
                                 <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False" />
                                 <Setter TargetName="Decrease" Property="Command" Value="ScrollBar.PageLeftCommand" />
                                 <Setter TargetName="Increase" Property="Command" Value="ScrollBar.PageRightCommand" />
@@ -55,7 +60,7 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="Orientation" Value="Horizontal">
-                    <Setter Property="Width" Value="Auto" /><Setter Property="Height" Value="10" />
+                    <Setter Property="Width" Value="Auto" /><Setter Property="Height" Value="14" />
                 </Trigger>
             </Style.Triggers>
         </Style>

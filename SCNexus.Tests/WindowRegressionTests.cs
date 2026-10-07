@@ -1,4 +1,4 @@
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -195,6 +195,8 @@ public class WindowRegressionTests
                     overlay.UpdateLayout();
                     await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
                     Assert.False(vm.OverlayExpanded);
+                    Assert.Contains(VisualDescendants(overlay).OfType<TextBlock>(), x => x.IsVisible && x.Text == vm.OverlayBalanceDisplay);
+                    Assert.DoesNotContain(VisualDescendants(overlay).OfType<TextBlock>(), x => x.IsVisible && x.Text == vm.OverlayShipSourceDisplay);
                     Assert.True(toolbar.IsVisible);
                     Assert.DoesNotContain(VisualDescendants(toolbar).OfType<Button>(), x => x.IsVisible && x.Command == vm.DetectShipFromOverlayCommand);
                     mode.Command.Execute(null);
@@ -204,6 +206,12 @@ public class WindowRegressionTests
                     vm.OverlayEditMode = true;
                     overlay.ApplySettings(vm);
                     overlay.UpdateLayout();
+                    var chrome = (Border)overlay.FindName("OverlayChrome");
+                    var expectedBackground = ((SolidColorBrush)app.FindResource("Bg")).Color;
+                    var actualBackground = ((SolidColorBrush)chrome.Background).Color;
+                    Assert.Equal(expectedBackground.R, actualBackground.R);
+                    Assert.Equal(expectedBackground.G, actualBackground.G);
+                    Assert.Equal(expectedBackground.B, actualBackground.B);
                     overlayBitmap.Render(overlay);
                     var overlayEncoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
                     overlayEncoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(overlayBitmap));
