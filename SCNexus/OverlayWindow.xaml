@@ -8,14 +8,15 @@
     <Window.Resources>
         <DataTemplate x:Key="OverlayActions">
             <StackPanel Width="426">
-                <StackPanel Visibility="{Binding OverlayExpanded, Converter={StaticResource BoolVisibility}}">
+                <StackPanel>
                 <Border Background="{DynamicResource Panel}" CornerRadius="8" Padding="10" Margin="0,0,0,8"
                         Visibility="{Binding HasOverlayChecklist, Converter={StaticResource BoolVisibility}}">
-                    <StackPanel>
+                    <Expander Header="{Binding OverlayChecklistTitle}" IsExpanded="{Binding OverlayExpanded, Mode=TwoWay}">
+                    <StackPanel Margin="0,8,0,0">
                         <DockPanel>
                             <Button DockPanel.Dock="Right" Content="{Binding OverlayChecklistSwitchText}" Command="{Binding SwitchOverlayChecklistCommand}"
                                     Visibility="{Binding CanSwitchOverlayChecklist, Converter={StaticResource BoolVisibility}}" Padding="6,3" Margin="6,0,0,0" Focusable="False" />
-                            <TextBlock Text="{Binding OverlayChecklistTitle}" Foreground="{DynamicResource Accent}" FontWeight="SemiBold" FontSize="11" TextWrapping="Wrap" />
+
                         </DockPanel>
                         <TextBlock Text="{Binding OverlayChecklistStop}" Foreground="{DynamicResource Text}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0" />
                         <TextBlock Text="⚠ PYRO" Foreground="{DynamicResource Danger}" Visibility="{Binding OverlayChecklistDanger, Converter={StaticResource BoolVisibility}}" />
@@ -39,6 +40,7 @@
                         <Button Content="{Binding OverlayChecklistCloseText}" Command="{Binding CloseShoppingGuidanceCommand}" Padding="8,4" Margin="0,6,0,0" Focusable="False"
                                 Visibility="{Binding HasShoppingGuidance, Converter={StaticResource BoolVisibility}}" />
                     </StackPanel>
+                    </Expander>
                 </Border>
                 </StackPanel>
                 <Button Content="{Binding OverlayDetectShipButtonText}" ToolTip="{Binding FleetScanHint}" Command="{Binding DetectShipFromOverlayCommand}"
@@ -69,11 +71,13 @@
                 </StackPanel>
                 <TextBlock Grid.Column="1" Text="{Binding OverlayEnvironmentDisplay}" Foreground="{DynamicResource Accent}" FontWeight="Bold" FontSize="11" />
             </Grid>
-            <TextBlock Text="{Binding OverlayBalanceDisplay}" Foreground="{DynamicResource Text}" FontSize="14" FontWeight="SemiBold" Margin="0,10,0,0" />
-            <StackPanel Visibility="{Binding OverlayShowShip, Converter={StaticResource BoolVisibility}}" Margin="0,8,0,0">
-                <TextBlock Text="{Binding OverlayShipDisplay}" Foreground="{DynamicResource Text}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
-                <TextBlock Text="{Binding OverlayShipSourceDisplay}" Visibility="{Binding OverlayExpanded, Converter={StaticResource BoolVisibility}}" Foreground="{DynamicResource Muted}" FontSize="10" Margin="0,3,0,0" />
-            </StackPanel>
+            <Grid Margin="0,12,0,0">
+                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding OverlayShipDisplay}" Visibility="{Binding OverlayShowShip, Converter={StaticResource BoolVisibility}}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,12,0"/>
+                <TextBlock Grid.Column="1" Text="{Binding BalanceDisplay}" FontWeight="SemiBold" FontSize="13"/>
+            </Grid>
+
+            <TextBlock Text="{Binding OverlayShipSourceDisplay}" Visibility="{Binding OverlayExpanded, Converter={StaticResource BoolVisibility}}" Foreground="{DynamicResource Muted}" FontSize="10" Margin="0,3,0,0" />
             <StackPanel Visibility="{Binding OverlayShowLocation, Converter={StaticResource BoolVisibility}}" Margin="0,8,0,0">
                 <TextBlock Text="{Binding OverlayLocationDisplay}" Foreground="{DynamicResource Text}" FontSize="12" TextWrapping="Wrap" />
                 <TextBlock Text="{Binding OverlayLocationSourceDisplay}" Visibility="{Binding OverlayExpanded, Converter={StaticResource BoolVisibility}}" Foreground="{DynamicResource Muted}" FontSize="10" Margin="0,3,0,0" />

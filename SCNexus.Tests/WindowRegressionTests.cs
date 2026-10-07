@@ -102,7 +102,7 @@ public class WindowRegressionTests
                     foreach (var light in new[] { false, true })
                     foreach (var language in new[] { "ru", "en" })
                     foreach (var size in new[] { new Size(1100, 720), new Size(1440, 900) })
-                    foreach (var page in new[] { "Обзор", "Маршруты", "Флот", "Рейсы", "Инструменты", "Настройки" })
+                    foreach (var page in new[] { "Обзор", "Маршруты", "Флот", "Оснащение", "Рейсы", "Инструменты", "Настройки" })
                     {
                         vm.LightTheme = light;
                         ThemeService.Apply(light);
@@ -110,6 +110,8 @@ public class WindowRegressionTests
                         vm.Language = language;
                         typeof(MainViewModel).GetMethod("Navigate", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
                             .Invoke(vm, [page]);
+                        Assert.Equal(page == "Оснащение", vm.IsEquipmentOpen);
+                        Assert.Equal(page == "Обзор", vm.IsDashboardOpen);
                         window.Width = size.Width;
                         window.Height = size.Height;
                         // A shown Window is sized by its HWND; measuring it manually races display-mode changes.
@@ -195,7 +197,7 @@ public class WindowRegressionTests
                     overlay.UpdateLayout();
                     await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
                     Assert.False(vm.OverlayExpanded);
-                    Assert.Contains(VisualDescendants(overlay).OfType<TextBlock>(), x => x.IsVisible && x.Text == vm.OverlayBalanceDisplay);
+                    Assert.Contains(VisualDescendants(overlay).OfType<TextBlock>(), x => x.IsVisible && x.Text == vm.BalanceDisplay);
                     Assert.DoesNotContain(VisualDescendants(overlay).OfType<TextBlock>(), x => x.IsVisible && x.Text == vm.OverlayShipSourceDisplay);
                     Assert.True(toolbar.IsVisible);
                     Assert.DoesNotContain(VisualDescendants(toolbar).OfType<Button>(), x => x.IsVisible && x.Command == vm.DetectShipFromOverlayCommand);

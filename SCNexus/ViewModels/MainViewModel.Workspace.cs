@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -13,6 +13,9 @@ namespace SCNexus.ViewModels;
 
 public partial class MainViewModel
 {
+    [ObservableProperty] private bool isEquipmentOpen;
+    partial void OnIsEquipmentOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
+    [RelayCommand] private void OpenEquipment() => Navigate("Оснащение");
     [ObservableProperty] private string activePage = "Обзор";
     [ObservableProperty] private bool monitorEnabled = true;
     [ObservableProperty] private int monitorIntervalSeconds = 15;
@@ -39,6 +42,7 @@ public partial class MainViewModel
     {
         "Маршруты" => "Корабль, бюджет и подходящие торговые рейсы",
         "Флот" => "Твои корабли и каталог моделей",
+        "Оснащение" => "Компоненты, сравнение сборок и маршрут покупки",
         "Рейсы" => "События игры, текущий рейс и история",
         "Инструменты" => "Состояние игры, проверка файлов и журнал сессий",
         "Настройки" => "Подключение к игре, отображение и сохранение данных",
@@ -67,6 +71,7 @@ public partial class MainViewModel
 
     private void Navigate(string page)
     {
+        IsEquipmentOpen = page == "Оснащение";
         IsSettingsOpen = page == "Настройки";
         IsFleetOpen = page == "Флот";
         IsHistoryOpen = page == "Рейсы";

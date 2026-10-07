@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -102,7 +102,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     public ObservableCollection<string> Systems { get; } = ["Все системы"];
     public ObservableCollection<LocationOption> FilteredLocations { get; } = [];
     public ObservableCollection<FlightRecord> Flights { get; } = [];
-    public bool IsDashboardOpen => !IsSettingsOpen && !IsFleetOpen && !IsHistoryOpen && !IsToolsOpen && !IsHaulingOpen;
+    public bool IsDashboardOpen => !IsEquipmentOpen && !IsSettingsOpen && !IsFleetOpen && !IsHistoryOpen && !IsToolsOpen && !IsHaulingOpen;
     public bool HasActiveFlight => ActiveFlight is not null;
     public bool HasHaulingBestRoute => HaulingBestRoute is not null;
     public bool HasMoreHaulingRoutes => _visibleHaulingCount < _allHaulingRoutes.Count;
