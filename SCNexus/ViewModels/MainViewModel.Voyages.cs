@@ -122,6 +122,7 @@ public partial class MainViewModel
     {
         _voyageCancellation?.Cancel();
         VoyagePlans.Clear();
+        RefreshRouteResults();
         VoyageStatus = "Нажми «Подобрать рейсы» для текущего корабля и фильтров.";
     }
 
@@ -152,6 +153,7 @@ public partial class MainViewModel
         _voyageCancellation = cancellation;
         IsVoyageLoading = true;
         VoyagePlans.Clear();
+        RefreshRouteResults();
         VoyageStatus = "Подбираю остановки, товары и объёмы…";
         var request = new VoyageRequest(VoyageMode, SelectedShip.Ship.CargoScu, Math.Max(0, Balance - Reserve),
             VoyageMaxPurchases, VoyageDestination?.Id ?? 0, CurrentLocation, CurrentSystem,
@@ -162,6 +164,7 @@ public partial class MainViewModel
             var plans = await Task.Run(() => new VoyagePlanner().Calculate(data, request, cancellation.Token));
             cancellation.Token.ThrowIfCancellationRequested();
             foreach (var plan in plans) VoyagePlans.Add(plan);
+            RefreshRouteResults();
             VoyageStatus = plans.Count == 0 ? "Нет подходящих планов. Попробуй другую конечную точку, больше остановок или мягче фильтры."
                 : $"Подобрано планов: {plans.Count}. Сортировка по суммарной прибыли; время и топливо не учтены.";
         }

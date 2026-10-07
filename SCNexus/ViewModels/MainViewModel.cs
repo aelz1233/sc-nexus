@@ -12,6 +12,9 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     FlightLogService flightLogService, GameDataService gameDataService, GameLogService gameLogService,
     HaulingService haulingService, UpdateService updateService, DataCollectionService? dataCollectionService = null) : ObservableObject
 {
+    [ObservableProperty] private bool lightTheme;
+    public string ThemeLabel => IsEnglish ? "Light theme" : "Светлая тема";
+    partial void OnLightThemeChanged(bool value) { ThemeService.Apply(value); QueueSave(); }
     private bool _loaded;
     private bool _selectingLocation;
     private IReadOnlyList<LocationOption> _allLocations = [];
@@ -146,6 +149,8 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         dataCollectionService?.SetFleetScanning(AutoFleetOcrEnabled, FleetOcrAutoScroll);
         OcrIntervalSeconds = Math.Clamp(settings.OcrIntervalSeconds, 5, 30);
         dataCollectionService?.SetOcrInterval(OcrIntervalSeconds);
+        LightTheme = settings.LightTheme;
+        ThemeService.Apply(LightTheme);
         Language = settings.Language is "en" ? "en" : "ru";
         OverlayEnabled = settings.OverlayEnabled;
         OverlayExpanded = settings.OverlayExpanded;
@@ -530,6 +535,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             FleetOcrAutoScroll = FleetOcrAutoScroll,
             OcrIntervalSeconds = OcrIntervalSeconds,
             Language = Language,
+            LightTheme = LightTheme,
             OverlayEnabled = OverlayEnabled,
             OverlayExpanded = OverlayExpanded,
             OverlayOpacity = Math.Clamp(OverlayOpacity, 0.65, 1),
@@ -604,6 +610,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         if (_haulingData is null) return;
         HaulingRoutes.Clear();
         _allHaulingRoutes = [];
+        RefreshRouteResults();
         _visibleHaulingCount = 0;
         OnPropertyChanged(nameof(HasMoreHaulingRoutes));
         OnPropertyChanged(nameof(HaulingCountDisplay));
@@ -628,6 +635,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             _allHaulingRoutes = _allHaulingRoutes.OrderByDescending(x => x.PersonalProfitPerHour.HasValue)
                 .ThenByDescending(x => x.PersonalProfitPerHour).ThenByDescending(x => x.Profit).ToArray();
         ShowMoreHaulingRoutes();
+        RefreshRouteResults();
         HaulingBestRoute = _allHaulingRoutes.FirstOrDefault();
         var oldQuote = _allHaulingRoutes.Any(x => DateTimeOffset.UtcNow - x.UpdatedAt > TimeSpan.FromHours(24));
         HaulingStatus = _allHaulingRoutes.Count == 0

@@ -66,18 +66,19 @@ public partial class MainWindow : Window
     private void ApplyDarkTitleBar()
     {
         var handle = new WindowInteropHelper(this).Handle;
-        var enabled = 1;
+        var enabled = ThemeService.IsLight ? 0 : 1;
         // Windows 10 20H1+ uses attribute 20; older Windows 10 builds use 19.
         if (DwmSetWindowAttribute(handle, 20, ref enabled, sizeof(int)) != 0)
             DwmSetWindowAttribute(handle, 19, ref enabled, sizeof(int));
-        var background = 0x0019100B; // COLORREF: #0B1019
-        var foreground = 0x00F6F0EA; // COLORREF: #EAF0F6
+        var background = ThemeService.IsLight ? 0x00F6F4F3 : 0x001D1A18; // COLORREF: #0B1019
+        var foreground = ThemeService.IsLight ? 0x002B2520 : 0x00F1EEEC; // COLORREF: #EAF0F6
         DwmSetWindowAttribute(handle, 35, ref background, sizeof(int));
         DwmSetWindowAttribute(handle, 36, ref foreground, sizeof(int));
     }
 
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(MainViewModel.LightTheme)) ApplyDarkTitleBar();
         if (e.PropertyName == nameof(MainViewModel.ActivePage))
             Dispatcher.BeginInvoke(() => PageScroll.ScrollToTop());
         if (e.PropertyName == nameof(MainViewModel.Language)) Dispatcher.BeginInvoke(() =>

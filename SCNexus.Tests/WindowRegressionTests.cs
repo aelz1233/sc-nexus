@@ -8,6 +8,9 @@ using SCNexus.Models;
 using SCNexus.Services;
 using SCNexus.ViewModels;
 
+// WPF resources and the application language are process-wide.
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
+
 namespace SCNexus.Tests;
 
 public class WindowRegressionTests
@@ -45,35 +48,30 @@ public class WindowRegressionTests
                     var data = new GameDataService(client, Path.Combine(dir, "cache"));
                     var vm = new MainViewModel(settings, new TradingService(data, new RouteService()),
                         new FlightLogService(settings), data, new GameLogService(), new HaulingService(), new UpdateService());
+                    vm.Balance = 20000000;
+                    var ship = new ShipSummary(new PersonalShip { Id = 1, Name = "C2 Hercules Starlifter", CargoScu = 696, Role = "Cargo" }, 0);
+                    vm.Ships.Add(ship);
+                    vm.SortedShips.Add(ship);
+                    vm.CurrentShip = ship.Name;
+                    vm.CargoScu = ship.Ship.CargoScu;
+                    vm.SelectedShip = ship;
                     var window = new MainWindow { DataContext = vm };
-                    var list = LogicalDescendants(window).OfType<ItemsControl>().Single(x =>
-                        BindingOperations.GetBinding(x, ItemsControl.ItemsSourceProperty)?.Path.Path == "HaulingRoutes");
-                    var route = new HaulingRoute("Cargo", "A", "B", "Stanton", "Pyro", 75, 100,
-                        10, 20, 100, 100, 750, 1500, false, "Межзвёздный", DateTimeOffset.UtcNow);
-                    var card = (FrameworkElement)list.ItemTemplate.LoadContent();
-                    card.DataContext = route;
-                    card.Measure(new Size(900, double.PositiveInfinity));
-                    card.Arrange(new Rect(new Point(), card.DesiredSize));
-                    card.UpdateLayout();
-                    var progress = VisualDescendants(card).OfType<ProgressBar>().Single();
-                    Assert.Equal(75d, progress.Value);
-                    Assert.Equal(BindingMode.OneWay, BindingOperations.GetBinding(progress, ProgressBar.ValueProperty)!.Mode);
-
-                    var voyages = LogicalDescendants(window).OfType<ItemsControl>().Single(x =>
-                        BindingOperations.GetBinding(x, ItemsControl.ItemsSourceProperty)?.Path.Path == "VoyagePlans");
-                    var voyageCard = (FrameworkElement)voyages.ItemTemplate.LoadContent();
-                    voyageCard.DataContext = new VoyagePlan("Сбор груза", [route],
-                        [new VoyageStop(1, "A", "Pyro", "Купить", 75, 100, 250)], 1000, 100);
-                    voyageCard.Measure(new Size(900, double.PositiveInfinity));
-                    voyageCard.Arrange(new Rect(new Point(), voyageCard.DesiredSize));
-                    voyageCard.UpdateLayout();
-                    Assert.Equal(75d, VisualDescendants(voyageCard).OfType<ProgressBar>().Single().Value);
-                    var stopsExpander = VisualDescendants(voyageCard).OfType<Expander>().Single();
-                    Assert.False(stopsExpander.IsExpanded);
-                    Assert.Equal("Остановки и груз", stopsExpander.Header);
-                    stopsExpander.IsExpanded = true;
-                    voyageCard.UpdateLayout();
-                    Assert.Contains(VisualDescendants(voyageCard).OfType<TextBlock>(), x => x.Text.Contains("ОПАСНО: Pyro"));
+                    var route = new HaulingRoute("Iodine", "ArcCorp Mining Area 056", "Seraphim Station", "Stanton", "Stanton", 600, 696,
+                        8000, 8700, 1000, 1000, 4800000, 5220000, false, "Внутрисистемный", DateTimeOffset.UtcNow);
+                    typeof(MainViewModel).GetField("_allHaulingRoutes", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                        .SetValue(vm, new[] { route, route with { Commodity = "Laranite", BuySystem = "Pyro", BuyAt = "Ruin Station", BuyPrice = 12000, SellPrice = 13500, Investment = 7200000, Revenue = 8100000 }, route with { Commodity = "Gold", Scu = 100, BuyPrice = 2000, SellPrice = 2100, Investment = 200000, Revenue = 210000 } });
+                    vm.RouteSearch = "Iodine";
+                    Assert.Single(vm.RouteResults);
+                    Assert.Equal("Iodine", vm.SelectedRouteResult!.Commodity);
+                    vm.RouteSearch = "";
+                    Assert.Equal(3, vm.RouteResults.Count);
+                    vm.VoyageMode = "Сбор груза";
+                    vm.VoyagePlans.Add(new VoyagePlan("Сбор груза", [route], [new VoyageStop(1, "A", "Stanton", "Купить", 600, 696, 1000000), new VoyageStop(2, "B", "Stanton", "Продать", 0, 696, 2000000)], 10000000, 696));
+                    vm.RouteSearch = "Iodine";
+                    Assert.Single(vm.RouteResults);
+                    Assert.NotNull(vm.SelectedRouteResult!.Plan);
+                    vm.VoyageMode = "Прямой рейс";
+                    vm.RouteSearch = "";
 
                     LocalizationService.SetLanguage("en");
                     UiLocalization.Apply(window);
@@ -88,10 +86,27 @@ public class WindowRegressionTests
                     window.ShowActivated = false;
                     window.Show();
                     await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                    var resultsGrid = LogicalDescendants(window).OfType<SCNexus.Controls.RouteResultsView>().Single().FindName("Results") as DataGrid;
+                    Assert.NotNull(resultsGrid);
+                    Assert.NotNull(resultsGrid.SelectedItem);
+                    Assert.Equal(vm.SelectedRouteResult, resultsGrid.SelectedItem);
+                    Assert.Equal(900000, ((RouteResult)resultsGrid.Items[0]).Profit);
+                    resultsGrid.SelectedIndex = 0;
+                    Assert.True(vm.SelectedRouteResult!.IsDangerous);
+                    var sorting = new DataGridSortingEventArgs(resultsGrid.Columns.Last());
+                    var resultsControl = LogicalDescendants(window).OfType<SCNexus.Controls.RouteResultsView>().Single();
+                    typeof(SCNexus.Controls.RouteResultsView).GetMethod("OnSorting", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(resultsControl, [resultsGrid, sorting]);
+                    Assert.Equal(10000, ((RouteResult)resultsGrid.Items[0]).Profit);
+                    typeof(SCNexus.Controls.RouteResultsView).GetMethod("OnSorting", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(resultsControl, [resultsGrid, sorting]);
+                    Assert.Equal(900000, ((RouteResult)resultsGrid.Items[0]).Profit);
+                    foreach (var light in new[] { false, true })
                     foreach (var language in new[] { "ru", "en" })
                     foreach (var size in new[] { new Size(1100, 720), new Size(1440, 900) })
                     foreach (var page in new[] { "Обзор", "Маршруты", "Флот", "Рейсы", "Инструменты", "Настройки" })
                     {
+                        vm.LightTheme = light;
+                        ThemeService.Apply(light);
+                        Assert.Equal(light ? "#FFF3F4F6" : "#FF181A1D", ((SolidColorBrush)window.Background).Color.ToString());
                         vm.Language = language;
                         typeof(MainViewModel).GetMethod("Navigate", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
                             .Invoke(vm, [page]);
@@ -108,11 +123,22 @@ public class WindowRegressionTests
                         {
                             var output = Path.Combine(AppContext.BaseDirectory, "audit-screenshots");
                             Directory.CreateDirectory(output);
-                            var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(1440, 900, 96, 96, PixelFormats.Pbgra32);
-                            bitmap.Render((Visual)window.Content);
+                            var content = (FrameworkElement)window.Content;
+                            var width = (int)Math.Ceiling(content.ActualWidth);
+                            var height = (int)Math.Ceiling(content.ActualHeight);
+                            var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(width, height + 28, 96, 96, PixelFormats.Pbgra32);
+                            var presentation = new DrawingVisual();
+                            using (var drawing = presentation.RenderOpen())
+                            {
+                                drawing.DrawRectangle((Brush)app.Resources["Bg"], null, new Rect(0, 0, width, height + 28));
+                                drawing.DrawRectangle(new VisualBrush(content), null, new Rect(0, 0, width, height));
+                                drawing.DrawText(new FormattedText("SC NEXUS · Interface preview · Illustrative data", System.Globalization.CultureInfo.GetCultureInfo("en-US"), FlowDirection.LeftToRight,
+                                    new Typeface("Segoe UI"), 11, (Brush)app.Resources["Muted"], 1), new Point(20, height + 6));
+                            }
+                            bitmap.Render(presentation);
                             var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
                             encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
-                            using var image = File.Create(Path.Combine(output, $"{language}-{page}.png"));
+                            using var image = File.Create(Path.Combine(output, $"{(light ? "light" : "dark")}-{language}-{page}.png"));
                             encoder.Save(image);
                         }
                     }

@@ -29,16 +29,20 @@ The guiding principle is simple: use automatic data first and ask the player for
 
 ## Interface
 
-<p align="center">
-  <img src="docs/screenshots/dashboard.png" width="94%" alt="SC Nexus dashboard">
-</p>
-<p align="center">
-  <img src="docs/screenshots/trade-route-card.png" width="31%" alt="Trade route recommendation">
-  <img src="docs/screenshots/flight-journal.png" width="31%" alt="Flight journal">
-  <img src="docs/screenshots/cargo-stops.png" width="31%" alt="Multi-stop cargo plan">
-</p>
+**Contract earnings are optional.** Settings → General → “Include contract earnings in analytics” (also available in Journal). Turn it off to exclude contracts from total and hourly income while keeping saved records. Automatic reward detection is not guaranteed for every contract; verify catalog amounts before saving. Wallet balance is unaffected.
 
-<p align="center"><em>Dashboard, trade analysis, flight tracking, and an expandable multi-stop cargo plan. The application supports Russian and English.</em></p>
+The current source adds light and dark themes (Settings → General → Light theme). Routes use a sortable table with commodity illustrations, search, numeric columns and a selected-route inspector. Additional filters are collapsed; Pyro/NQA warnings use both text and an icon. On narrow windows the inspector moves below the table.
+
+Contract payouts can be looked up by the definition ID recorded in Game.log using SC Wiki. A catalog reward is an estimate for the displayed game version, never a confirmed payment. Missing rewards remain unknown; a returned range is not converted into a single amount. The actual payout must be confirmed before it enters analytics. Acceptance and completion timestamps fill duration when both are available.
+
+<p align="center">
+  <img src="docs/screenshots/routes-dark-en.png" width="94%" alt="English route planner — dark theme">
+</p>
+<p align="center">
+  <img src="docs/screenshots/routes-light-en.png" width="48%" alt="English route planner — light theme">
+  <img src="docs/screenshots/settings-en.png" width="48%" alt="English settings and optional contract earnings">
+</p>
+<p align="center"><em>English interface: dark and light routes, plus the optional contract-earnings setting. Screenshots are rendered from the application using illustrative data, not live market quotes.</em></p>
 
 ## Features
 

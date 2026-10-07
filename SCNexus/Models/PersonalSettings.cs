@@ -23,6 +23,7 @@ public sealed class PersonalSettings
     public bool AutoFleetOcrEnabled { get; set; } = true;
     public bool FleetOcrAutoScroll { get; set; } = true;
     public int OcrIntervalSeconds { get; set; } = 5;
+    public bool LightTheme { get; set; }
     public string Language { get; set; } = "ru";
     public bool OverlayEnabled { get; set; } = true;
     public bool OverlayExpanded { get; set; }

@@ -74,6 +74,8 @@ public sealed class DetectedShip
 
 public sealed class MissionState
 {
+    public string? DefinitionId { get; init; }
+    public DateTimeOffset? AcceptedAt { get; init; }
     public required string Id { get; init; }
     public required ObservedValue<string> Name { get; init; }
     public required ObservedValue<string> Status { get; init; }

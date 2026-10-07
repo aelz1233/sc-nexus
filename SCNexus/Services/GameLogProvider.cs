@@ -264,6 +264,7 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
             var previous = _missions.GetValueOrDefault(id);
             var state = new MissionState
             {
+                DefinitionId = Regex.Match(line, @"contractDefinitionId\s*\[(?<id>[0-9a-f-]{36})\]", RegexOptions.IgnoreCase).Groups["id"].Value is { Length: > 0 } definition ? definition : previous?.DefinitionId, AcceptedAt = previous?.AcceptedAt,
                 Id = id, Name = previous?.Name.Confidence > .9 ? previous.Name : new ObservedValue<string>(name, Source, timestamp, .9),
                 Status = new ObservedValue<string>(previous?.Status.Value is "completed" or "failed" or "abandoned" ? previous.Status.Value : "active", Source, timestamp, .9),
                 Objective = string.IsNullOrWhiteSpace(objective) ? null : new ObservedValue<string>(objective, Source, timestamp, .82)
@@ -283,6 +284,7 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
                 (status is "active" or "in_progress" ? "active" : "unknown");
             var state = new MissionState
             {
+                DefinitionId = previous?.DefinitionId, AcceptedAt = previous?.AcceptedAt,
                 Id = id,
                 Name = previous?.Name ?? new ObservedValue<string>($"Mission {id[..8]}", Source, timestamp, .65),
                 Status = new ObservedValue<string>(missionStatus, Source, timestamp, .95),
@@ -299,6 +301,7 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
             var previous = _missions.GetValueOrDefault(id);
             var state = new MissionState
             {
+                DefinitionId = previous?.DefinitionId, AcceptedAt = previous?.AcceptedAt,
                 Id = id,
                 Name = previous?.Name ?? new ObservedValue<string>($"Mission {id[..8]}", Source, timestamp, .65),
                 Status = new ObservedValue<string>(status, Source, timestamp, .99),
@@ -316,6 +319,7 @@ public sealed partial class GameLogProvider(GameLogService gameLogService) : IDa
             var previous = _missions.GetValueOrDefault(id);
             var state = new MissionState
             {
+                DefinitionId = previous?.DefinitionId, AcceptedAt = previous?.AcceptedAt ?? timestamp,
                 Id = id, Name = new(title, Source, timestamp, .98),
                 Status = new(previous?.Status.Value is "completed" or "failed" or "abandoned" ? previous.Status.Value : "active", Source, timestamp, .96),
                 Objective = previous?.Objective

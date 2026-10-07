@@ -56,6 +56,17 @@ public class FleetTerminalScanTests
     }
 
     [Fact]
+    public void DuplicateAliasesDoNotHideAnAmbiguousFuzzyMatch()
+    {
+        VehicleCatalogItem[] similar =
+        [
+            new() { Id = 10, Name = "Alpha", NameFull = "Alpha", IsSpaceship = 1 },
+            new() { Id = 11, Name = "Alpho", NameFull = "Alpho", IsSpaceship = 1 }
+        ];
+        Assert.Empty(OcrProvider.ParseText("ASOP\nAlphx\nStored", similar, DateTimeOffset.UtcNow).Records);
+    }
+
+    [Fact]
     public void ShopHeadingIsNotEvidenceOfPlayerFleet()
     {
         Assert.Empty(OcrProvider.ParseText("Корабли\nКупить\nGuardian MX", Ships, DateTimeOffset.UtcNow).Records);

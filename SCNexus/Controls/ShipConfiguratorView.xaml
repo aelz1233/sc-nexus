@@ -4,14 +4,14 @@
              Loaded="OnLoaded">
     <UserControl.Resources>
         <DataTemplate x:Key="ComponentLineTemplate">
-            <Border Background="#0C1621" BorderBrush="#22364A" BorderThickness="1" CornerRadius="8" Padding="11,9" Margin="0,0,0,6">
+            <Border Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="8" Padding="11,9" Margin="0,0,0,6">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="130" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="180" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding SlotDisplay}" Foreground="{StaticResource Muted}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding SlotDisplay}" Foreground="{DynamicResource Muted}" FontWeight="SemiBold" VerticalAlignment="Center" />
                     <StackPanel Grid.Column="1" Margin="10,0">
                         <TextBlock Text="{Binding NameDisplay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                         <TextBlock Text="{Binding MetricDisplay}" Style="{StaticResource Hint}" Margin="0,2,0,0" />
@@ -26,11 +26,11 @@
         </DataTemplate>
 
         <DataTemplate x:Key="ShoppingPlanTemplate">
-            <Border Background="#0C1621" BorderBrush="#22364A" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,7">
+            <Border Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,7">
                 <StackPanel>
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding NameDisplay}" FontWeight="SemiBold" Foreground="{StaticResource Accent}" />
+                        <TextBlock Text="{Binding NameDisplay}" FontWeight="SemiBold" Foreground="{DynamicResource Accent}" />
                         <TextBlock Grid.Column="1" Text="{Binding SummaryDisplay}" FontWeight="SemiBold" Margin="16,0,0,0" />
                     </Grid>
                     <TextBlock Text="{Binding LogicDisplay}" Style="{StaticResource Hint}" Margin="0,4,0,0" />
@@ -40,10 +40,10 @@
                         <ItemsControl ItemsSource="{Binding Stops}" Margin="0,7,0,0">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#111E2B" CornerRadius="7" Padding="10" Margin="0,0,0,6">
+                                    <Border Background="{DynamicResource Panel}" CornerRadius="8" Padding="10" Margin="0,0,0,6">
                                         <StackPanel>
                                             <TextBlock Text="{Binding Heading}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                            <TextBlock Text="⚠ ОПАСНО: Pyro" Foreground="#FF9A8F" Visibility="{Binding IsPyro, Converter={StaticResource BoolVisibility}}" Margin="0,3,0,0" />
+                                            <TextBlock Text="⚠ ОПАСНО: Pyro" Foreground="{DynamicResource Warning}" Visibility="{Binding IsPyro, Converter={StaticResource BoolVisibility}}" Margin="0,3,0,0" />
                                             <ItemsControl ItemsSource="{Binding Items}" Margin="0,5,0,0">
                                                 <ItemsControl.ItemTemplate><DataTemplate><CheckBox IsChecked="{Binding IsPurchased, Mode=TwoWay}" Margin="0,2"><TextBlock Text="{Binding Display}" TextWrapping="Wrap" /></CheckBox></DataTemplate></ItemsControl.ItemTemplate>
                                             </ItemsControl>
@@ -70,7 +70,7 @@
                     </StackPanel>
                     <Button Grid.Column="1" Content="Копировать детали" Click="OnCopyBuildClick" CommandParameter="{Binding}" VerticalAlignment="Center" Margin="14,0,0,0" />
                 </Grid>
-                <Border Background="#0D1925" BorderBrush="#22364A" BorderThickness="1" CornerRadius="9" Padding="13" Margin="0,0,0,9">
+                <Border Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="9" Padding="13" Margin="0,0,0,9">
                     <StackPanel>
                         <TextBlock Text="{Binding ComparisonDisplay}" FontWeight="SemiBold" TextWrapping="Wrap" />
                         <TextBlock Text="{Binding EngineeringComparisonDisplay}" Style="{StaticResource Hint}" Margin="0,4,0,0" />
@@ -131,19 +131,19 @@
         <Expander x:Name="SummaryCard" Header="Данные и метод расчёта" IsExpanded="False" Visibility="Collapsed" Margin="0,0,0,10">
             <Border Style="{StaticResource Card}" Padding="14" Margin="0,7,0,0">
                 <StackPanel>
-                    <TextBlock x:Name="DataStatusText" FontWeight="SemiBold" Foreground="{StaticResource Accent}" TextWrapping="Wrap" />
+                    <TextBlock x:Name="DataStatusText" FontWeight="SemiBold" Foreground="{DynamicResource Accent}" TextWrapping="Wrap" />
                     <TextBlock x:Name="CoverageText" Style="{StaticResource Hint}" Margin="0,5,0,0" />
                     <TextBlock x:Name="MethodText" Style="{StaticResource Hint}" Margin="0,4,0,0" />
-                    <TextBlock Margin="0,6,0,0" FontSize="12" Foreground="{StaticResource Muted}">
+                    <TextBlock Margin="0,6,0,0" FontSize="12" Foreground="{DynamicResource Muted}">
                         <Run Text="Источники: " />
-                        <Hyperlink NavigateUri="https://api.star-citizen.wiki/developers" RequestNavigate="OnSourceNavigate" Foreground="{StaticResource Accent}">Star Citizen Wiki API</Hyperlink>
+                        <Hyperlink NavigateUri="https://api.star-citizen.wiki/developers" RequestNavigate="OnSourceNavigate" Foreground="{DynamicResource Accent}">Star Citizen Wiki API</Hyperlink>
                         <Run Text=" и UEX Corp." />
                     </TextBlock>
                 </StackPanel>
             </Border>
         </Expander>
 
-        <TabControl x:Name="ResultsTabs" Visibility="Collapsed" FontWeight="Normal" Foreground="#EAF0F6">
+        <TabControl x:Name="ResultsTabs" Visibility="Collapsed" FontWeight="Normal" Foreground="{DynamicResource Text}">
             <TabItem x:Name="BudgetTab" Header="Лучшее за бюджет">
                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource BuildResultTemplate}" />
             </TabItem>

@@ -299,6 +299,7 @@ public sealed class SettingsService
                 current.FleetOcrAutoScroll = snapshot.FleetOcrAutoScroll;
                 current.OcrIntervalSeconds = Math.Clamp(snapshot.OcrIntervalSeconds, 5, 30);
                 current.Language = snapshot.Language;
+                current.LightTheme = snapshot.LightTheme;
                 current.OverlayEnabled = snapshot.OverlayEnabled;
                 current.OverlayExpanded = snapshot.OverlayExpanded;
                 current.OverlayOpacity = snapshot.OverlayOpacity;
@@ -351,6 +352,7 @@ public sealed class SettingsService
             if (!names.Contains("ContractEarningsEnabled")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN ContractEarningsEnabled INTEGER NOT NULL DEFAULT 1");
             if (!names.Contains("ContractEarningsJson")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN ContractEarningsJson TEXT NOT NULL DEFAULT '[]'");
             if (!names.Contains("OcrEnabled")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OcrEnabled INTEGER NOT NULL DEFAULT 0");
+            if (!names.Contains("LightTheme")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN LightTheme INTEGER NOT NULL DEFAULT 0");
             if (!names.Contains("Language")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN Language TEXT NOT NULL DEFAULT 'ru'");
             if (!names.Contains("OverlayEnabled")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayEnabled INTEGER NOT NULL DEFAULT 1");
             if (!names.Contains("OverlayExpanded")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN OverlayExpanded INTEGER NOT NULL DEFAULT 0");

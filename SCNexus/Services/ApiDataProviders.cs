@@ -31,6 +31,27 @@ public sealed class UexProvider(GameDataService gameDataService) : IDataProvider
 
 public sealed class SCWikiProvider(ShipComponentCatalogService catalogService) : IDataProvider
 {
+    private static readonly System.Net.Http.HttpClient MissionClient = new() { Timeout = TimeSpan.FromSeconds(20) };
+    public static async Task<(decimal? Minimum, decimal? Maximum, string Version)> GetMissionRewardAsync(string definitionId)
+    {
+        if (!Guid.TryParse(definitionId, out var id) || id == Guid.Empty)
+            throw new ArgumentException("Invalid contract definition ID.", nameof(definitionId));
+        using var response = await MissionClient.GetAsync($"https://api.star-citizen.wiki/api/missions/{id:D}");
+        response.EnsureSuccessStatusCode();
+        using var json = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return ParseMissionReward(json.RootElement, id);
+    }
+    internal static (decimal? Minimum, decimal? Maximum, string Version) ParseMissionReward(System.Text.Json.JsonElement root, Guid id)
+    {
+        var data = root.GetProperty("data");
+        if (!data.TryGetProperty("uuid", out var uuid) || !Guid.TryParse(uuid.GetString(), out var returned) || returned != id)
+            throw new System.Text.Json.JsonException("Contract ID mismatch.");
+        decimal? Amount(string name) => data.TryGetProperty(name, out var value) && value.ValueKind == System.Text.Json.JsonValueKind.Number && value.TryGetDecimal(out var amount) && amount > 0 ? amount : null;
+        var version = root.TryGetProperty("meta", out var meta) && meta.TryGetProperty("resource", out var resource) && resource.TryGetProperty("version", out var v) ? v.GetString() ?? "?" : "?";
+        var currency = data.TryGetProperty("reward_currency", out var c) && c.ValueKind == System.Text.Json.JsonValueKind.String ? c.GetString() : null;
+        if (currency is not null && !currency.Equals("aUEC", StringComparison.OrdinalIgnoreCase) && !currency.Equals("UEC", StringComparison.OrdinalIgnoreCase)) return (null, null, version);
+        return (Amount("reward_min"), Amount("reward_max"), version);
+    }
     public string Name => "Star Citizen Wiki";
     public DataSourceKind Source => DataSourceKind.StarCitizenWiki;
     public int Priority => 4;

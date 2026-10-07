@@ -31,7 +31,7 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
         var window = GetForegroundWindow();
         if (window == IntPtr.Zero || !IsStarCitizen(window))
             return new DataProviderResult { Status = "Waiting for Star Citizen foreground window" };
-        var lines = await CaptureAndRecognizeAsync(window, token);
+        var lines = await CaptureAndRecognizeAsync(window, token, fleetDetail: AutoFleetEnabled);
         if (lines.Count == 0) return new DataProviderResult { Status = "No text recognized" };
         var text = string.Join("\n", lines.Select(x => x.Text));
         try
@@ -110,6 +110,9 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
         amount = 0;
         if (!Regex.IsMatch(text, @"\d")) return false;
         var cleaned = Regex.Replace(text, @"(?i)\ba\s*u\s*e\s*c\b|\buec\b", "");
+        // Do not turn labels/player IDs such as "ACI 777" into a wallet amount.
+        cleaned = cleaned.Trim();
+        if (!Regex.IsMatch(cleaned, @"^[0-9OoIl|\s,.]+$", RegexOptions.CultureInvariant)) return false;
         cleaned = new string(cleaned.Select(c => c switch
         {
             'O' or 'o' => '0',
@@ -206,8 +209,8 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
 
         if (matches.Count == 0) return null;
         var ordered = matches.OrderBy(x => x.Distance).ThenByDescending(x => x.AliasLength).ToArray();
-        if (ordered.Length > 1 && ordered[0].Distance == ordered[1].Distance &&
-            ordered[0].Vehicle.Id != ordered[1].Vehicle.Id && ordered[0].AliasLength == ordered[1].AliasLength)
+        var other = ordered.FirstOrDefault(x => x.Vehicle.Id != ordered[0].Vehicle.Id);
+        if (other.Vehicle is not null && ordered[0].Distance == other.Distance && ordered[0].AliasLength == other.AliasLength)
             return null;
         return ordered[0].Vehicle;
     }

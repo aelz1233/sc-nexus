@@ -6,6 +6,7 @@ using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SCNexus.Models;
+using SCNexus.Services;
 
 namespace SCNexus.ViewModels;
 
@@ -24,6 +25,9 @@ public partial class MainViewModel
         .Where(x => !x.Excluded && x.CompletedAt >= FlightPeriodStart).OrderByDescending(x => x.CompletedAt);
     private IEnumerable<ContractEarning> CountedEarnings => ContractEarningsEnabled ? ContractEarnings.Where(x => !x.Excluded) : [];
     public string ContractEarningsLabel => IsEnglish ? "Include contract earnings in analytics" : "Учитывать заработок с контрактов в аналитике";
+    public string ContractEarningsLimitations => IsEnglish
+        ? "Automatic reward detection is not available for every contract. SC Wiki may have no amount or an estimate for another game version. Verify the actual payout before saving. Turn this option off to exclude contract earnings from totals and income per hour; saved records are kept and your wallet balance is unchanged."
+        : "Автоматическое определение награды доступно не для всех контрактов. В SC Wiki сумма может отсутствовать или относиться к другой версии игры. Перед сохранением проверь фактическую выплату. Выключи учёт, чтобы исключить контракты из общего заработка и дохода в час. Сохранённые записи останутся, баланс не изменится.";
     public string TotalIncomeLabel => IsEnglish ? "Total income" : "Общий заработок";
     public string RecordTripLabel => IsEnglish ? "Record a trading trip" : "Записать торговый рейс";
     public string ContractEarningsTitle => IsEnglish ? "Contract payouts" : "Выплаты по контрактам";
@@ -35,6 +39,39 @@ public partial class MainViewModel
     public string SaveContractLabel => IsEnglish ? "Save payout" : "Сохранить выплату";
     public string DeleteContractLabel => IsEnglish ? "Remove payout" : "Удалить выплату";
     public string UseRewardLabel => IsEnglish ? "Use visible reward (verify contract)" : "Подставить награду с экрана (проверь контракт)";
+    public string LookupRewardLabel => IsEnglish ? "Find reward by contract ID" : "Найти награду по ID контракта";
+    [RelayCommand]
+    private async Task LookupContractRewardAsync()
+    {
+        var mission = SelectedEarningMission;
+        if (!Guid.TryParse(mission?.DefinitionId, out var id) || id == Guid.Empty)
+        {
+            ContractEarningStatus = IsEnglish ? "The log has no definition ID for this contract. Open its reward in the game." : "В журнале нет ID типа этого контракта. Открой его награду в игре.";
+            return;
+        }
+        ContractEarningStatus = IsEnglish ? "Searching SC Wiki…" : "Поиск в SC Wiki…";
+        try
+        {
+            var reward = await SCWikiProvider.GetMissionRewardAsync(id.ToString());
+            if (SelectedEarningMission?.Id != mission!.Id) return;
+            var source = $"SC Wiki · {reward.Version}";
+            if (reward.Minimum is null || reward.Maximum is null)
+                ContractEarningStatus = IsEnglish ? $"{source}: monetary reward unavailable. Use the in-game reward." : $"{source}: денежная награда отсутствует. Используй сумму с экрана игры.";
+            else if (reward.Minimum != reward.Maximum)
+                ContractEarningStatus = IsEnglish ? $"{source}: expected {reward.Minimum:N0}–{reward.Maximum:N0} aUEC. Confirm the actual payout." : $"{source}: ожидается {reward.Minimum:N0}–{reward.Maximum:N0} aUEC. Подтверди фактическую выплату.";
+            else
+            {
+                ContractRewardAmount = reward.Minimum.Value;
+                ContractEarningStatus = IsEnglish ? $"{source}: expected reward filled. Verify game version and actual payout before saving." : $"{source}: ожидаемая награда подставлена. Проверь версию игры и фактическую выплату перед сохранением.";
+            }
+        }
+        catch (Exception ex) when (ex is System.Net.Http.HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException or KeyNotFoundException)
+        {
+            if (SelectedEarningMission?.Id != mission!.Id) return;
+            ContractEarningStatus = IsEnglish ? "Reward lookup unavailable. Retry or use the in-game reward." : "Поиск награды недоступен. Повтори или используй сумму из игры.";
+            AppLogService.Write("Mission reward lookup", ex);
+        }
+    }
     [RelayCommand]
     private void UseVisibleContractReward()
     {
@@ -51,7 +88,7 @@ public partial class MainViewModel
     {
         var saved = ContractEarnings.FirstOrDefault(x => x.MissionId == value?.Id);
         ContractRewardAmount = saved?.Amount ?? 0;
-        ContractDurationMinutes = saved?.Minutes ?? 0;
+        ContractDurationMinutes = saved?.Minutes ?? (value?.AcceptedAt is { } start && value.Status.Timestamp > start ? Math.Round((value.Status.Timestamp - start).TotalMinutes, 1) : 0);
     }
     partial void OnContractEarningsEnabledChanged(bool value) { NotifyEarnings(); QueueSave(); }
     [RelayCommand]

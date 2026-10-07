@@ -55,6 +55,21 @@ public class BalanceDetectionTests
     }
 
     [Fact]
+    public void PlayerIdBesideWalletIsNotParsedAsMoney()
+    {
+        var lines = new List<OcrProvider.ScreenLine>
+        {
+            new("HEALTH", new Rect(300, 0, 100, 20)),
+            new("HOME", new Rect(560, 140, 70, 20)),
+            new("ACI 777", new Rect(450, 141, 80, 20)),
+            new("35,087,892", new Rect(350, 116, 90, 20))
+        };
+        Assert.Equal(35087892m, OcrProvider.ReadMobiGlasBalance(lines));
+        lines.RemoveAt(3);
+        Assert.Null(OcrProvider.ReadMobiGlasBalance(lines));
+    }
+
+    [Fact]
     public void OcrBalanceNeedsTwoMatchingRecentFrames()
     {
         using var client = new HttpClient();

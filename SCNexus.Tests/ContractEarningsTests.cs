@@ -8,6 +8,21 @@ namespace SCNexus.Tests;
 
 public class ContractEarningsTests
 {
+    [Theory]
+    [InlineData("null", "null", "null", false)]
+    [InlineData("50000", "50000", "\"aUEC\"", true)]
+    [InlineData("50000", "70000", "\"UEC\"", true)]
+    [InlineData("500", "500", "\"reputation\"", false)]
+    public void WikiRewardRequiresMoneyAndMatchingDefinition(string min, string max, string currency, bool available)
+    {
+        var id = Guid.NewGuid();
+        using var json = System.Text.Json.JsonDocument.Parse($"{{\"data\":{{\"uuid\":\"{id}\",\"reward_min\":{min},\"reward_max\":{max},\"reward_currency\":{currency}}},\"meta\":{{\"resource\":{{\"version\":\"test-build\"}}}}}}");
+        var reward = SCWikiProvider.ParseMissionReward(json.RootElement, id);
+        Assert.Equal(available, reward.Minimum.HasValue);
+        Assert.Equal("test-build", reward.Version);
+        Assert.Throws<System.Text.Json.JsonException>(() => SCWikiProvider.ParseMissionReward(json.RootElement, Guid.NewGuid()));
+    }
+
     [Fact]
     public async Task EarningsAndDisabledSettingSurviveRestart()
     {
@@ -40,7 +55,8 @@ public class ContractEarningsTests
         {
             await File.WriteAllLinesAsync(Path.Combine(directory, "Game.log"),
             [
-                $"<2026-10-03T01:00:00Z> Creating objective marker: missionId [{id}], generator name [Cargo], contract [Hauling]",
+                $"<2026-10-03T01:00:00Z> Added notification \"Принят контракт: Hauling\" MissionId: [{id}]",
+                $"<2026-10-03T01:00:00Z> Creating objective marker: missionId [{id}], generator name [Cargo], contract [Hauling], contractDefinitionId[ea15b45a-acfa-4ac0-995b-6a7194d0697b]",
                 $"<2026-10-03T02:00:00Z> <MissionEnded> mission_id {id} - mission_state MISSION_STATE_COMPLETED",
                 "<2026-10-03T02:00:00.443Z> <SHUDEvent_OnNotification> Added notification \"Начислено 50250 aUEC: \" [115] to queue. MissionId: [00000000-0000-0000-0000-000000000000]",
                 "<2026-10-03T02:00:00.443Z> <SHUDEvent_OnNotification> Added notification \"Начислено 50250 aUEC: \" [115] to queue.",
@@ -48,6 +64,8 @@ public class ContractEarningsTests
                 "<2026-10-03T02:10:00Z> <SHUDEvent_OnNotification> Added notification \"Начислено 500 aUEC: \" [120]"
             ]);
             var result = await new GameLogProvider(new GameLogService(directory)).CollectAsync(new(directory, new(), DateTimeOffset.UtcNow, false), default);
+            Assert.Equal("ea15b45a-acfa-4ac0-995b-6a7194d0697b", result.Records.Where(x => x.Kind == "mission").Select(x => (MissionState)x.Value).Last().DefinitionId);
+            Assert.Equal(DateTimeOffset.Parse("2026-10-03T01:00:00Z"), result.Records.Where(x => x.Kind == "mission").Select(x => (MissionState)x.Value).Last().AcceptedAt);
             var receipts = result.Records.Where(x => x.Kind == "contract-income").ToArray();
             Assert.Equal(2, receipts.Length);
             Assert.Single(receipts.Select(x => x.Key).Distinct());
