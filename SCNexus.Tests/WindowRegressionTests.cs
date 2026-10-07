@@ -56,6 +56,14 @@ public class WindowRegressionTests
                     vm.CurrentShip = ship.Name;
                     vm.CargoScu = ship.Ship.CargoScu;
                     vm.SelectedShip = ship;
+                    var otherShip = new ShipSummary(new PersonalShip { Id = 2, Name = "Constellation Taurus", CargoScu = 174, Role = "Cargo" }, 0);
+                    vm.Ships.Add(otherShip);
+                    vm.SortedShips.Add(otherShip);
+                    vm.SelectedShip = otherShip;
+                    vm.CurrentShip = ship.Name;
+                    vm.OpenEquipmentCommand.Execute(null);
+                    Assert.Same(ship, vm.SelectedShip);
+                    Assert.True(vm.IsEquipmentOpen);
                     var window = new MainWindow { DataContext = vm };
                     var route = new HaulingRoute("Iodine", "ArcCorp Mining Area 056", "Seraphim Station", "Stanton", "Stanton", 600, 696,
                         8000, 8700, 1000, 1000, 4800000, 5220000, false, "Внутрисистемный", DateTimeOffset.UtcNow);
@@ -67,7 +75,8 @@ public class WindowRegressionTests
                     vm.RouteSearch = "";
                     Assert.Equal(3, vm.RouteResults.Count);
                     vm.VoyageMode = "Сбор груза";
-                    vm.VoyagePlans.Add(new VoyagePlan("Сбор груза", [route], [new VoyageStop(1, "A", "Stanton", "Купить", 600, 696, 1000000), new VoyageStop(2, "B", "Stanton", "Продать", 0, 696, 2000000)], 10000000, 696));
+                    var overlayPlan = new VoyagePlan("Сбор груза", [route], [new VoyageStop(1, "A", "Stanton", "Купить", 600, 696, 1000000), new VoyageStop(2, "B", "Stanton", "Продать", 0, 696, 2000000)], 10000000, 696);
+                    vm.VoyagePlans.Add(overlayPlan);
                     vm.RouteSearch = "Iodine";
                     Assert.Single(vm.RouteResults);
                     Assert.NotNull(vm.SelectedRouteResult!.Plan);
@@ -104,12 +113,8 @@ public class WindowRegressionTests
                     Assert.Equal(900000, ((RouteResult)resultsGrid.Items[0]).Profit);
                     resultsGrid.SelectedIndex = 0;
                     Assert.True(vm.SelectedRouteResult!.IsDangerous);
-                    var profitColumn = resultsGrid.Columns.Single(x => x.SortMemberPath == nameof(RouteResult.Profit));
-                    var sorting = new DataGridSortingEventArgs(profitColumn);
-                    var resultsControl = LogicalDescendants(window).OfType<SCNexus.Controls.RouteResultsView>().Single();
-                    typeof(SCNexus.Controls.RouteResultsView).GetMethod("OnSorting", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(resultsControl, [resultsGrid, sorting]);
-                    Assert.Equal(10000, ((RouteResult)resultsGrid.Items[0]).Profit);
-                    typeof(SCNexus.Controls.RouteResultsView).GetMethod("OnSorting", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(resultsControl, [resultsGrid, sorting]);
+                    Assert.False(resultsGrid.CanUserReorderColumns);
+                    Assert.False(resultsGrid.CanUserSortColumns);
                     Assert.Equal(900000, ((RouteResult)resultsGrid.Items[0]).Profit);
                     var untranslatedEnglish = new HashSet<string>();
                     foreach (var light in new[] { false, true })
@@ -163,6 +168,16 @@ public class WindowRegressionTests
                     }
                     Assert.Empty(untranslatedEnglish);
 
+                    vm.OpenSettingsCommand.Execute(null);
+                    var settingsTabs = LogicalDescendants(window).OfType<TabControl>().Single(x => x.Items.Count == 4);
+                    settingsTabs.SelectedIndex = 2;
+                    window.UpdateLayout();
+                    await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                    UiLocalization.Apply(window);
+                    Assert.DoesNotContain(VisualDescendants(window).OfType<TextBlock>(), x =>
+                        x.IsVisible && System.Text.RegularExpressions.Regex.IsMatch(x.Text ?? "", "[А-Яа-яЁё]"));
+                    settingsTabs.SelectedIndex = 0;
+
                     var shopping = new ComponentShoppingPlan("Balanced",
                         [new(1, "Stanton", "Area18", "CenterMass", [new("FR-76", 2, 42000), new("XL-1", 1, 90000)], 174000),
                          new(2, "Pyro", "Ruin Station", "Dumpers Depot", [new("Glacier", 2, 12000)], 24000)], 198000, 190000, 1);
@@ -188,6 +203,10 @@ public class WindowRegressionTests
                     tabEncoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(tabBitmap));
                     using (var output = File.Create(Path.Combine(AppContext.BaseDirectory, "audit-screenshots", "configurator.png"))) tabEncoder.Save(output);
                     var overlay = new OverlayWindow { DataContext = vm };
+                    typeof(MainViewModel).GetMethod("ActivateVoyageGuidance", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                        .Invoke(vm, [overlayPlan]);
+                    vm.LightTheme = false;
+                    ThemeService.Apply(false);
                     vm.IsGameRunning = true;
                     vm.OverlayEditMode = true;
                     vm.OverlayPreview = true;
@@ -207,21 +226,12 @@ public class WindowRegressionTests
                     overlay.Show();
                     overlay.UpdateLayout();
                     await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-                    Assert.Single(app.Windows.OfType<OverlayActionWindow>());
-                    var toolbar = app.Windows.OfType<OverlayActionWindow>().Single();
-                    Assert.Contains(VisualDescendants(toolbar).OfType<Button>(), x => x.Command == vm.HideOverlayCommand);
-                    var mode = VisualDescendants(toolbar).OfType<Button>().Single(x => x.Command == vm.ToggleOverlayModeCommand);
-                    mode.Command.Execute(null);
-                    overlay.UpdateLayout();
-                    await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-                    Assert.False(vm.OverlayExpanded);
-                    Assert.Contains(VisualDescendants(overlay).OfType<TextBlock>(), x => x.IsVisible && x.Text == vm.BalanceDisplay);
+                    Assert.DoesNotContain(VisualDescendants(overlay).OfType<Button>(), x => x.IsVisible);
+                    Assert.DoesNotContain(VisualDescendants(overlay).OfType<TextBlock>(), x => x.IsVisible && x.Text == vm.BalanceDisplay);
                     Assert.DoesNotContain(VisualDescendants(overlay).OfType<TextBlock>(), x => x.IsVisible && x.Text == vm.OverlayShipSourceDisplay);
-                    Assert.True(toolbar.IsVisible);
-                    Assert.DoesNotContain(VisualDescendants(toolbar).OfType<Button>(), x => x.IsVisible && x.Command == vm.DetectShipFromOverlayCommand);
-                    mode.Command.Execute(null);
-                    overlay.UpdateLayout();
-                    await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                    Assert.DoesNotContain(VisualDescendants(overlay).OfType<TextBlock>(), x =>
+                        x.IsVisible && System.Text.RegularExpressions.Regex.IsMatch(x.Text ?? "", "[А-Яа-яЁё]"));
+                    Assert.True(overlay.ActualWidth <= 360);
                     var overlayBitmap = new System.Windows.Media.Imaging.RenderTargetBitmap((int)Math.Ceiling(overlay.ActualWidth), (int)Math.Ceiling(overlay.ActualHeight), 96, 96, PixelFormats.Pbgra32);
                     vm.OverlayEditMode = true;
                     overlay.ApplySettings(vm);
@@ -239,9 +249,7 @@ public class WindowRegressionTests
                     vm.OverlayEditMode = false;
                     overlay.ApplySettings(vm);
                     overlay.Hide();
-                    Assert.False(app.Windows.OfType<OverlayActionWindow>().Single().IsVisible);
                     overlay.Close();
-                    Assert.Empty(app.Windows.OfType<OverlayActionWindow>());
 
                     var closed = new TaskCompletionSource();
                     window.Closed += (_, _) => closed.TrySetResult();

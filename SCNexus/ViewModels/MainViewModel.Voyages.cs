@@ -369,6 +369,10 @@ public partial class MainViewModel
     {
         RefreshOverlayChecklist();
         OnPropertyChanged(nameof(HasActiveVoyage));
+        OnPropertyChanged(nameof(HasNoDashboardAction));
+        OnPropertyChanged(nameof(DashboardActionTitle));
+        OnPropertyChanged(nameof(DashboardActionDetails));
+        OnPropertyChanged(nameof(DashboardActionButtonText));
         OnPropertyChanged(nameof(ActiveVoyageStop));
         OnPropertyChanged(nameof(ActiveVoyageStopDisplay));
         OnPropertyChanged(nameof(ActiveVoyageActionDisplay));

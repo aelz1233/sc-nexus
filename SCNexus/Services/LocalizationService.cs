@@ -15,6 +15,7 @@ public static class LocalizationService
     private static readonly Dictionary<string, string> English = new(StringComparer.Ordinal)
     {
         ["Подробности"] = "Details",
+        ["Поиск"] = "Search",
         ["ОПЕРАЦИИ ПОЛЁТА"] = "FLIGHT OPERATIONS",
         ["ЛОКАЛЬНОЕ РАБОЧЕЕ ПРОСТРАНСТВО"] = "LOCAL WORKSPACE",
         ["АКТИВНЫЙ КОРАБЛЬ"] = "ACTIVE SHIP",
@@ -35,6 +36,7 @@ public static class LocalizationService
         ["Открой планировщик, чтобы загрузить котировки UEX."] = "Open the planner to load UEX prices.",
         ["Доступно на закупку:"] = "Available to spend:",
         ["Оверлей"] = "Overlay",
+        ["Расширенный вид: следующая остановка"] = "Expanded view: next stop",
         ["Поиск маршрута"] = "Find route",
         ["Товар, локация или система"] = "Commodity, location or system",
         ["Как учитываются награды"] = "How rewards are counted",
@@ -97,7 +99,8 @@ public static class LocalizationService
         ["ТОЧНАЯ ЛОКАЦИЯ · НЕОБЯЗАТЕЛЬНО"] = "EXACT LOCATION · OPTIONAL",
         ["Все системы и локации"] = "All systems and locations", ["Любая локация · "] = "Any location · ",
         ["Перенести в рейс"] = "Send to trip", ["Остановки и груз"] = "Stops and cargo",
-        ["До точек закупки"] = "Purchase stops", ["Конечная точка · поиск по системе и названию"] = "Destination · search by system or name",
+        ["До точек закупки"] = "Purchase stops", ["Точек закупки"] = "Purchase stops", ["Конечная точка"] = "Destination", ["Конечная точка · поиск по системе и названию"] = "Destination · search by system or name",
+        ["Далее"] = "Next",
         ["Сохранить план в файл"] = "Save plan to file", ["МОЙ ФЛОТ"] = "MY FLEET", ["Добавить первый корабль"] = "Add your first ship",
         ["Добавить корабль"] = "Add ship", ["Поиск по каталогу"] = "Catalog search", ["Каталог UEX"] = "UEX catalog",
         ["МОДЕЛЬ"] = "MODEL", ["ГРУЗОВОЙ ОБЪЁМ"] = "CARGO CAPACITY", ["РОЛЬ"] = "ROLE",
@@ -120,7 +123,6 @@ public static class LocalizationService
         ["Nexus читает только новые строки журнала. Интервал OCR выбирается в настройках данных и автоматизации."] = "Nexus reads only new log lines. Choose the OCR interval under Data and automation.",
         ["Подробности торговых маршрутов"] = "Trade route details", ["Обновление программы"] = "Application update",
         ["Игровой оверлей"] = "Game overlay", ["Показывать оверлей при запущенном Star Citizen"] = "Show the overlay while Star Citizen is running",
-        ["Расширенный вид: миссия, следующая остановка и свежесть данных"] = "Expanded view: mission, next stop, and data freshness",
         ["Бинд показать / скрыть"] = "Show / hide shortcut", ["Прозрачность"] = "Opacity",
         ["Внешний вид и состав"] = "Appearance and content", ["Положение"] = "Position",
         ["Масштаб"] = "Scale", ["Прозрачность фона"] = "Background opacity",
@@ -292,7 +294,7 @@ public static class LocalizationService
         , [" · без цены:"] = " · without price:", ["Подтверждённые слоты компонентов рассчитаны"] = "Verified component slots calculated"
         , ["Не удалось подобрать для "] = "No compatible component for ", [" слотов"] = " slots"
         , ["Заменить компонентов:"] = "Components to replace:", [" · оставить штатными:"] = " · keep installed:"
-        , ["Купить "] = "Buy ", ["Продать "] = "Sell ", [" SCU за "] = " SCU for "
+        , ["Купить"] = "Buy", ["Продать"] = "Sell", ["Купить "] = "Buy ", ["Продать "] = "Sell ", [" SCU за "] = " SCU for "
         , ["На этой остановке:"] = "At this stop:", [" за шт."] = " each", ["Энергия и охлаждение: данных недостаточно"] = "Power and cooling: insufficient data"
         , ["Энергия:"] = "Power:", ["Охлаждение:"] = "Cooling:", [" сегм. · резерв "] = " segments · reserve "
         , ["⚠ Расчётная нагрузка превышает выработку энергии."] = "⚠ Estimated load exceeds power generation."

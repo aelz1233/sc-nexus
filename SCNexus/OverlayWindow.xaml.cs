@@ -9,13 +9,12 @@ namespace SCNexus;
 
 public partial class OverlayWindow : Window
 {
-    private const double BaseWidth = 460;
+    private const double BaseWidth = 360;
     private const int GwlExStyle = -20;
     private const long WsExTransparent = 0x00000020L;
     private const long WsExToolWindow = 0x00000080L;
     private const long WsExNoActivate = 0x08000000L;
     private bool _dragging;
-    private OverlayActionWindow? _actionWindow;
 
     public OverlayWindow()
     {
@@ -24,10 +23,6 @@ public partial class OverlayWindow : Window
         {
             MakePassive();
         };
-        Closed += (_, _) => { _actionWindow?.Close(); _actionWindow = null; };
-        IsVisibleChanged += (_, _) => UpdateActionWindow();
-        LocationChanged += (_, _) => UpdateActionWindow();
-        LayoutUpdated += (_, _) => UpdateActionWindow();
         Loaded += (_, _) => PositionAtWorkAreaEdge();
         SizeChanged += (_, _) => PositionAtWorkAreaEdge();
         MouseLeftButtonDown += OnMouseLeftButtonDown;
@@ -89,8 +84,6 @@ public partial class OverlayWindow : Window
         SetWindowLongPtr(handle, GwlExStyle, new IntPtr(style));
         Focusable = editable;
         Cursor = editable ? Cursors.SizeAll : Cursors.Arrow;
-        ActionsHost.Opacity = editable ? 1 : 0;
-        UpdateActionWindow();
     }
 
     private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -106,25 +99,6 @@ public partial class OverlayWindow : Window
             _dragging = false;
             vm.SetOverlayCustomPosition(Left, Top);
         }
-    }
-
-    private void UpdateActionWindow()
-    {
-        if (!IsVisible || DataContext is not MainViewModel { OverlayEditMode: false } vm ||
-            !ActionsHost.IsVisible || ActionsHost.ActualWidth <= 0)
-        {
-            _actionWindow?.Hide();
-            return;
-        }
-        _actionWindow ??= new OverlayActionWindow(ActionsHost.ContentTemplate) { Owner = this, DataContext = vm };
-        var bounds = ActionsHost.TransformToAncestor(this).TransformBounds(
-            new Rect(ActionsHost.RenderSize));
-        _actionWindow.Left = Left + bounds.Left;
-        _actionWindow.Top = Top + bounds.Top;
-        _actionWindow.Width = bounds.Width;
-        _actionWindow.Height = bounds.Height;
-        _actionWindow.Opacity = Math.Clamp(vm.OverlayTextOpacity, .65, 1);
-        if (!_actionWindow.IsVisible) _actionWindow.Show();
     }
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]

@@ -15,7 +15,16 @@ public partial class MainViewModel
 {
     [ObservableProperty] private bool isEquipmentOpen;
     partial void OnIsEquipmentOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
-    [RelayCommand] private void OpenEquipment() => Navigate("Оснащение");
+    [RelayCommand]
+    private void OpenEquipment()
+    {
+        var activeShip = Ships.FirstOrDefault(ship => ship.Name.Equals(CurrentShip, StringComparison.OrdinalIgnoreCase))
+            ?? SortedShips.FirstOrDefault(ship => ship.Name.Equals(CurrentShip, StringComparison.OrdinalIgnoreCase))
+            ?? SelectedShip
+            ?? SortedShips.FirstOrDefault();
+        if (activeShip is not null) SelectedShip = activeShip;
+        Navigate("Оснащение");
+    }
     [ObservableProperty] private string activePage = "Обзор";
     [ObservableProperty] private bool monitorEnabled = true;
     [ObservableProperty] private int monitorIntervalSeconds = 15;
@@ -37,6 +46,43 @@ public partial class MainViewModel
     public string TradeBudgetHint => IsEnglish
         ? $"Trading budget: {Math.Max(0, Balance - Reserve):N0} aUEC · Nexus balance: {Balance:N0} · Reserve: {Reserve:N0}"
         : $"На закупку: {Math.Max(0, Balance - Reserve):N0} aUEC · Баланс Nexus: {Balance:N0} · Резерв: {Reserve:N0}";
+    public bool HasNoDashboardAction => !HasActiveVoyage && !HasActiveFlight;
+    public string DashboardActionTitle => HasActiveVoyage
+        ? ActiveVoyageStopDisplay
+        : HasActiveFlight
+            ? (IsEnglish ? "Trip in progress" : "Рейс в процессе")
+            : (IsEnglish ? "Route not selected" : "Маршрут не выбран");
+    public string DashboardActionDetails => HasActiveVoyage
+        ? ActiveVoyageActionDisplay
+        : HasActiveFlight
+            ? ActiveFlightDisplay
+            : IsEnglish
+                ? "Choose a route to see the next purchase or sale here."
+                : "Подбери маршрут — здесь появится следующая покупка или продажа.";
+    public string DashboardActionButtonText => HasNoShips
+        ? (IsEnglish ? "Open fleet" : "Открыть флот")
+        : HasActiveVoyage
+            ? (IsEnglish ? "Continue route" : "Продолжить маршрут")
+            : HasActiveFlight
+                ? (IsEnglish ? "Open journal" : "Открыть журнал")
+                : (IsEnglish ? "Find route" : "Подобрать маршрут");
+    public string DashboardActionHeading => IsEnglish ? "NEXT ACTION" : "СЛЕДУЮЩЕЕ ДЕЙСТВИЕ";
+    public string DashboardShipLabel => IsEnglish ? "SHIP" : "КОРАБЛЬ";
+    public string DashboardLocationLabel => IsEnglish ? "LOCATION" : "ЛОКАЦИЯ";
+    public string DashboardBudgetLabel => IsEnglish ? "AVAILABLE TO BUY" : "ДОСТУПНО НА ЗАКУПКУ";
+    public string DashboardShipCapacityDisplay => CargoScu > 0
+        ? $"{CargoScu:N0} SCU"
+        : (IsEnglish ? "Capacity not set" : "Вместимость не указана");
+    public string DashboardLocationDisplay
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(CurrentLocation) || CurrentLocation is "Не указана" or "Not specified")
+                return IsEnglish ? "Not set" : "Не указана";
+            var location = ReadableLocation(CurrentLocation);
+            return string.IsNullOrWhiteSpace(CurrentSystem) ? location : $"{CurrentSystem} · {location}";
+        }
+    }
     public string PageTitle => LocalizationService.T(ActivePage == "Рейсы" ? "Журнал" : ActivePage);
     public string PageDescription => LocalizationService.T(ActivePage switch
     {
@@ -80,6 +126,30 @@ public partial class MainViewModel
         ActivePage = page;
     }
 
+    [RelayCommand]
+    private async Task OpenDashboardActionAsync()
+    {
+        if (HasNoShips)
+        {
+            OpenFleet();
+            return;
+        }
+
+        if (HasActiveVoyage)
+        {
+            await OpenHaulingAsync();
+            return;
+        }
+
+        if (HasActiveFlight)
+        {
+            OpenHistory();
+            return;
+        }
+
+        await OpenHaulingAsync();
+    }
+
     private void RefreshCatalog()
     {
         var selected = SelectedCatalogVehicle;
@@ -95,7 +165,7 @@ public partial class MainViewModel
 
     private void NotifyWorkspace()
     {
-        foreach (var name in new[] { nameof(HasNoShips), nameof(HasNoFlights), nameof(FleetSummary), nameof(CanStartFlight), nameof(HasNoHaulingRoutes), nameof(TradeBudgetHint) })
+        foreach (var name in new[] { nameof(HasNoShips), nameof(HasNoFlights), nameof(FleetSummary), nameof(CanStartFlight), nameof(HasNoHaulingRoutes), nameof(TradeBudgetHint), nameof(DashboardActionButtonText), nameof(DashboardShipCapacityDisplay) })
             OnPropertyChanged(name);
     }
 

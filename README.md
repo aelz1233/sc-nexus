@@ -31,7 +31,7 @@ The guiding principle is simple: use automatic data first and ask the player for
 
 **Contract earnings are optional.** Settings → General → “Include contract earnings in analytics” (also available in Journal). Turn it off to exclude contracts from total and hourly income while keeping saved records. Automatic reward detection is not guaranteed for every contract; verify catalog amounts before saving. Wallet balance is unaffected.
 
-The interface uses one compact flight-operations layout in both themes: persistent navigation, a status header for the active ship and balance, dense workspaces, and one restrained accent colour. Routes use a sortable commodity-and-path table with investment, profit, and confirmed Pyro/NQA risk. The selected-route inspector stays focused on the actionable details; on narrow windows it moves below the table.
+The interface uses one compact flight-operations layout in both themes: persistent navigation, a clear active-ship and available-to-buy budget header, one next action on the dashboard, and one restrained accent colour. Routes keep a fixed profit-first table with investment, profit, and confirmed Pyro/NQA risk; columns cannot be rearranged or resorted. The selected-route inspector stays focused on actionable details; on narrow windows it moves below the table. The optional click-through overlay shows only the ship, location, next action, and an explicit risk warning.
 
 Contract payouts can be looked up by the definition ID recorded in Game.log using SC Wiki. A catalog reward is an estimate for the displayed game version, never a confirmed payment. Missing rewards remain unknown; a returned range is not converted into a single amount. The actual payout must be confirmed before it enters analytics. Acceptance and completion timestamps fill duration when both are available.
 
@@ -45,14 +45,17 @@ Contract payouts can be looked up by the definition ID recorded in Game.log usin
   <img src="docs/screenshots/routes-light-en.png" width="48%" alt="English route planner — light theme">
   <img src="docs/screenshots/settings-en.png" width="48%" alt="English settings and optional contract earnings">
 </p>
-<p align="center"><em>English interface: dashboard, dark and light routes, plus the optional contract-earnings setting. Screenshots are rendered from the application using illustrative data, not live market quotes.</em></p>
+<p align="center">
+  <img src="docs/screenshots/overlay.png" width="36%" alt="English compact in-game overlay — dark theme">
+</p>
+<p align="center"><em>English interface: dashboard, dark and light routes, settings, and the compact overlay. Screenshots are rendered from the application using illustrative data, not live market quotes.</em></p>
 
 ## Features
 
 | Area | What SC Nexus does |
 | --- | --- |
-| **Dashboard and player state** | Shows the current or last session, detected ship and location, active mission, game build, server details, notifications, and personal trading metrics. |
-| **Trade routes** | Uses UEX market quotes, stock, demand, cargo capacity, budget, safety rules, and system filters to find direct routes, chains, and multi-stop cargo collection plans. Pyro is explicitly marked as dangerous. |
+| **Dashboard and player state** | Shows the immediate next action, active ship and capacity, starting location, and available trading budget without mixing it with a ship price or unconfirmed telemetry. |
+| **Trade routes** | Uses UEX market quotes, cargo capacity, budget, and safety rules to find direct routes, chains, and multi-stop cargo collection plans. Pyro is explicitly marked as dangerous. |
 | **Fleet and loadouts** | Maintains a personal fleet from the UEX vehicle catalog or reliable detections. The loadout planner reads compatible ports and component data, compares builds, and creates purchase checklists. |
 | **Game data collection** | Reads new `Game.log` lines incrementally, checks local game files in read-only mode, tracks sessions, movement, missions, deaths, trade events, and supported values. |
 | **Overlay and tray** | Provides an optional read-only overlay, configurable hotkey, system-tray controls, and a notification center. It does not inject into Star Citizen or intercept its input. |
@@ -134,22 +137,21 @@ To scan your fleet:
 
 1. Open Star Citizen and keep its window visible.
 2. Open the interactive **ASOP terminal** and clear its search/filter.
-3. Expand the in-game SC Nexus overlay and select **Scan ASOP**. Switch to Star Citizen within three seconds; the game must be the foreground window.
+3. In SC Nexus open **Settings → Overlay** and select **Scan ASOP**. Switch to Star Citizen within three seconds; the game must be the foreground window.
 4. Read the result below the button. Recognized ship models and categories are added to your fleet.
 
 With list scrolling enabled, the **Scan ASOP** button reads the visible rows, scrolls to the top, then down through the list (up to 60 scroll steps / 100 seconds). Clear ASOP search filters first and keep the cursor still during the scan. **Esc**, switching away from the game, or losing the terminal stops scanning. Already recognized entries are kept; interrupted scans may be incomplete. An unchanged list is a stopping heuristic, not proof that every ship was found.
 
 **Locked / Заблокировано** entries are excluded. Rows whose status cannot be read are also skipped. Claim, destroyed and delivery entries are included when recognized. Models are deduplicated; an unlocked copy is kept even when another copy of that model is locked. Categories use UEX metadata with name-based rules as a fallback. Existing ship notes are preserved; scanning does not delete existing fleet entries.
 
-English and Russian Windows OCR are used together when installed. For Russian terminal statuses, install Russian OCR in Windows language settings. The button works independently of periodic OCR. No retrieve, claim or purchase buttons are pressed. The overlay remains click-through outside its controls and checklist. OCR can fail on a hidden/minimized window, unreadable text or unsupported languages.
+English and Russian Windows OCR are used together when installed. For Russian terminal statuses, install Russian OCR in Windows language settings. The button works independently of periodic OCR. No retrieve, claim or purchase buttons are pressed. The overlay stays click-through and never intercepts game input. OCR can fail on a hidden/minimized window, unreadable text or unsupported languages.
 
 ### Overlay controls and checklists
 
 - Assign a shortcut in **Settings → Game overlay**. No shortcut is enabled by default. Nexus uses a Windows hotkey plus a read-only check of the assigned chord while Star Citizen is active; it does not install keyboard hooks in the game. Use borderless/windowed mode and run both applications with the same Windows privileges if the shortcut only works outside the game.
-- Switch between compact and expanded views or hide the panel from its controls. Clicks elsewhere pass through to the game.
-- The expanded view includes route progress, a trip checklist, source timestamps, Nexus balance, and mission objectives when available. Old mission observations are marked as history.
-- In the loadout configurator choose a shopping plan and **Track purchases in overlay**. Check purchased components, confirm the stop, and continue to the next store. Previous stops remain accessible for corrections. The checklist and current stop survive restarts.
-- If both a trade route and a component purchase plan are active, use the checklist selector to switch between them. Checkmarks do not spend money or confirm that components were installed. Install purchased parts through Vehicle Loadout in the game.
+- Configure compact or expanded view, visibility, and positioning in **Settings → Overlay**. The in-game panel contains no controls, so every click passes through to the game.
+- The compact view keeps only ship, location, next action, and explicit risk. The expanded view adds the next route stop when one is available.
+- Component shopping plans remain in the loadout workflow. Install purchased parts through Vehicle Loadout in the game.
 - Shopping plans offer lowest price, fewer flights, and a balanced option. Stop order is a proximity heuristic, not a guaranteed fastest route or a live stock reservation.
 
 ## Data sources

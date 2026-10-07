@@ -313,9 +313,9 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
 
     partial void OnBalanceChanged(decimal value) { OnPropertyChanged(nameof(BalanceDisplay)); OnPropertyChanged(nameof(OverlayBalanceDisplay)); OnPropertyChanged(nameof(HaulingBudgetDisplay)); OnPropertyChanged(nameof(TradeBudgetHint)); QueueSave(); RecalculateHauling(); }
     partial void OnCurrentShipChanged(string value) => QueueSave();
-    partial void OnCurrentSystemChanged(string value) { OnPropertyChanged(nameof(LocationDisplay)); OnPropertyChanged(nameof(HaulingStartDisplay)); QueueSave(); RecalculateHauling(); }
-    partial void OnCurrentLocationChanged(string value) { OnPropertyChanged(nameof(LocationDisplay)); OnPropertyChanged(nameof(HaulingStartDisplay)); QueueSave(); RecalculateHauling(); }
-    partial void OnCargoScuChanged(int value) => QueueSave();
+    partial void OnCurrentSystemChanged(string value) { OnPropertyChanged(nameof(LocationDisplay)); OnPropertyChanged(nameof(HaulingStartDisplay)); OnPropertyChanged(nameof(DashboardLocationDisplay)); QueueSave(); RecalculateHauling(); }
+    partial void OnCurrentLocationChanged(string value) { OnPropertyChanged(nameof(LocationDisplay)); OnPropertyChanged(nameof(HaulingStartDisplay)); OnPropertyChanged(nameof(DashboardLocationDisplay)); QueueSave(); RecalculateHauling(); }
+    partial void OnCargoScuChanged(int value) { OnPropertyChanged(nameof(DashboardShipCapacityDisplay)); QueueSave(); }
     partial void OnReserveChanged(decimal value) { OnPropertyChanged(nameof(HaulingBudgetDisplay)); OnPropertyChanged(nameof(TradeBudgetHint)); QueueSave(); RecalculateHauling(); }
     partial void OnAllowRiskyChanged(bool value) { QueueSave(); RecalculateHauling(); }
     partial void OnAvoidPyroChanged(bool value) { QueueSave(); RecalculateHauling(); }
@@ -325,6 +325,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     partial void OnSelectedShipChanged(ShipSummary? value)
     {
         OnPropertyChanged(nameof(CanStartFlight));
+        OnPropertyChanged(nameof(DashboardShipCapacityDisplay));
         if (!_loaded || value is null) return;
         CurrentShip = value.Name;
         CargoScu = value.Ship.CargoScu;
@@ -470,6 +471,10 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         OnPropertyChanged(nameof(HasActiveFlight));
         OnPropertyChanged(nameof(ActiveFlightDisplay));
         OnPropertyChanged(nameof(CanStartFlight));
+        OnPropertyChanged(nameof(HasNoDashboardAction));
+        OnPropertyChanged(nameof(DashboardActionTitle));
+        OnPropertyChanged(nameof(DashboardActionDetails));
+        OnPropertyChanged(nameof(DashboardActionButtonText));
     }
 
     private async void QueueSave()
@@ -678,6 +683,9 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         SelectedShip = Ships.FirstOrDefault(x => x.Ship.Id == selectedId)
             ?? Ships.FirstOrDefault(x => x.Name.Equals(CurrentShip, StringComparison.OrdinalIgnoreCase))
             ?? Ships.FirstOrDefault();
+        OnPropertyChanged(nameof(HasNoShips));
+        OnPropertyChanged(nameof(DashboardActionButtonText));
+        OnPropertyChanged(nameof(DashboardShipCapacityDisplay));
         Flights.Clear();
         foreach (var flight in flights) Flights.Add(flight);
         RefreshFlightStatistics();
