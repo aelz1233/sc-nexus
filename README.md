@@ -31,10 +31,13 @@ The guiding principle is simple: use automatic data first and ask the player for
 
 **Contract earnings are optional.** Settings → General → “Include contract earnings in analytics” (also available in Journal). Turn it off to exclude contracts from total and hourly income while keeping saved records. Automatic reward detection is not guaranteed for every contract; verify catalog amounts before saving. Wallet balance is unaffected.
 
-The current source adds light and dark themes (Settings → General → Light theme). Routes use a sortable table with commodity illustrations, search, numeric columns and a selected-route inspector. Additional filters are collapsed; Pyro/NQA warnings use both text and an icon. On narrow windows the inspector moves below the table.
+The interface uses one compact flight-operations layout in both themes: persistent navigation, a status header for the active ship and balance, dense workspaces, and one restrained accent colour. Routes use a sortable commodity-and-path table with investment, profit, and confirmed Pyro/NQA risk. The selected-route inspector stays focused on the actionable details; on narrow windows it moves below the table.
 
 Contract payouts can be looked up by the definition ID recorded in Game.log using SC Wiki. A catalog reward is an estimate for the displayed game version, never a confirmed payment. Missing rewards remain unknown; a returned range is not converted into a single amount. The actual payout must be confirmed before it enters analytics. Acceptance and completion timestamps fill duration when both are available.
 
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" width="94%" alt="English flight-operations dashboard — dark theme">
+</p>
 <p align="center">
   <img src="docs/screenshots/routes-dark-en.png" width="94%" alt="English route planner — dark theme">
 </p>
@@ -42,7 +45,7 @@ Contract payouts can be looked up by the definition ID recorded in Game.log usin
   <img src="docs/screenshots/routes-light-en.png" width="48%" alt="English route planner — light theme">
   <img src="docs/screenshots/settings-en.png" width="48%" alt="English settings and optional contract earnings">
 </p>
-<p align="center"><em>English interface: dark and light routes, plus the optional contract-earnings setting. Screenshots are rendered from the application using illustrative data, not live market quotes.</em></p>
+<p align="center"><em>English interface: dashboard, dark and light routes, plus the optional contract-earnings setting. Screenshots are rendered from the application using illustrative data, not live market quotes.</em></p>
 
 ## Features
 
