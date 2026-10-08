@@ -126,6 +126,31 @@
                                 </StackPanel>
                             </Grid>
                         </Border>
+                        <Grid Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="24"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,8"><Button DockPanel.Dock="Right" Content="Открыть журнал" Command="{Binding OpenHistoryCommand}" Padding="0" Background="Transparent" Foreground="{DynamicResource Accent}"/><TextBlock Text="Последние рейсы" Style="{StaticResource SectionTitle}" Margin="0"/></DockPanel>
+                                <Border Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="8" Padding="2">
+                                    <StackPanel>
+                                        <ItemsControl ItemsSource="{Binding Flights}">
+                                            <ItemsControl.ItemTemplate><DataTemplate><Grid Margin="14,10"><Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="{Binding DateDisplay}" Style="{StaticResource Hint}"/><TextBlock Grid.Column="1" Text="{Binding ShipName}" TextTrimming="CharacterEllipsis"/><TextBlock Grid.Column="2" Text="{Binding ResultDisplay}" Foreground="{DynamicResource Accent}" Margin="12,0,0,0"/></Grid></DataTemplate></ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Text="Завершённые рейсы появятся здесь." Style="{StaticResource Hint}" Visibility="{Binding HasNoFlights, Converter={StaticResource BoolVisibility}}" Margin="14,12"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <DockPanel Margin="0,0,0,8"><Button DockPanel.Dock="Right" Content="Сканировать ASOP" Command="{Binding DetectShipFromOverlayCommand}" Padding="0" Background="Transparent" Foreground="{DynamicResource Accent}"/><TextBlock Text="Состояние игры" Style="{StaticResource SectionTitle}" Margin="0"/></DockPanel>
+                                <Border Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="8" Padding="14">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding LiveLocationDisplay}" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding LiveMissionTitle}" Margin="0,12,0,0" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding LiveMissionHint}" Style="{StaticResource Hint}" Margin="0,4,0,0"/>
+                                        <TextBlock Text="{Binding DataCollectionStatus}" Style="{StaticResource Hint}" Margin="0,12,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
                     </StackPanel>
                     <StackPanel Visibility="{Binding IsHaulingOpen, Converter={StaticResource BoolVisibility}}">
                         <Border Style="{StaticResource WorkspaceSection}" Visibility="{Binding HasActiveVoyage, Converter={StaticResource BoolVisibility}}">
@@ -184,50 +209,53 @@
                         <TextBlock Text="Запас и спрос меняются в игре. Перед закупкой проверь терминал; прибыль рассчитана по последним котировкам UEX." Foreground="{DynamicResource Muted}" TextWrapping="Wrap" FontSize="11" Margin="0,5,0,0" />
                     </StackPanel>
                     <StackPanel Visibility="{Binding IsFleetOpen, Converter={StaticResource BoolVisibility}}">
-                        <TextBlock Text="{Binding FleetSummary}" Style="{StaticResource SectionTitle}" />
-                        <Border Style="{StaticResource WorkspaceSection}" Margin="0,0,0,18">
-                            <Expander Header="Добавить корабль" IsExpanded="{Binding HasNoShips, Mode=OneTime}">
-                                <StackPanel Margin="0,16,0,0">
-                                    <Grid Margin="0,0,0,14">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="190" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Каталог UEX" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                        <ComboBox Grid.Column="1" ItemsSource="{Binding ShipSortOptions}" SelectedItem="{Binding ShipSortMode, Mode=TwoWay}" />
+                        <Grid Margin="0,0,0,18">
+                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="190"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Мой флот" Style="{StaticResource SectionTitle}" Margin="0"/>
+                                <TextBlock Text="{Binding FleetSummary}" Style="{StaticResource Hint}" Margin="14,3,0,0"/>
+                            </StackPanel>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding ShipSortOptions}" SelectedItem="{Binding ShipSortMode, Mode=TwoWay}" Margin="0,0,10,0"/>
+                            <Button Grid.Column="2" Content="Добавить корабль" Padding="12,8" Click="ExpandAddShip_Click"/>
+                        </Grid>
+                        <Grid MinHeight="470">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="320"/></Grid.ColumnDefinitions>
+                            <Border Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="8" Margin="0,0,22,0">
+                                <DockPanel>
+                                    <Grid DockPanel.Dock="Top" Background="{DynamicResource Input}" Margin="1" Height="40">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition/><ColumnDefinition Width="110"/><ColumnDefinition Width="120"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="Корабль" Style="{StaticResource FieldLabel}" Margin="14,12,0,0"/>
+                                        <TextBlock Grid.Column="1" Text="Роль" Style="{StaticResource FieldLabel}" Margin="8,12,0,0"/>
+                                        <TextBlock Grid.Column="2" Text="Груз" Style="{StaticResource FieldLabel}" Margin="8,12,0,0"/>
+                                        <TextBlock Grid.Column="3" Text="Статус" Style="{StaticResource FieldLabel}" Margin="8,12,0,0"/>
                                     </Grid>
-                                    <TextBlock Style="{StaticResource Caption}" Text="МОДЕЛЬ" />
-                                    <ComboBox ItemsSource="{Binding CatalogShips}" SelectedItem="{Binding SelectedCatalogVehicle, Mode=TwoWay}" DisplayMemberPath="Display" Margin="0,6,0,6" />
-                                    <Expander Header="Поиск по каталогу" Margin="0,6,0,6">
-                                        <TextBox Text="{Binding CatalogQuery, UpdateSourceTrigger=PropertyChanged}" Margin="0,8,0,0" ToolTip="Введи часть названия корабля" />
-                                    </Expander>
-                                    <TextBlock Text="{Binding VehicleStatus}" Foreground="{DynamicResource Muted}" TextWrapping="Wrap" FontSize="11" Margin="0,6,0,17" />
-                                    <TextBlock Text="{Binding NewShipCargoScu, StringFormat=Вместимость: {0:N0} SCU}" Foreground="{DynamicResource Muted}" Margin="0,0,0,0" />
-                                    <TextBlock Style="{StaticResource Caption}" Text="Роль определяется по модели" Margin="0,14,0,0" />
-                                    <TextBlock Text="{Binding NewShipRole}" Foreground="{DynamicResource Accent}" Margin="0,6,0,0" />
-                                    <TextBlock Style="{StaticResource Caption}" Text="СБОРКА И ЗАМЕТКИ" Margin="0,16,0,0" />
-                                    <TextBox Text="{Binding NewShipBuild, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,14" />
-                                    <Button Style="{StaticResource PrimaryButton}" Content="Добавить корабль" Command="{Binding AddShipCommand}" IsEnabled="{Binding HasSelectedCatalogVehicle}" HorizontalAlignment="Left" />
-                                </StackPanel>
-                            </Expander>
-                        </Border>
-                        <TextBlock Text="Мой флот" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,12" />
-                        <Grid MinHeight="340">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="280"/></Grid.ColumnDefinitions>
-                            <ListBox ItemsSource="{Binding SortedShips}" SelectedItem="{Binding SelectedShip, Mode=TwoWay}" Background="{DynamicResource Panel}" Foreground="{DynamicResource Text}" BorderBrush="{DynamicResource Border}" Margin="0,0,16,0" HorizontalContentAlignment="Stretch" MaxHeight="520" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="Padding" Value="12"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border x:Name="Row" Padding="{TemplateBinding Padding}" Background="Transparent" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="Row" Property="Background" Value="{DynamicResource Selected}"/></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource Accent}"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style></ListBox.ItemContainerStyle>
-                                <ListBox.ItemTemplate><DataTemplate><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding Role}" Style="{StaticResource Hint}" Margin="0,4,0,0"/></StackPanel><TextBlock Grid.Column="1" Text="{Binding CargoDisplay}" VerticalAlignment="Center"/></Grid></DataTemplate></ListBox.ItemTemplate>
-                            </ListBox>
+                                    <ListBox ItemsSource="{Binding SortedShips}" SelectedItem="{Binding SelectedShip, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource Text}" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                        <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="Padding" Value="0"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border x:Name="Row" Padding="14,10" Background="Transparent" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="Row" Property="Background" Value="{DynamicResource Selected}"/><Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource Accent}"/></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Row" Property="Background" Value="{DynamicResource Hover}"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style></ListBox.ItemContainerStyle>
+                                        <ListBox.ItemTemplate><DataTemplate><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition/><ColumnDefinition Width="110"/><ColumnDefinition Width="120"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding Ship.BuildNotes}" Style="{StaticResource Hint}" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel><TextBlock Grid.Column="1" Text="{Binding Role}" VerticalAlignment="Center"/><TextBlock Grid.Column="2" Text="{Binding CargoDisplay}" VerticalAlignment="Center"/><TextBlock Grid.Column="3" Text="● В составе флота" Foreground="{DynamicResource Accent}" VerticalAlignment="Center" FontSize="12"/></Grid></DataTemplate></ListBox.ItemTemplate>
+                                    </ListBox>
+                                </DockPanel>
+                            </Border>
                             <StackPanel Grid.Column="1">
+                                <Image Source="{Binding SelectedShipPortrait}" Height="150" Stretch="UniformToFill" Visibility="{Binding HasSelectedShipPortrait, Converter={StaticResource BoolVisibility}}" Margin="0,0,0,14"/>
                                 <TextBlock Text="{Binding SelectedShip.Name}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                                <TextBlock Text="{Binding SelectedShip.Role}" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
-                                <TextBlock Text="{Binding SelectedShip.CargoDisplay}" Margin="0,16,0,0"/>
-                                <TextBlock Text="{Binding SelectedShip.BuildNotes}" TextWrapping="Wrap" Style="{StaticResource Hint}" Margin="0,8,0,16"/>
+                                <TextBlock Text="{Binding SelectedShip.Role}" Style="{StaticResource Hint}" Margin="0,6,0,0"/>
+                                <TextBlock Text="{Binding SelectedShipPortraitStatus}" Style="{StaticResource Hint}" Margin="0,5,0,0"/>
+                                <Border Background="{DynamicResource Input}" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,18,0,14"><StackPanel><TextBlock Text="ГРУЗОВОЙ ОБЪЁМ" Style="{StaticResource FieldLabel}"/><TextBlock Text="{Binding SelectedShip.CargoDisplay}" FontSize="17" FontWeight="SemiBold"/></StackPanel></Border>
+                                <TextBlock Text="{Binding SelectedShip.BuildNotes}" TextWrapping="Wrap" Style="{StaticResource Hint}" Margin="0,0,0,16"/>
                                 <Button Content="Выбрать для рейсов" Command="{Binding UseShipCommand}" CommandParameter="{Binding SelectedShip}" Style="{StaticResource PrimaryButton}"/>
                                 <Button Content="Оснащение" Command="{Binding OpenEquipmentCommand}" Margin="0,8,0,0"/>
                                 <Button Content="Удалить" Command="{Binding DeleteShipCommand}" CommandParameter="{Binding SelectedShip}" Background="Transparent" Foreground="{DynamicResource Muted}" Margin="0,8,0,0"/>
                             </StackPanel>
                         </Grid>
+                        <Expander x:Name="AddShipPanel" Header="Добавить корабль" IsExpanded="{Binding HasNoShips, Mode=OneTime}" Margin="0,18,0,0">
+                            <StackPanel Margin="0,12,0,0" MaxWidth="650">
+                                <TextBlock Text="Каталог UEX" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox ItemsSource="{Binding CatalogShips}" SelectedItem="{Binding SelectedCatalogVehicle, Mode=TwoWay}" DisplayMemberPath="Display"/>
+                                <TextBox Text="{Binding CatalogQuery, UpdateSourceTrigger=PropertyChanged}" ToolTip="Введи часть названия корабля" Margin="0,8,0,0"/>
+                                <TextBlock Text="{Binding VehicleStatus}" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
+                                <Button Style="{StaticResource PrimaryButton}" Content="Добавить корабль" Command="{Binding AddShipCommand}" IsEnabled="{Binding HasSelectedCatalogVehicle}" HorizontalAlignment="Left" Margin="0,12,0,0"/>
+                            </StackPanel>
+                        </Expander>
 
                         <TextBlock Text="{Binding FlightStatus}" Foreground="{DynamicResource Accent}" TextWrapping="Wrap" Margin="0,10,0,0" />
                     </StackPanel>

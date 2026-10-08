@@ -100,6 +100,12 @@ public partial class MainWindow : Window
         if (vm.SaveGithubToken(GithubTokenBox.Password)) GithubTokenBox.Clear();
     }
 
+    private void ExpandAddShip_Click(object sender, RoutedEventArgs e)
+    {
+        AddShipPanel.IsExpanded = true;
+        AddShipPanel.BringIntoView();
+    }
+
     private void BeginOverlayHotkeyCapture_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not MainViewModel vm) return;

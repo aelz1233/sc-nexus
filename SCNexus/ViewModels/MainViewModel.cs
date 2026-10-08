@@ -27,6 +27,8 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     private CancellationTokenSource? _pendingSave;
     private CancellationTokenSource? _catalogSearchCancellation;
     private CancellationTokenSource? _locationSearchCancellation;
+    private readonly ShipPortraitService _shipPortraitService = new();
+    private int _portraitRequest;
 
     [ObservableProperty] private decimal balance;
     [ObservableProperty] private string currentShip = "Не выбран";
@@ -68,6 +70,9 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     [ObservableProperty] private string newShipRole = "";
     [ObservableProperty] private string newShipBuild = "";
     [ObservableProperty] private ShipSummary? selectedShip;
+    [ObservableProperty] private Uri? selectedShipPortrait;
+    [ObservableProperty] private string selectedShipPortraitStatus = "";
+    public bool HasSelectedShipPortrait => SelectedShipPortrait is not null;
     [ObservableProperty] private string shipSortMode = "По названию";
     [ObservableProperty] private string selectedSystem = "Все системы";
     [ObservableProperty] private string locationQuery = "";
@@ -326,11 +331,28 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     {
         OnPropertyChanged(nameof(CanStartFlight));
         OnPropertyChanged(nameof(DashboardShipCapacityDisplay));
+        LoadSelectedShipPortrait(value);
         if (!_loaded || value is null) return;
         CurrentShip = value.Name;
         CargoScu = value.Ship.CargoScu;
         RecalculateHauling();
     }
+
+    private async void LoadSelectedShipPortrait(ShipSummary? ship)
+    {
+        var request = ++_portraitRequest;
+        SelectedShipPortrait = null;
+        SelectedShipPortraitStatus = "";
+        if (ship is null) return;
+        var portrait = await _shipPortraitService.GetPortraitAsync(ship.Name, CancellationToken.None);
+        if (request != _portraitRequest || SelectedShip != ship) return;
+        SelectedShipPortrait = portrait;
+        SelectedShipPortraitStatus = portrait is null
+            ? (IsEnglish ? "Image unavailable" : "Изображение недоступно")
+            : (IsEnglish ? "Image: Star Citizen Wiki" : "Изображение: Star Citizen Wiki");
+    }
+
+    partial void OnSelectedShipPortraitChanged(Uri? value) => OnPropertyChanged(nameof(HasSelectedShipPortrait));
     partial void OnShipSortModeChanged(string value) { RefreshSortedShips(); RefreshCatalog(); }
     partial void OnSelectedCatalogVehicleChanged(VehicleCatalogItem? value)
     {

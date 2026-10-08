@@ -137,6 +137,7 @@ public partial class MainViewModel
             var mission = CurrentMissions.FirstOrDefault();
             if (mission is null) return "";
             var label = IsEnglish ? $"Missions: {CurrentMissions.Length}" : $"Миссий: {CurrentMissions.Length}";
+            if (IsEnglish) return label;
             var objective = mission.ObjectiveDisplay;
             return $"{label} • {mission.DisplayName}\n{SourceName(mission.Status.Source)} • {mission.Status.AgeDisplay}" +
                 (string.IsNullOrWhiteSpace(objective) ? "" : $"\n{objective}");
@@ -146,6 +147,8 @@ public partial class MainViewModel
     {
         get
         {
+            if (IsEnglish)
+                return HasActiveVoyage ? "UEX price data" : "Live data";
             if (HasActiveVoyage && ActiveVoyagePlan is { Trades.Count: > 0 } plan)
             {
                 var oldest = plan.Trades.Min(x => x.UpdatedAt);

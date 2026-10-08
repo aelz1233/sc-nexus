@@ -8,7 +8,7 @@
     <Viewbox x:Name="OverlayScaleHost" Width="360" Stretch="Uniform" StretchDirection="Both"
              HorizontalAlignment="Left" VerticalAlignment="Top">
         <Border x:Name="OverlayChrome" Width="360" Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Border}" BorderThickness="1"
-                CornerRadius="8" Padding="12" SnapsToDevicePixels="True">
+                CornerRadius="12" Padding="14" SnapsToDevicePixels="True">
             <StackPanel x:Name="OverlayContent" Opacity="{Binding OverlayTextOpacity}">
                 <Grid>
                     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -16,10 +16,13 @@
                         <Border Width="7" Height="7" Background="{DynamicResource Accent}" CornerRadius="8" VerticalAlignment="Center" Margin="0,0,7,0" />
                         <TextBlock Text="SC NEXUS" Foreground="{DynamicResource Text}" FontWeight="Bold" FontSize="12" />
                     </StackPanel>
-                    <Border Grid.Column="1" Background="{DynamicResource Input}" CornerRadius="4" Padding="6,2"
-                            Visibility="{Binding OverlayDanger, Converter={StaticResource BoolVisibility}}">
-                        <TextBlock Text="{Binding OverlayDangerDisplay}" Foreground="{DynamicResource Danger}" FontWeight="SemiBold" FontSize="10" />
-                    </Border>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <TextBlock Text="{Binding OverlayBalanceDisplay}" Foreground="{DynamicResource Muted}" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="135" />
+                        <Border Background="{DynamicResource Input}" CornerRadius="5" Padding="6,2" Margin="8,0,0,0"
+                                Visibility="{Binding OverlayDanger, Converter={StaticResource BoolVisibility}}">
+                            <TextBlock Text="{Binding OverlayDangerDisplay}" Foreground="{DynamicResource Danger}" FontWeight="SemiBold" FontSize="10" />
+                        </Border>
+                    </StackPanel>
                 </Grid>
 
                 <StackPanel Visibility="{Binding OverlayShowShip, Converter={StaticResource BoolVisibility}}" Margin="0,10,0,0">
@@ -27,6 +30,24 @@
                 </StackPanel>
                 <TextBlock Text="{Binding OverlayLocationDisplay}" Visibility="{Binding OverlayShowLocation, Converter={StaticResource BoolVisibility}}"
                            Foreground="{DynamicResource Muted}" FontSize="11" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+
+                <TextBlock Text="{Binding OverlayMissionDisplay}" Foreground="{DynamicResource Muted}" FontSize="10" TextWrapping="Wrap" Margin="0,7,0,0">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding OverlayShowMission}" Value="True" />
+                                        <Condition Binding="{Binding OverlayHasMission}" Value="True" />
+                                        <Condition Binding="{Binding OverlayExpanded}" Value="True" />
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
 
                 <StackPanel Visibility="{Binding OverlayShowRoute, Converter={StaticResource BoolVisibility}}">
                     <StackPanel Visibility="{Binding OverlayHasRoute, Converter={StaticResource BoolVisibility}}">
@@ -45,6 +66,8 @@
 
                 <TextBlock Text="{Binding OverlayControlHint}" Visibility="{Binding OverlayEditMode, Converter={StaticResource BoolVisibility}}"
                            Foreground="{DynamicResource Muted}" FontSize="10" Margin="0,9,0,0" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding OverlayFreshnessDisplay}" Visibility="{Binding OverlayShowFreshness, Converter={StaticResource BoolVisibility}}"
+                           Foreground="{DynamicResource Muted}" FontSize="9" Margin="0,9,0,0" TextTrimming="CharacterEllipsis" />
             </StackPanel>
         </Border>
     </Viewbox>
