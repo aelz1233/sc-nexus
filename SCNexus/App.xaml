@@ -177,6 +177,7 @@
         </Style>
         <Style x:Key="Card" TargetType="Border"><Setter Property="Background" Value="{DynamicResource Panel}"/><Setter Property="BorderBrush" Value="{DynamicResource Border}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="16"/><Setter Property="Margin" Value="0,0,0,12"/></Style>
         <Style x:Key="WorkspaceSection" TargetType="Border"><Setter Property="Background" Value="{DynamicResource Panel}"/><Setter Property="BorderBrush" Value="{DynamicResource Border}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="16"/><Setter Property="Margin" Value="0,0,0,12"/></Style>
+        <Style x:Key="SettingsSection" TargetType="Border"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="{DynamicResource Border}"/><Setter Property="BorderThickness" Value="0,0,0,1"/><Setter Property="Padding" Value="0,0,0,18"/><Setter Property="Margin" Value="0,0,0,18"/></Style>
         <Style x:Key="SectionTitle" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}"><Setter Property="FontSize" Value="17"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Margin" Value="0,0,0,12"/></Style>
         <Style x:Key="FieldLabel" TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource Muted}"/><Setter Property="FontSize" Value="12"/><Setter Property="Margin" Value="0,0,0,7"/></Style>
         <Style x:Key="Hint" TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource Muted}"/><Setter Property="FontSize" Value="12"/><Setter Property="TextWrapping" Value="Wrap"/><Setter Property="LineHeight" Value="19"/></Style>
@@ -335,7 +336,7 @@
                 <ControlTemplate.Triggers>
                     <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="TabChrome" Property="Background" Value="{DynamicResource Input}"/><Setter TargetName="TabChrome" Property="BorderBrush" Value="{DynamicResource Border}"/></Trigger>
                     <Trigger Property="IsSelected" Value="True"><Setter TargetName="TabChrome" Property="Background" Value="{DynamicResource Input}"/><Setter TargetName="TabChrome" Property="BorderBrush" Value="{DynamicResource Border}"/><Setter TargetName="TabHeader" Property="TextElement.Foreground" Value="{DynamicResource Accent}"/><Setter TargetName="TabHeader" Property="TextElement.FontWeight" Value="SemiBold"/></Trigger>
-                    <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="TabChrome" Property="BorderBrush" Value="{DynamicResource Border}"/></Trigger>
+                    <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="TabChrome" Property="BorderBrush" Value="{DynamicResource Accent}"/></Trigger>
                 </ControlTemplate.Triggers>
             </ControlTemplate></Setter.Value></Setter>
         </Style>

@@ -93,17 +93,22 @@ public sealed class GameLogService(string? gameDirectory = null)
 
     public static string? FindGameDirectory()
     {
-        foreach (var process in Process.GetProcessesByName("StarCitizen"))
+        var processes = Process.GetProcessesByName("StarCitizen");
+        try
         {
-            try
+            foreach (var process in processes)
             {
-                var binary = process.MainModule?.FileName;
-                var install = binary is null ? null : Directory.GetParent(Path.GetDirectoryName(binary)!)?.FullName;
-                if (install is not null && Directory.Exists(install)) return install;
+                try
+                {
+                    var binary = process.MainModule?.FileName;
+                    var install = binary is null ? null : Directory.GetParent(Path.GetDirectoryName(binary)!)?.FullName;
+                    if (install is not null && Directory.Exists(install)) return install;
+                }
+                catch (System.ComponentModel.Win32Exception) { }
+                catch (InvalidOperationException) { }
             }
-            catch (System.ComponentModel.Win32Exception) { }
-            catch (InvalidOperationException) { }
         }
+        finally { foreach (var process in processes) process.Dispose(); }
         var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var drive in DriveInfo.GetDrives().Where(x => x.IsReady && x.DriveType == DriveType.Fixed))
         {

@@ -38,6 +38,8 @@ public partial class MainViewModel
     public string DataDirectory => Path.GetDirectoryName(settingsService.DatabasePath)!;
     public bool HasNoShips => Ships.Count == 0;
     public bool HasNoFlights => Flights.Count == 0;
+    public IReadOnlyList<FlightRecord> RecentFlights => Flights.Where(x => x.EndedAtUtc is not null).Take(3).ToArray();
+    public bool HasNoRecentFlights => !Flights.Any(x => x.EndedAtUtc is not null);
     public bool CanStartFlight => !HasActiveFlight && SelectedShip is not null;
     public bool HasNoHaulingRoutes => HaulingRoutes.Count == 0 && !IsMarketLoading;
     public string FleetSummary => IsEnglish
@@ -165,7 +167,7 @@ public partial class MainViewModel
 
     private void NotifyWorkspace()
     {
-        foreach (var name in new[] { nameof(HasNoShips), nameof(HasNoFlights), nameof(FleetSummary), nameof(CanStartFlight), nameof(HasNoHaulingRoutes), nameof(TradeBudgetHint), nameof(DashboardActionButtonText), nameof(DashboardShipCapacityDisplay) })
+        foreach (var name in new[] { nameof(HasNoShips), nameof(HasNoFlights), nameof(RecentFlights), nameof(HasNoRecentFlights), nameof(FleetSummary), nameof(CanStartFlight), nameof(HasNoHaulingRoutes), nameof(TradeBudgetHint), nameof(DashboardActionButtonText), nameof(DashboardShipCapacityDisplay) })
             OnPropertyChanged(name);
     }
 
@@ -180,6 +182,11 @@ public partial class MainViewModel
 
     [RelayCommand] private Task RefreshMarketAsync() => LoadMarketAsync(true);
 
+    private Task EnsureMarketFreshAsync() => _haulingData is null ||
+        DateTimeOffset.UtcNow - _haulingData.PricesFetchedAt >= TimeSpan.FromMinutes(30) ||
+        DateTimeOffset.UtcNow - _haulingData.TerminalsFetchedAt >= TimeSpan.FromHours(12)
+            ? LoadMarketAsync(false) : Task.CompletedTask;
+
     private async Task LoadMarketAsync(bool forceRefresh)
     {
         if (IsMarketLoading) return;
@@ -190,10 +197,17 @@ public partial class MainViewModel
             _haulingData = await gameDataService.GetSnapshotAsync(forceRefresh: forceRefresh);
             RefreshRouteSystems();
             RefreshVoyageDestinations();
-            DataStatus = $"UEX · {_haulingData.PricesFetchedAt.LocalDateTime:dd.MM HH:mm}" + (_haulingData.UsedOldCache ? " · сохранённые данные" : "");
+            DataStatus = $"UEX · {_haulingData.PricesFetchedAt.LocalDateTime:dd.MM HH:mm}" +
+                (_haulingData.UsedOldCache || DateTimeOffset.UtcNow - _haulingData.PricesFetchedAt >= TimeSpan.FromMinutes(30)
+                    ? " · устаревшие данные" : "");
             RecalculateHauling();
         }
-        catch (Exception ex) { HaulingStatus = ex.Message; }
+        catch (Exception ex)
+        {
+            HaulingStatus = ex.Message;
+            DataStatus = _haulingData is null ? "UEX · данные недоступны" :
+                $"UEX · {_haulingData.PricesFetchedAt.LocalDateTime:dd.MM HH:mm} · не удалось обновить котировки";
+        }
         finally { IsMarketLoading = false; }
     }
 

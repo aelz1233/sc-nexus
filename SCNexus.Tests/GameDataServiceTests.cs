@@ -8,6 +8,24 @@ namespace SCNexus.Tests;
 public class GameDataServiceTests
 {
     [Fact]
+    public async Task DownloadedMarketDataWorksWhenDiskCacheCannotBeWritten()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var cachePath = Path.Combine(directory, "blocked-cache");
+            await File.WriteAllTextAsync(cachePath, "not a directory");
+            using var client = new HttpClient(new StubHandler(false)) { BaseAddress = new Uri("https://example.test/2.0/") };
+            var snapshot = await new GameDataService(client, cachePath).GetSnapshotAsync();
+            Assert.Single(snapshot.Quotes);
+            Assert.Single(snapshot.Terminals);
+            Assert.False(snapshot.UsedOldCache);
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+
+    [Fact]
     public async Task ParsesSnakeCaseCachesAndFallsBackOffline()
     {
         var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));

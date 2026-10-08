@@ -17,13 +17,13 @@ public sealed class RouteService
             .Where(x => x.Type == "commodity" && x.IsAvailableLive == 1)
             .ToDictionary(x => x.Id);
         var sellQuotes = data.Quotes
-            .Where(x => x.PriceSell > 0 && terminals.ContainsKey(x.IdTerminal))
+            .Where(x => x.PriceSell > 0 && x.ScuSell > 0 && x.StatusSell != 1 && terminals.ContainsKey(x.IdTerminal))
             .GroupBy(x => x.IdCommodity)
             .ToDictionary(x => x.Key, x => x.ToArray());
         var routes = new List<TradeRoute>();
         foreach (var buy in data.Quotes)
         {
-            if (buy.PriceBuy <= 0 || buy.StatusBuy == 1 || !terminals.TryGetValue(buy.IdTerminal, out var origin) ||
+            if (buy.PriceBuy <= 0 || buy.ScuBuy <= 0 || buy.StatusBuy == 1 || !terminals.TryGetValue(buy.IdTerminal, out var origin) ||
                 (hasStartLocation && !origin.MatchesLocation(settings.CurrentLocation)) ||
                 (hasStartSystem &&
                  !string.Equals(origin.StarSystemName, settings.CurrentSystem, StringComparison.OrdinalIgnoreCase)) ||
@@ -43,7 +43,9 @@ public sealed class RouteService
                 if (scu <= 0) continue;
                 var investment = scu * buy.PriceBuy;
                 var revenue = scu * sell.PriceSell;
-                var quoteTime = DateTimeOffset.FromUnixTimeSeconds(Math.Min(buy.DateModified, sell.DateModified));
+                DateTimeOffset quoteTime;
+                try { quoteTime = DateTimeOffset.FromUnixTimeSeconds(Math.Min(buy.DateModified, sell.DateModified)); }
+                catch (ArgumentOutOfRangeException) { quoteTime = data.PricesFetchedAt; }
                 var usesNqa = origin.IsNqa == 1 || destination.IsNqa == 1;
                 var isPyro = string.Equals(origin.StarSystemName, "Pyro", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(destination.StarSystemName, "Pyro", StringComparison.OrdinalIgnoreCase);

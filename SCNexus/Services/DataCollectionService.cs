@@ -172,6 +172,11 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
         DataSourceKind existingSource, DateTimeOffset existingTime, double existingConfidence)
     {
         if (incomingSource == existingSource) return incomingTime >= existingTime && incomingConfidence >= existingConfidence * .75;
+        if (key == "player.balance")
+        {
+            if (incomingSource == DataSourceKind.Ocr && incomingConfidence >= .9 && incomingTime > existingTime) return true;
+            if (existingSource == DataSourceKind.Ocr && existingConfidence >= .9 && incomingTime < existingTime) return false;
+        }
         // A historical high-priority log entry must never replace a newer correction or observation.
         if (incomingTime < existingTime - TimeSpan.FromMinutes(2)) return false;
         var existingStale = DateTimeOffset.UtcNow - existingTime > FreshnessFor(key);

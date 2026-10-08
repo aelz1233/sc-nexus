@@ -20,7 +20,7 @@ public sealed class ShipPortraitService
             var candidates = ShipComponentCatalogService.BuildVehicleSearchTerms(shipName);
             foreach (var candidate in candidates)
             {
-                var portrait = await FindPortraitAsync(
+                var portrait = await FindPortraitAsync(shipName,
                     "titles=" + Uri.EscapeDataString(candidate), token);
                 if (portrait is not null) return Cache(shipName, portrait);
             }
@@ -29,7 +29,7 @@ public sealed class ShipPortraitService
             // Search makes those models recoverable without hard-coded image URLs.
             foreach (var candidate in candidates.Take(3))
             {
-                var portrait = await FindPortraitAsync(
+                var portrait = await FindPortraitAsync(shipName,
                     "generator=search&gsrnamespace=0&gsrlimit=3&gsrsearch=" + Uri.EscapeDataString(candidate), token);
                 if (portrait is not null) return Cache(shipName, portrait);
             }
@@ -38,7 +38,7 @@ public sealed class ShipPortraitService
         return Cache(shipName, null);
     }
 
-    private static async Task<Uri?> FindPortraitAsync(string queryParameters, CancellationToken token)
+    private static async Task<Uri?> FindPortraitAsync(string shipName, string queryParameters, CancellationToken token)
     {
         var url = "https://starcitizen.tools/api.php?action=query&format=json&redirects=1&prop=pageimages&pithumbsize=640&" + queryParameters;
         using var response = await Client.GetAsync(url, token);
@@ -46,15 +46,35 @@ public sealed class ShipPortraitService
         using var document = JsonDocument.Parse(await response.Content.ReadAsStreamAsync(token));
         if (!document.RootElement.TryGetProperty("query", out var query) ||
             !query.TryGetProperty("pages", out var pages)) return null;
+        return SelectPortrait(shipName, pages);
+    }
 
+    internal static Uri? SelectPortrait(string shipName, JsonElement pages)
+    {
+        if (pages.ValueKind != JsonValueKind.Object) return null;
+        Uri? best = null;
+        var bestScore = double.NegativeInfinity;
+        var bestRank = int.MaxValue;
         foreach (var page in pages.EnumerateObject())
         {
-            if (page.Value.TryGetProperty("thumbnail", out var thumbnail) &&
-                thumbnail.TryGetProperty("source", out var source) &&
-                Uri.TryCreate(source.GetString(), UriKind.Absolute, out var portrait))
-                return portrait;
+            if (!page.Value.TryGetProperty("title", out var title) || title.ValueKind != JsonValueKind.String ||
+                title.GetString() is not { } pageTitle ||
+                !page.Value.TryGetProperty("thumbnail", out var thumbnail) ||
+                !thumbnail.TryGetProperty("source", out var source) ||
+                source.ValueKind != JsonValueKind.String ||
+                !Uri.TryCreate(source.GetString(), UriKind.Absolute, out var portrait)) continue;
+
+            var score = ShipComponentCatalogService.VehicleMatchScore(shipName, pageTitle);
+            if (score < 45) continue;
+            var rank = page.Value.TryGetProperty("index", out var index) &&
+                index.ValueKind == JsonValueKind.Number && index.TryGetInt32(out var value)
+                ? value : int.MaxValue;
+            if (score < bestScore || (score == bestScore && rank >= bestRank)) continue;
+            best = portrait;
+            bestScore = score;
+            bestRank = rank;
         }
-        return null;
+        return best;
     }
 
     private Uri? Cache(string name, Uri? portrait)

@@ -173,6 +173,46 @@ public class DataCollectionTests
     }
 
     [Fact]
+    public async Task ConfirmedOcrBalanceBeatsOlderLogWithoutBlockingNewerLog()
+    {
+        var directory = TempDirectory();
+        try
+        {
+            var settings = new SettingsService(Path.Combine(directory, "nexus.db"));
+            await settings.LoadAsync();
+            var now = DateTimeOffset.UtcNow;
+            var log = new SequencedProvider("log", DataSourceKind.GameLog, 1,
+            [
+                new("player.balance", "100", DataSourceKind.GameLog, now.AddMinutes(-2), .95),
+                null,
+                new("player.balance", "100", DataSourceKind.GameLog, now.AddMinutes(-2), .95),
+                new("player.balance", "300", DataSourceKind.GameLog, now, .95)
+            ]);
+            var ocr = new SequencedProvider("ocr", DataSourceKind.Ocr, 5,
+            [
+                null,
+                new("player.balance", "200", DataSourceKind.Ocr, now.AddMinutes(-1), .94),
+                null,
+                null
+            ]);
+            var collection = new DataCollectionService([log, ocr], new DataHistoryService(settings),
+                new GameLogService(directory));
+
+            await collection.RefreshAsync(false);
+            Assert.Equal(100, collection.Current.Player.Balance?.Value);
+            await collection.RefreshAsync(false);
+            Assert.Equal(200, collection.Current.Player.Balance?.Value);
+            Assert.Equal(DataSourceKind.Ocr, collection.Current.Player.Balance?.Source);
+            await collection.RefreshAsync(false);
+            Assert.Equal(200, collection.Current.Player.Balance?.Value);
+            await collection.RefreshAsync(false);
+            Assert.Equal(300, collection.Current.Player.Balance?.Value);
+            Assert.Equal(DataSourceKind.GameLog, collection.Current.Player.Balance?.Source);
+        }
+        finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); Directory.Delete(directory, true); }
+    }
+
+    [Fact]
     public async Task RecoveryAlwaysIncludesLatestValuesAlongsideBusyEventHistory()
     {
         var directory = TempDirectory();
@@ -268,6 +308,24 @@ public class DataCollectionTests
             {
                 Values = [new ValueObservation("player.ship", value, source, timestamp ?? DateTimeOffset.UtcNow, confidence)]
             });
+    }
+
+    private sealed class SequencedProvider(string name, DataSourceKind source, int priority,
+        IReadOnlyList<ValueObservation?> observations) : IDataProvider
+    {
+        private int _next;
+        public string Name => name;
+        public DataSourceKind Source => source;
+        public int Priority => priority;
+        public TimeSpan RefreshInterval => TimeSpan.Zero;
+        public Task<DataProviderResult> CollectAsync(DataProviderContext context, CancellationToken token)
+        {
+            var observation = observations[_next++];
+            return Task.FromResult(new DataProviderResult
+            {
+                Values = observation is null ? [] : [observation]
+            });
+        }
     }
 
     private sealed class CountingProvider : IDataProvider

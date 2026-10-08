@@ -8,6 +8,23 @@ namespace SCNexus.Tests;
 public class ShipComponentCatalogServiceTests
 {
     [Fact]
+    public async Task DownloadedCatalogWorksWhenDiskCacheCannotBeWritten()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var cachePath = Path.Combine(directory, "blocked-cache");
+            await File.WriteAllTextAsync(cachePath, "not a directory");
+            using var client = new HttpClient(new CatalogHandler());
+            var catalog = await new ShipComponentCatalogService(client, cachePath).LoadAsync("Test Ship");
+            Assert.Equal(2, catalog.Slots.Count);
+            Assert.False(catalog.UsedOldCache);
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+
+    [Fact]
     public async Task LoadsNestedEditablePortAndRejectsItemWithoutRequiredTag()
     {
         var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));

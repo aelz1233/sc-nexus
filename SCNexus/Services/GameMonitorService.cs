@@ -10,7 +10,9 @@ public static partial class GameMonitorService
 
     public static Snapshot Inspect(string? gameDirectory)
     {
-        var running = Process.GetProcessesByName("StarCitizen").Length > 0;
+        var processes = Process.GetProcessesByName("StarCitizen");
+        var running = processes.Length > 0;
+        foreach (var process in processes) process.Dispose();
         if (gameDirectory is null) return new Snapshot(running, "Не найден", "Не определён", null);
         var log = Path.Combine(gameDirectory, "Game.log");
         if (!File.Exists(log)) return new Snapshot(running, "Не найден", "Не определён", null);

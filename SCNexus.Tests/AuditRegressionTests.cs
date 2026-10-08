@@ -11,6 +11,44 @@ namespace SCNexus.Tests;
 public class AuditRegressionTests
 {
     [Fact]
+    public async Task StartupDoesNotReplaceManualBalanceWithOlderLogReading()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        using var client = new HttpClient();
+        try
+        {
+            var settings = new SettingsService(Path.Combine(directory, "nexus.db"));
+            await settings.LoadAsync();
+            var manualAt = DateTimeOffset.UtcNow.AddMinutes(-2);
+            await settings.SaveAsync(new PersonalSettings { Balance = 12000, BalanceManualUpdatedAt = manualAt });
+            var data = new GameDataService(client, Path.Combine(directory, "cache"));
+            var vm = new MainViewModel(settings, new TradingService(data, new RouteService()),
+                new FlightLogService(settings), data, new GameLogService(directory), new HaulingService(), new UpdateService());
+            await vm.InitializeAsync();
+            var apply = typeof(MainViewModel).GetMethod("ApplyDataSnapshot", BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+            DataCollectionSnapshot Snapshot(decimal amount, DateTimeOffset timestamp) => new()
+            {
+                Player = new PlayerState { Balance = new(amount, DataSourceKind.GameLog, timestamp, .95) }
+            };
+            apply.Invoke(vm, [Snapshot(10000, manualAt.AddMinutes(-1))]);
+            Assert.Equal(12000, vm.Balance);
+
+            apply.Invoke(vm, [Snapshot(13000, manualAt.AddMinutes(1))]);
+            Assert.Equal(13000, vm.Balance);
+            await vm.SaveNowAsync();
+            var saved = await settings.LoadAsync();
+            Assert.Equal(13000, saved.Balance);
+            Assert.Equal(manualAt, saved.BalanceManualUpdatedAt);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (Directory.Exists(directory)) Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
     public void ComponentChecklistRestoresProgressAndDoesNotSpendBalance()
     {
         var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
@@ -195,7 +233,7 @@ public class AuditRegressionTests
             await File.WriteAllTextAsync(path, "corrupt original");
             var recovered = new SettingsService(path);
             Assert.Equal(123456, (await recovered.LoadAsync()).Balance);
-            Assert.Contains("nexus-valid.db", recovered.StartupRecoveryMessage);
+            Assert.DoesNotContain("nexus-unrelated.db", recovered.StartupRecoveryMessage);
             Assert.Equal("corrupt original", await File.ReadAllTextAsync(Assert.Single(Directory.GetFiles(directory, "nexus-corrupt-*.db"))));
         }
         finally

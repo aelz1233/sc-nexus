@@ -137,13 +137,35 @@ public class WindowRegressionTests
                         await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
                         UiLocalization.Apply(window);
                         Assert.Contains(VisualDescendants(window).OfType<TextBlock>(), x => x.IsVisible);
+                        if (page == "Маршруты")
+                            Assert.Contains(VisualDescendants(window).OfType<TextBlock>(), x => x.IsVisible && x.Text == "Laranite");
                         if (language == "en")
                             untranslatedEnglish.UnionWith(VisualDescendants(window).OfType<TextBlock>()
                                 .Where(x => x.IsVisible && System.Text.RegularExpressions.Regex.IsMatch(x.Text ?? "", "[А-Яа-яЁё]"))
                                 .Select(x => x.Text));
                         Assert.All(VisualDescendants(window).OfType<System.Windows.Controls.Primitives.RangeBase>(), control =>
                             Assert.False(double.IsNaN(control.Value)));
-                        if (size.Width == 1440)
+                        if (!light && language == "ru" && size.Width == 1440 && page == "Маршруты")
+                        {
+                            var routeView = LogicalDescendants(window).OfType<SCNexus.Controls.RouteResultsView>().Single();
+                            var detailsColumn = (ColumnDefinition)routeView.FindName("DetailsColumn");
+                            var detailsToggle = (CheckBox)routeView.FindName("InspectorToggle");
+                            Assert.True(resultsGrid.ActualHeight < 350);
+                            Assert.True(detailsColumn.Width.Value > 0);
+                            detailsToggle.IsChecked = false;
+                            await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                            Assert.Equal(0, detailsColumn.Width.Value);
+                            detailsToggle.IsChecked = true;
+                            await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                            Assert.True(detailsColumn.Width.Value > 0);
+                            vm.RouteSearch = "not-a-route";
+                            await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                            Assert.Equal(0, detailsColumn.Width.Value);
+                            vm.RouteSearch = "";
+                            await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                            Assert.True(detailsColumn.Width.Value > 0);
+                        }
+                        if (size.Width == 1440 || page is "Обзор" or "Маршруты" or "Настройки")
                         {
                             var output = Path.Combine(AppContext.BaseDirectory, "audit-screenshots");
                             Directory.CreateDirectory(output);
@@ -162,7 +184,8 @@ public class WindowRegressionTests
                             bitmap.Render(presentation);
                             var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
                             encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
-                            using var image = File.Create(Path.Combine(output, $"{(light ? "light" : "dark")}-{language}-{page}.png"));
+                            var prefix = size.Width == 1440 ? "" : "min-";
+                            using var image = File.Create(Path.Combine(output, $"{prefix}{(light ? "light" : "dark")}-{language}-{page}.png"));
                             encoder.Save(image);
                         }
                     }

@@ -197,10 +197,13 @@ public partial class MainViewModel
         }
         if (player.Balance is { Confidence: >= .9 } balance && balance.Value >= 0 &&
             balance.Source is not (DataSourceKind.Manual or DataSourceKind.NexusHistory) &&
-            IsFresh(balance, TimeSpan.FromHours(1)) && balance != _lastAppliedBalance)
+            IsFresh(balance, TimeSpan.FromHours(1)) && balance != _lastAppliedBalance &&
+            (_balanceManualUpdatedAt is null || balance.Timestamp > _balanceManualUpdatedAt))
         {
             _lastAppliedBalance = balance;
-            Balance = balance.Value;
+            _applyingAutomaticBalance = true;
+            try { Balance = balance.Value; }
+            finally { _applyingAutomaticBalance = false; }
         }
         if (player.Environment is { } environment)
             DataCollectionStatus = IsEnglish

@@ -68,6 +68,7 @@ public static class LocalizationService
         ["Прибыль"] = "Profit",
         ["Загрузка"] = "Cargo",
         ["Выбрать рейс"] = "Select route",
+        ["ВЫБРАННЫЙ РЕЙС"] = "SELECTED ROUTE",
         ["Остановки"] = "Stops",
         ["Груз и цены"] = "Cargo and prices",
         ["Нет подходящих маршрутов. Проверь поиск, бюджет и фильтры."] = "No matching routes. Check search, budget and filters.",

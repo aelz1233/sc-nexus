@@ -6,6 +6,12 @@ namespace SCNexus.Tests;
 
 public class SettingsServiceTests
 {
+    private sealed class TestClock(DateTimeOffset now) : TimeProvider
+    {
+        public DateTimeOffset Now { get; set; } = now;
+        public override DateTimeOffset GetUtcNow() => Now;
+    }
+
     [Fact]
     public async Task OcrIntervalDefaultsToFiveAndSurvivesRestartAndOldSchemaUpgrade()
     {
@@ -32,8 +38,16 @@ public class SettingsServiceTests
                 await using var command = connection.CreateCommand();
                 command.CommandText = "ALTER TABLE PersonalSettings DROP COLUMN OcrIntervalSeconds";
                 await command.ExecuteNonQueryAsync();
+                command.CommandText = "ALTER TABLE PersonalSettings DROP COLUMN BalanceManualUpdatedAt";
+                await command.ExecuteNonQueryAsync();
             }
-            Assert.Equal(5, (await new SettingsService(path).LoadAsync()).OcrIntervalSeconds);
+            var upgradedService = new SettingsService(path);
+            var upgraded = await upgradedService.LoadAsync();
+            Assert.Equal(5, upgraded.OcrIntervalSeconds);
+            Assert.Null(upgraded.BalanceManualUpdatedAt);
+            upgraded.BalanceManualUpdatedAt = new DateTimeOffset(2026, 10, 8, 12, 0, 0, TimeSpan.Zero);
+            await upgradedService.SaveAsync(upgraded);
+            Assert.Equal(upgraded.BalanceManualUpdatedAt, (await new SettingsService(path).LoadAsync()).BalanceManualUpdatedAt);
         }
         finally
         {
@@ -258,6 +272,32 @@ public class SettingsServiceTests
             var backupSettings = await new SettingsService(backup).LoadAsync();
             Assert.Equal(12_400_000, backupSettings.Balance);
             Assert.Equal("Guardian MX", backupSettings.CurrentShip);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (Directory.Exists(directory)) Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
+    public async Task RunningAppCreatesANewBackupAfterTheDateChanges()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        var clock = new TestClock(new DateTimeOffset(2026, 10, 8, 12, 0, 0, TimeSpan.Zero));
+        try
+        {
+            var service = new SettingsService(Path.Combine(directory, "nexus.db"), clock);
+            await service.LoadAsync();
+            await service.SaveAsync(new PersonalSettings { Balance = 100 });
+            Assert.Single(Directory.GetFiles(service.BackupDirectory, "nexus-*.db"));
+
+            clock.Now = clock.Now.AddDays(1);
+            await service.SaveAsync(new PersonalSettings { Balance = 200 });
+            var backups = Directory.GetFiles(service.BackupDirectory, "nexus-*.db");
+            Assert.Equal(2, backups.Length);
+            var newer = backups.OrderByDescending(Path.GetFileName).First();
+            Assert.Equal(200, (await new SettingsService(newer).LoadAsync()).Balance);
         }
         finally
         {

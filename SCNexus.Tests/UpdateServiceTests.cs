@@ -16,6 +16,41 @@ public class UpdateServiceTests
     }
 
     [Fact]
+    public async Task DefaultFeedUsesPublishedReleaseMetadataAndSavedToken()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        var release = JsonSerializer.Serialize(new
+        {
+            tag_name = "v99.88.76",
+            html_url = "https://github.com/aelz1233/sc-nexus/releases/tag/v99.88.76",
+            assets = new[]
+            {
+                new { name = "SCNexus-Setup-99.88.76-win-x64.exe", url = "https://api.github.com/installer", size = 100L },
+                new { name = "SHA256SUMS.txt", url = "https://api.github.com/checksums", size = 80L }
+            }
+        });
+        using var client = new HttpClient(new Handler(request =>
+        {
+            Assert.Equal("https://api.github.com/repos/aelz1233/sc-nexus/releases/latest", request.RequestUri?.AbsoluteUri);
+            Assert.Equal("private-token", request.Headers.Authorization?.Parameter);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(release, Encoding.UTF8, "application/json")
+            };
+        }));
+        try
+        {
+            var service = new UpdateService(client, Path.Combine(root, "token.bin"),
+                "https://api.github.com/repos/aelz1233/sc-nexus/releases/latest");
+            service.SaveToken("private-token");
+            var latest = await service.GetLatestAsync();
+            Assert.Equal(new Version(99, 88, 76), latest.Version);
+            Assert.Equal("https://api.github.com/installer", latest.Installer.ApiUrl);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
     public async Task PrivateReleaseUsesEncryptedTokenAndVerifiesInstaller()
     {
         var version = new Version(99, 88, 77);

@@ -16,8 +16,6 @@ public sealed record UpdateRelease(Version Version, string PageUrl, UpdateAsset 
 public sealed class UpdateService
 {
     private const string LatestReleaseUrl = "https://api.github.com/repos/aelz1233/sc-nexus/releases/latest";
-    private const string PublicVersionUrl = "https://raw.githubusercontent.com/aelz1233/sc-nexus/main/VERSION";
-    private const string PublicReleaseBaseUrl = "https://github.com/aelz1233/sc-nexus/releases";
     private readonly string _tokenPath;
     private readonly string _latestReleaseUrl;
     private readonly string _stateDirectory;
@@ -94,24 +92,8 @@ public sealed class UpdateService
         catch { response.Dispose(); throw; }
     }
 
-    private bool UsesPublicFeed => _latestReleaseUrl.Equals(LatestReleaseUrl, StringComparison.OrdinalIgnoreCase);
-
     public async Task<UpdateRelease> GetLatestAsync(CancellationToken cancellationToken = default)
     {
-        if (UsesPublicFeed)
-        {
-            using var versionResponse = await SendAsync(PublicVersionUrl, null, false, HttpCompletionOption.ResponseContentRead, cancellationToken);
-            var publicTag = (await versionResponse.Content.ReadAsStringAsync(cancellationToken)).Trim().TrimStart('v', 'V');
-            if (!Version.TryParse(publicTag, out var publicVersion)) throw new InvalidDataException("В VERSION указан неверный номер версии.");
-            var normalizedVersion = publicVersion.ToString(3);
-            var installerName = $"SCNexus-Setup-{normalizedVersion}-win-x64.exe";
-            var downloadBase = $"{PublicReleaseBaseUrl}/download/v{normalizedVersion}";
-            return new(publicVersion,
-                $"{PublicReleaseBaseUrl}/tag/v{normalizedVersion}",
-                new UpdateAsset(installerName, $"{downloadBase}/{installerName}", 0),
-                new UpdateAsset("SHA256SUMS.txt", $"{downloadBase}/SHA256SUMS.txt", 0));
-        }
-
         var token = ReadToken();
         using var response = await SendAsync(_latestReleaseUrl, token, false, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -135,8 +117,7 @@ public sealed class UpdateService
         foreach (var asset in new[] { release.Checksums, release.Installer })
         {
             var uri = new Uri(asset.ApiUrl);
-            var trustedHost = uri.Host.Equals(apiHost, StringComparison.OrdinalIgnoreCase) ||
-                (UsesPublicFeed && uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase));
+            var trustedHost = uri.Host.Equals(apiHost, StringComparison.OrdinalIgnoreCase);
             if (uri.Scheme != Uri.UriSchemeHttps || !trustedHost)
                 throw new InvalidDataException("Адрес файла обновления не принадлежит доверенному GitHub-хосту.");
         }

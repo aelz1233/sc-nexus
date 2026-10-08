@@ -27,7 +27,6 @@ public sealed class GameDataService
 
     public async Task<DataSnapshot> GetSnapshotAsync(CancellationToken token = default, bool forceRefresh = false)
     {
-        Directory.CreateDirectory(_cacheDirectory);
         var pricesTask = LoadAsync<CommodityQuote>("prices", "commodities_prices_all", forceRefresh ? TimeSpan.Zero : TimeSpan.FromMinutes(30), token);
         var terminalsTask = LoadAsync<TradeTerminal>("terminals", "terminals?type=commodity", forceRefresh ? TimeSpan.Zero : TimeSpan.FromHours(12), token);
         var prices = await pricesTask;
@@ -38,14 +37,12 @@ public sealed class GameDataService
 
     public async Task<IReadOnlyList<TradeTerminal>> GetTerminalsAsync(CancellationToken token = default)
     {
-        Directory.CreateDirectory(_cacheDirectory);
         var terminals = await LoadAsync<TradeTerminal>("terminals", "terminals?type=commodity", TimeSpan.FromHours(12), token);
         return terminals.Data;
     }
 
     public async Task<IReadOnlyList<VehicleCatalogItem>> GetVehiclesAsync(CancellationToken token = default)
     {
-        Directory.CreateDirectory(_cacheDirectory);
         var vehicles = await LoadAsync<VehicleCatalogItem>("vehicles", "vehicles", TimeSpan.FromHours(12), token);
         if (vehicles.Data.All(x => x.IsMilitary is null))
             vehicles = await LoadAsync<VehicleCatalogItem>("vehicles", "vehicles", TimeSpan.Zero, token);
@@ -78,6 +75,7 @@ public sealed class GameDataService
             }
             catch (JsonException) { }
             catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
         if (cached is { Data.Count: > 0 } && DateTimeOffset.UtcNow - cached.FetchedAt < ttl)
             return cached;
@@ -93,9 +91,23 @@ public sealed class GameDataService
             var result = new CachedData<T>(DateTimeOffset.UtcNow, payload.Data, false);
             _memoryCache[key] = result;
             var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-            await using (var file = File.Create(temporary))
-                await JsonSerializer.SerializeAsync(file, result, Json, token);
-            File.Move(temporary, path, true);
+            try
+            {
+                Directory.CreateDirectory(_cacheDirectory);
+                await using (var file = File.Create(temporary))
+                    await JsonSerializer.SerializeAsync(file, result, Json, token);
+                File.Move(temporary, path, true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // The downloaded data remains usable when the disk cache cannot be updated.
+            }
+            finally
+            {
+                try { if (File.Exists(temporary)) File.Delete(temporary); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
             return result;
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidDataException or JsonException or TaskCanceledException)

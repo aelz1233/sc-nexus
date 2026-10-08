@@ -92,65 +92,61 @@
                     </StackPanel>
                 </Grid>
             </Border>
-            <ScrollViewer x:Name="PageScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" ClipToBounds="True" Padding="28,20,28,24">
+            <ScrollViewer x:Name="PageScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" ClipToBounds="True" Padding="24,18,24,24">
                 <Grid MaxWidth="1440" HorizontalAlignment="Stretch">
                     <StackPanel Visibility="{Binding IsDashboardOpen, Converter={StaticResource BoolVisibility}}">
-                        <Border Style="{StaticResource WorkspaceSection}" Padding="20" Margin="0,0,0,14">
+                        <Border Style="{StaticResource WorkspaceSection}" Padding="18,14" Margin="0,0,0,12">
                             <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="{Binding DashboardActionHeading}" Style="{StaticResource FieldLabel}" />
-                                    <TextBlock Text="{Binding DashboardActionTitle}" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,6,0,0" />
-                                    <TextBlock Text="{Binding DashboardActionDetails}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="154"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding DashboardActionHeading}" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="0,0,16,0" />
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding DashboardActionTitle}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding DashboardActionDetails}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,4,0,0" />
                                 </StackPanel>
-                                <Button Grid.Column="1" Content="{Binding DashboardActionButtonText}" Command="{Binding OpenDashboardActionCommand}" Style="{StaticResource PrimaryButton}" VerticalAlignment="Center" Margin="24,0,0,0" />
+                                <Button Grid.Column="2" Content="{Binding DashboardActionButtonText}" Command="{Binding OpenDashboardActionCommand}" Style="{StaticResource PrimaryButton}" VerticalAlignment="Center" Margin="18,0,0,0" />
                             </Grid>
                         </Border>
-                        <Border Style="{StaticResource WorkspaceSection}" Padding="0">
-                            <Grid Margin="20,16">
+                        <Border Background="{DynamicResource Input}" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="6" Padding="16,13" Margin="0,0,0,18">
+                            <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="1"/><ColumnDefinition/><ColumnDefinition Width="1"/><ColumnDefinition/></Grid.ColumnDefinitions>
                                 <StackPanel>
                                     <TextBlock Text="{Binding DashboardShipLabel}" Style="{StaticResource FieldLabel}" />
                                     <TextBlock Text="{Binding CurrentShip}" FontWeight="SemiBold" TextWrapping="Wrap" />
                                     <TextBlock Text="{Binding DashboardShipCapacityDisplay}" Style="{StaticResource Hint}" Margin="0,4,0,0" />
                                 </StackPanel>
-                                <Border Grid.Column="1" Background="{DynamicResource Border}" Margin="22,0" />
-                                <StackPanel Grid.Column="2">
+                                <Border Grid.Column="1" Background="{DynamicResource Border}" />
+                                <StackPanel Grid.Column="2" Margin="18,0">
                                     <TextBlock Text="{Binding DashboardLocationLabel}" Style="{StaticResource FieldLabel}" />
                                     <TextBlock Text="{Binding DashboardLocationDisplay}" FontWeight="SemiBold" TextWrapping="Wrap" />
                                 </StackPanel>
-                                <Border Grid.Column="3" Background="{DynamicResource Border}" Margin="22,0" />
-                                <StackPanel Grid.Column="4">
+                                <Border Grid.Column="3" Background="{DynamicResource Border}" />
+                                <StackPanel Grid.Column="4" Margin="18,0,0,0">
                                     <TextBlock Text="{Binding DashboardBudgetLabel}" Style="{StaticResource FieldLabel}" />
                                     <TextBlock Text="{Binding HaulingBudgetDisplay}" Foreground="{DynamicResource Accent}" FontSize="17" FontWeight="SemiBold" />
                                 </StackPanel>
                             </Grid>
                         </Border>
-                        <Grid Margin="0,4,0,0">
-                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="24"/><ColumnDefinition/></Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <DockPanel Margin="0,0,0,8"><Button DockPanel.Dock="Right" Content="Открыть журнал" Command="{Binding OpenHistoryCommand}" Padding="0" Background="Transparent" Foreground="{DynamicResource Accent}"/><TextBlock Text="Последние рейсы" Style="{StaticResource SectionTitle}" Margin="0"/></DockPanel>
-                                <Border Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="8" Padding="2">
-                                    <StackPanel>
-                                        <ItemsControl ItemsSource="{Binding Flights}">
-                                            <ItemsControl.ItemTemplate><DataTemplate><Grid Margin="14,10"><Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="{Binding DateDisplay}" Style="{StaticResource Hint}"/><TextBlock Grid.Column="1" Text="{Binding ShipName}" TextTrimming="CharacterEllipsis"/><TextBlock Grid.Column="2" Text="{Binding ResultDisplay}" Foreground="{DynamicResource Accent}" Margin="12,0,0,0"/></Grid></DataTemplate></ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                        <TextBlock Text="Завершённые рейсы появятся здесь." Style="{StaticResource Hint}" Visibility="{Binding HasNoFlights, Converter={StaticResource BoolVisibility}}" Margin="14,12"/>
-                                    </StackPanel>
-                                </Border>
-                            </StackPanel>
-                            <StackPanel Grid.Column="2">
-                                <DockPanel Margin="0,0,0,8"><Button DockPanel.Dock="Right" Content="Сканировать ASOP" Command="{Binding DetectShipFromOverlayCommand}" Padding="0" Background="Transparent" Foreground="{DynamicResource Accent}"/><TextBlock Text="Состояние игры" Style="{StaticResource SectionTitle}" Margin="0"/></DockPanel>
-                                <Border Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="8" Padding="14">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding LiveLocationDisplay}" TextWrapping="Wrap"/>
-                                        <TextBlock Text="{Binding LiveMissionTitle}" Margin="0,12,0,0" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding LiveMissionHint}" Style="{StaticResource Hint}" Margin="0,4,0,0"/>
-                                        <TextBlock Text="{Binding DataCollectionStatus}" Style="{StaticResource Hint}" Margin="0,12,0,0"/>
-                                    </StackPanel>
-                                </Border>
-                            </StackPanel>
-                        </Grid>
+                        <Border Style="{StaticResource WorkspaceSection}" Padding="0">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="1"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                <StackPanel Margin="18,16">
+                                    <DockPanel Margin="0,0,0,10"><Button DockPanel.Dock="Right" Content="Открыть журнал" Command="{Binding OpenHistoryCommand}" Padding="0" BorderThickness="0" Background="Transparent" Foreground="{DynamicResource Accent}"/><TextBlock Text="Последние рейсы" Style="{StaticResource SectionTitle}" Margin="0"/></DockPanel>
+                                    <ItemsControl ItemsSource="{Binding RecentFlights}">
+                                        <ItemsControl.ItemTemplate><DataTemplate><Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="90"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="{Binding DateDisplay}" Style="{StaticResource Hint}"/><TextBlock Grid.Column="1" Text="{Binding ShipName}" TextTrimming="CharacterEllipsis"/><TextBlock Grid.Column="2" Text="{Binding ResultDisplay}" Foreground="{DynamicResource Accent}" Margin="12,0,0,0"/></Grid></DataTemplate></ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock Text="Завершённые рейсы появятся здесь." Style="{StaticResource Hint}" Visibility="{Binding HasNoRecentFlights, Converter={StaticResource BoolVisibility}}" Margin="0,4,0,0"/>
+                                </StackPanel>
+                                <Border Grid.Column="1" Background="{DynamicResource Border}" Margin="0,16" />
+                                <StackPanel Grid.Column="2" Margin="18,16">
+                                    <DockPanel Margin="0,0,0,10"><Button DockPanel.Dock="Right" Content="Сканировать ASOP" Command="{Binding DetectShipFromOverlayCommand}" Padding="0" BorderThickness="0" Background="Transparent" Foreground="{DynamicResource Accent}"/><TextBlock Text="Состояние игры" Style="{StaticResource SectionTitle}" Margin="0"/></DockPanel>
+                                    <TextBlock Text="{Binding GameProcessStatus}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding LiveLocationDisplay}" Style="{StaticResource Hint}" Margin="0,5,0,0" />
+                                    <TextBlock Text="{Binding LiveMissionTitle}" Margin="0,12,0,0" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding LiveMissionHint}" Style="{StaticResource Hint}" Margin="0,4,0,0"/>
+                                    <TextBlock Text="{Binding DataCollectionStatus}" Style="{StaticResource Hint}" Margin="0,12,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
                     </StackPanel>
                     <StackPanel Visibility="{Binding IsHaulingOpen, Converter={StaticResource BoolVisibility}}">
                         <Border Style="{StaticResource WorkspaceSection}" Visibility="{Binding HasActiveVoyage, Converter={StaticResource BoolVisibility}}">
@@ -610,9 +606,9 @@
                             </Expander>
                         </Border>
                     </StackPanel>
-                    <TabControl Visibility="{Binding IsSettingsOpen, Converter={StaticResource BoolVisibility}}">
+                    <TabControl Visibility="{Binding IsSettingsOpen, Converter={StaticResource BoolVisibility}}" MaxWidth="960" HorizontalAlignment="Left">
                         <TabItem Header="Основные"><StackPanel>
-<Border Style="{StaticResource WorkspaceSection}">
+<Border Style="{StaticResource SettingsSection}">
                                     <StackPanel>
                                         <TextBlock Text="Данные и автоматизация" Style="{StaticResource SectionTitle}" />
                                         <CheckBox IsChecked="{Binding ContractEarningsEnabled}" Margin="0,0,0,12"><TextBlock Text="{Binding ContractEarningsLabel}" TextWrapping="Wrap" /></CheckBox>
@@ -632,7 +628,7 @@
                                         </Expander>
                                     </StackPanel>
                                 </Border>
-<Border Style="{StaticResource WorkspaceSection}">
+<Border Style="{StaticResource SettingsSection}">
                                     <StackPanel>
                                         <TextBlock Text="Отображение" Style="{StaticResource SectionTitle}" />
                                         <CheckBox Content="{Binding ThemeLabel}" IsChecked="{Binding LightTheme}" Margin="0,0,0,12" />
@@ -645,7 +641,7 @@
                                 </Border>
                         </StackPanel></TabItem>
                         <TabItem Header="Игра"><StackPanel>
-<Border Style="{StaticResource WorkspaceSection}">
+<Border Style="{StaticResource SettingsSection}">
                                     <StackPanel>
                                         <TextBlock Text="Подключение к Star Citizen" Style="{StaticResource SectionTitle}" />
                                         <TextBlock Text="Установка игры" Style="{StaticResource FieldLabel}" />
@@ -657,7 +653,7 @@
                                         <TextBlock Text="Ручной выбор нужен только если установка не найдена автоматически." Style="{StaticResource Hint}" Margin="0,7,0,0" />
                                     </StackPanel>
                                 </Border>
-<Border Style="{StaticResource WorkspaceSection}">
+<Border Style="{StaticResource SettingsSection}">
                                     <StackPanel>
                                         <TextBlock Text="Автоматический мониторинг" Style="{StaticResource SectionTitle}" />
                                         <TextBlock Text="Game.log отслеживается постоянно" FontWeight="SemiBold" />
@@ -667,7 +663,7 @@
                                 </Border>
                         </StackPanel></TabItem>
                         <TabItem Header="Оверлей"><StackPanel>
-<Border Style="{StaticResource WorkspaceSection}">
+<Border Style="{StaticResource SettingsSection}">
                                     <StackPanel>
                                         <TextBlock Text="Игровой оверлей" Style="{StaticResource SectionTitle}" />
                                         <Border Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="10" Padding="14" Margin="0,0,0,12" MaxWidth="460" HorizontalAlignment="Left">
@@ -747,7 +743,7 @@
                                 </Border>
                         </StackPanel></TabItem>
                         <TabItem Header="Обновления и данные"><StackPanel>
-<Border Style="{StaticResource WorkspaceSection}">
+<Border Style="{StaticResource SettingsSection}">
                                     <StackPanel>
                                         <TextBlock Text="Обновление программы" Style="{StaticResource SectionTitle}" />
                                         <TextBlock Text="{Binding CurrentAppVersion}" Foreground="{DynamicResource Muted}" Margin="0,0,0,10" />
@@ -766,7 +762,7 @@
                                         </Expander>
                                     </StackPanel>
                                 </Border>
-<Border Style="{StaticResource WorkspaceSection}">
+<Border Style="{StaticResource SettingsSection}">
                             <StackPanel>
                                 <TextBlock Text="Личные данные" Style="{StaticResource SectionTitle}" />
                                 <TextBlock Text="Флот, рейсы и настройки сохраняются автоматически на этом компьютере." Style="{StaticResource Hint}" />

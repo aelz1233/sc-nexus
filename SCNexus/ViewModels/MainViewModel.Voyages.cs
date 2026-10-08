@@ -151,7 +151,7 @@ public partial class MainViewModel
     private async Task BuildVoyagesAsync()
     {
         if (SelectedShip is null) { VoyageStatus = "Сначала выбери корабль из своего флота."; return; }
-        if (_haulingData is null) await LoadMarketAsync(false);
+        await EnsureMarketFreshAsync();
         if (_haulingData is null) { VoyageStatus = "Нет котировок. Обнови цены и попробуй снова."; return; }
         if (SelectedShip is null) { VoyageStatus = "Выбери корабль для расчёта."; return; }
         _voyageCancellation?.Cancel();
@@ -173,6 +173,8 @@ public partial class MainViewModel
             RefreshRouteResults();
             VoyageStatus = plans.Count == 0 ? "Нет подходящих планов. Попробуй другую конечную точку, больше остановок или мягче фильтры."
                 : $"Подобрано планов: {plans.Count}. Сортировка по суммарной прибыли; время и топливо не учтены.";
+            if (data.UsedOldCache || DateTimeOffset.UtcNow - data.PricesFetchedAt >= TimeSpan.FromMinutes(30))
+                VoyageStatus += " Котировки устарели.";
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { VoyageStatus = $"Не удалось построить план: {ex.Message}"; }

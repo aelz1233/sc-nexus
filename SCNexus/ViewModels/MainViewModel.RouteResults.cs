@@ -38,8 +38,12 @@ public partial class MainViewModel
     private async Task FindRoutesAsync()
     {
         if (IsMultiVoyage) await BuildVoyagesAsync();
-        else if (_haulingData is null) await LoadMarketAsync(false);
-        else RecalculateHauling();
+        else
+        {
+            var previous = _haulingData;
+            await EnsureMarketFreshAsync();
+            if (ReferenceEquals(previous, _haulingData)) RecalculateHauling();
+        }
     }
     [RelayCommand]
     private void UseSelectedRoute()

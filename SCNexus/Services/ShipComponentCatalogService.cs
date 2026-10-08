@@ -35,7 +35,6 @@ public sealed class ShipComponentCatalogService
         if (string.IsNullOrWhiteSpace(shipName))
             throw new ArgumentException("Выбери корабль для конфигуратора.", nameof(shipName));
 
-        Directory.CreateDirectory(_cacheDirectory);
         var cachePath = Path.Combine(_cacheDirectory,
             Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(shipName.Trim().ToUpperInvariant()))) + ".json");
         ShipComponentCatalog? cached = null;
@@ -48,6 +47,7 @@ public sealed class ShipComponentCatalogService
             }
             catch (JsonException) { }
             catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
 
         if (cached is { Slots.Count: > 0, SchemaVersion: >= CatalogSchemaVersion } &&
@@ -60,13 +60,20 @@ public sealed class ShipComponentCatalogService
             var temporary = cachePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
             try
             {
+                Directory.CreateDirectory(_cacheDirectory);
                 await using (var file = File.Create(temporary))
                     await JsonSerializer.SerializeAsync(file, catalog, cancellationToken: token);
                 File.Move(temporary, cachePath, true);
             }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // A failed cache write must not discard a usable downloaded catalog.
+            }
             finally
             {
-                if (File.Exists(temporary)) File.Delete(temporary);
+                try { if (File.Exists(temporary)) File.Delete(temporary); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
             }
             return catalog;
         }
@@ -259,7 +266,7 @@ public sealed class ShipComponentCatalogService
         }
     }
 
-    private static double VehicleMatchScore(string requested, string candidate)
+    internal static double VehicleMatchScore(string requested, string candidate)
     {
         var requestedKey = VehicleTokenKey(requested);
         var candidateKey = VehicleTokenKey(candidate);

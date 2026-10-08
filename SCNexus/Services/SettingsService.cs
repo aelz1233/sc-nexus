@@ -11,15 +11,19 @@ public sealed class SettingsService
     private const string CorruptDatabasePrefix = "Повреждена локальная база данных.";
     private readonly DbContextOptions<NexusDbContext> _options;
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly SemaphoreSlim _automaticBackupGate = new(1, 1);
     private readonly bool _databaseExistedAtStartup;
-    private bool _automaticBackupChecked;
+    private readonly TimeProvider _timeProvider;
+    private bool _hasSavedSettings;
+    private DateOnly? _lastAutomaticBackupDay;
     public string DatabasePath { get; }
     public string BackupDirectory => Path.Combine(Path.GetDirectoryName(DatabasePath)!, "backups");
     public string? StartupRecoveryMessage { get; private set; }
     public bool NeedsLanguageSelection { get; private set; }
 
-    public SettingsService(string? databasePath = null)
+    public SettingsService(string? databasePath = null, TimeProvider? timeProvider = null)
     {
+        _timeProvider = timeProvider ?? TimeProvider.System;
         databasePath ??= Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SCNexus", "nexus.db");
         Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
         DatabasePath = Path.GetFullPath(databasePath);
@@ -66,16 +70,18 @@ public sealed class SettingsService
     internal async Task<T> InTransactionAsync<T>(Func<NexusDbContext, Task<T>> action)
     {
         await _gate.WaitAsync();
+        T result;
         try
         {
             await using var db = CreateDbContext();
             await using var transaction = await db.Database.BeginTransactionAsync();
-            var result = await action(db);
+            result = await action(db);
             await db.SaveChangesAsync();
             await transaction.CommitAsync();
-            return result;
         }
         finally { _gate.Release(); }
+        await CreateAutomaticBackupAsync();
+        return result;
     }
 
     private static async Task ConfigureDatabaseAsync(NexusDbContext db)
@@ -279,6 +285,7 @@ public sealed class SettingsService
             else
             {
                 current.Balance = snapshot.Balance;
+                current.BalanceManualUpdatedAt = snapshot.BalanceManualUpdatedAt;
                 current.CurrentShip = snapshot.CurrentShip;
                 current.CurrentLocation = snapshot.CurrentLocation;
                 current.CurrentSystem = snapshot.CurrentSystem;
@@ -320,8 +327,10 @@ public sealed class SettingsService
                 current.LastSessionEndedAt = snapshot.LastSessionEndedAt;
             }
             await db.SaveChangesAsync();
+            _hasSavedSettings = true;
         }
         finally { _gate.Release(); }
+        await CreateAutomaticBackupAsync();
     }
 
     private static async Task AddMissingColumnsAsync(NexusDbContext db)
@@ -336,6 +345,7 @@ public sealed class SettingsService
             await using (var reader = await command.ExecuteReaderAsync())
                 while (await reader.ReadAsync()) names.Add(reader.GetString(1));
             if (!names.Contains("CargoScu")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN CargoScu INTEGER NOT NULL DEFAULT 0");
+            if (!names.Contains("BalanceManualUpdatedAt")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN BalanceManualUpdatedAt TEXT NULL");
             if (!names.Contains("Reserve")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN Reserve TEXT NOT NULL DEFAULT '0'");
             if (!names.Contains("AllowRisky")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN AllowRisky INTEGER NOT NULL DEFAULT 0");
             if (!names.Contains("CurrentSystem")) await db.Database.ExecuteSqlRawAsync("ALTER TABLE PersonalSettings ADD COLUMN CurrentSystem TEXT NOT NULL DEFAULT ''");
@@ -430,14 +440,18 @@ public sealed class SettingsService
 
     private async Task CreateAutomaticBackupAsync()
     {
-        if (_automaticBackupChecked || !_databaseExistedAtStartup) return;
-        _automaticBackupChecked = true;
+        if (!_databaseExistedAtStartup && !_hasSavedSettings) return;
+        var today = DateOnly.FromDateTime(_timeProvider.GetLocalNow().DateTime);
+        if (_lastAutomaticBackupDay == today) return;
+        await _automaticBackupGate.WaitAsync();
         try
         {
+            if (_lastAutomaticBackupDay == today) return;
             Directory.CreateDirectory(BackupDirectory);
-            var name = $"{Path.GetFileNameWithoutExtension(DatabasePath)}-{DateTime.Now:yyyy-MM-dd}.db";
+            var name = $"{Path.GetFileNameWithoutExtension(DatabasePath)}-{today:yyyy-MM-dd}.db";
             var destination = Path.Combine(BackupDirectory, name);
             if (!File.Exists(destination)) await BackupAsync(destination);
+            _lastAutomaticBackupDay = today;
 
             foreach (var old in Directory.EnumerateFiles(BackupDirectory, $"{Path.GetFileNameWithoutExtension(DatabasePath)}-*.db")
                          .Where(path => DateOnly.TryParseExact(Path.GetFileNameWithoutExtension(path)[(Path.GetFileNameWithoutExtension(DatabasePath).Length + 1)..],
@@ -449,5 +463,6 @@ public sealed class SettingsService
         catch (UnauthorizedAccessException) { }
         catch (SqliteException) { }
         catch (InvalidDataException) { }
+        finally { _automaticBackupGate.Release(); }
     }
 }

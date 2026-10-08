@@ -16,6 +16,8 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     public string ThemeLabel => IsEnglish ? "Light theme" : "Светлая тема";
     partial void OnLightThemeChanged(bool value) { ThemeService.Apply(value); QueueSave(); }
     private bool _loaded;
+    private bool _applyingAutomaticBalance;
+    private DateTimeOffset? _balanceManualUpdatedAt;
     private bool _selectingLocation;
     private IReadOnlyList<LocationOption> _allLocations = [];
     private IReadOnlyList<VehicleCatalogItem> _allVehicles = [];
@@ -131,6 +133,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     public async Task InitializeAsync()
     {
         var settings = await settingsService.LoadAsync();
+        _balanceManualUpdatedAt = settings.BalanceManualUpdatedAt;
         Balance = settings.Balance;
         ContractEarningsEnabled = settings.ContractEarningsEnabled;
         LoadContractEarnings(settings.ContractEarningsJson ?? "[]");
@@ -316,7 +319,16 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         AutoFillStatus = $"Подставлена сумма {candidate.AmountDisplay} из журнала. Поле можно исправить вручную.";
     }
 
-    partial void OnBalanceChanged(decimal value) { OnPropertyChanged(nameof(BalanceDisplay)); OnPropertyChanged(nameof(OverlayBalanceDisplay)); OnPropertyChanged(nameof(HaulingBudgetDisplay)); OnPropertyChanged(nameof(TradeBudgetHint)); QueueSave(); RecalculateHauling(); }
+    partial void OnBalanceChanged(decimal value)
+    {
+        if (_loaded && !_applyingAutomaticBalance) _balanceManualUpdatedAt = DateTimeOffset.UtcNow;
+        OnPropertyChanged(nameof(BalanceDisplay));
+        OnPropertyChanged(nameof(OverlayBalanceDisplay));
+        OnPropertyChanged(nameof(HaulingBudgetDisplay));
+        OnPropertyChanged(nameof(TradeBudgetHint));
+        QueueSave();
+        RecalculateHauling();
+    }
     partial void OnCurrentShipChanged(string value) => QueueSave();
     partial void OnCurrentSystemChanged(string value) { OnPropertyChanged(nameof(LocationDisplay)); OnPropertyChanged(nameof(HaulingStartDisplay)); OnPropertyChanged(nameof(DashboardLocationDisplay)); QueueSave(); RecalculateHauling(); }
     partial void OnCurrentLocationChanged(string value) { OnPropertyChanged(nameof(LocationDisplay)); OnPropertyChanged(nameof(HaulingStartDisplay)); OnPropertyChanged(nameof(DashboardLocationDisplay)); QueueSave(); RecalculateHauling(); }
@@ -542,6 +554,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     private PersonalSettings SettingsSnapshot() => new()
         {
             Balance = Balance,
+            BalanceManualUpdatedAt = _balanceManualUpdatedAt,
             CurrentShip = string.IsNullOrWhiteSpace(CurrentShip) ? "Не выбран" : CurrentShip.Trim(),
             CurrentLocation = string.IsNullOrWhiteSpace(CurrentLocation) ? "Не указана" : CurrentLocation.Trim(),
             CurrentSystem = CurrentSystem?.Trim() ?? "",
@@ -627,8 +640,9 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     private async Task OpenHaulingAsync()
     {
         Navigate("Маршруты");
-        if (_haulingData is null) await LoadMarketAsync(false);
-        else RecalculateHauling();
+        var previous = _haulingData;
+        await EnsureMarketFreshAsync();
+        if (ReferenceEquals(previous, _haulingData)) RecalculateHauling();
     }
 
     private void RecalculateHauling()
@@ -665,10 +679,12 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         RefreshRouteResults();
         HaulingBestRoute = _allHaulingRoutes.FirstOrDefault();
         var oldQuote = _allHaulingRoutes.Any(x => DateTimeOffset.UtcNow - x.UpdatedAt > TimeSpan.FromHours(24));
-        HaulingStatus = _allHaulingRoutes.Count == 0
+        var stalePrices = _haulingData.UsedOldCache || oldQuote ||
+            DateTimeOffset.UtcNow - _haulingData.PricesFetchedAt >= TimeSpan.FromMinutes(30);
+        HaulingStatus = (_allHaulingRoutes.Count == 0
             ? "Подходящих рейсов нет. Проверь бюджет, вместимость и фильтры."
-            : $"Найдено {_allHaulingRoutes.Count} маршрутов · данные загружены {_haulingData.PricesFetchedAt.LocalDateTime:dd.MM HH:mm}" +
-              (_haulingData.UsedOldCache || oldQuote ? " · есть устаревшие котировки" : "");
+            : $"Найдено {_allHaulingRoutes.Count} маршрутов · данные загружены {_haulingData.PricesFetchedAt.LocalDateTime:dd.MM HH:mm}") +
+            (stalePrices ? " · есть устаревшие котировки" : "");
     }
 
     [RelayCommand]
