@@ -28,6 +28,7 @@ public static class LocalizationService
         ["Категория маршрута"] = "Route category",
         ["Очистить выбор"] = "Clear selection",
         ["Активный рейс"] = "Active trip",
+        ["Учёт рейса"] = "Trip record",
         ["Ручная запись рейса"] = "Record trip manually",
         ["Подробности рейса"] = "Trip details",
         ["Поиск"] = "Search",

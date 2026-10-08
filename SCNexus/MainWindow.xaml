@@ -207,6 +207,12 @@
                                         <CheckBox Content="Исключить Pyro" IsChecked="{Binding AvoidPyro, Mode=TwoWay}" Margin="0,0,0,8"/>
                                         <CheckBox Content="Включить терминалы NQA" IsChecked="{Binding AllowRisky, Mode=TwoWay}" Margin="0,0,0,8"/>
                                         <CheckBox Content="Только рейсы внутри одной системы" IsChecked="{Binding HaulingSameSystemOnly, Mode=TwoWay}"/>
+                                        <TextBlock Text="Системы маршрута" Style="{StaticResource FieldLabel}" Margin="0,14,0,8"/>
+                                        <ItemsControl ItemsSource="{Binding RouteSystems}">
+                                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate><DataTemplate><CheckBox Content="{Binding Display}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,0,18,8"/></DataTemplate></ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <Button Content="Сбросить фильтры" Command="{Binding ResetRouteFiltersCommand}" HorizontalAlignment="Left" Margin="0,4,0,0"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2">
                                         <TextBlock Text="Бюджет и ограничения" Style="{StaticResource FieldLabel}" Margin="0,0,0,10"/>
@@ -222,17 +228,6 @@
                                         </Grid>
                                     </StackPanel>
                                 </Grid>
-                                <TextBlock Text="Системы маршрута" Style="{StaticResource FieldLabel}" Margin="0,14,0,8"/>
-                                <ItemsControl ItemsSource="{Binding RouteSystems}">
-                                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate><DataTemplate><CheckBox Content="{Binding Display}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,0,18,8"/></DataTemplate></ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <WrapPanel Margin="0,4,0,0">
-                                    <Button Content="Выбрать все" Command="{Binding SelectAllRouteSystemsCommand}" Margin="0,0,8,0"/>
-                                    <Button Content="Очистить выбор" Command="{Binding ClearRouteSystemsCommand}" Margin="0,0,8,0"/>
-                                    <Button Content="Сбросить фильтры" Command="{Binding ResetRouteFiltersCommand}"/>
-                                </WrapPanel>
-                                <TextBlock Text="{Binding RouteSystemsSummary}" Style="{StaticResource Hint}" Margin="0,8,0,0" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Expander>
                         <TextBlock Text="{Binding HaulingStatus}" Style="{StaticResource Hint}" Margin="0,0,0,8"/>
@@ -306,10 +301,7 @@
                                         <TextBlock Text="Активный рейс" Style="{StaticResource FieldLabel}" />
                                         <TextBlock Text="{Binding ActiveFlightDisplay}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding ActiveFlightDisplay}" Margin="0,5,0,0" />
                                     </StackPanel>
-                                    <WrapPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <Button Content="Начать рейс" Command="{Binding StartFlightCommand}" IsEnabled="{Binding CanStartFlight}" Margin="0,0,8,0" />
-                                        <Button Content="Завершить рейс" Command="{Binding FinishFlightCommand}" IsEnabled="{Binding HasActiveFlight}" Style="{StaticResource PrimaryButton}"/>
-                                    </WrapPanel>
+                                    <Button Grid.Column="1" Content="Учёт рейса" Click="OpenFlightEditor_Click" VerticalAlignment="Center"/>
                                 </Grid>
                                 <TextBlock Text="{Binding FlightStatus}" Foreground="{DynamicResource Accent}" TextWrapping="Wrap" Margin="0,7,0,0" />
                             </StackPanel>
@@ -383,107 +375,6 @@
                         </ItemsControl>
                         <Expander Header="Дополнительно" Margin="0,12,0,0" IsExpanded="False">
                             <StackPanel Margin="0,12,0,0">
-                        <Border Style="{StaticResource WorkspaceSection}" MaxWidth="1060" HorizontalAlignment="Left" Margin="0,0,0,12" Padding="14">
-                            <StackPanel>
-                                <Expander Header="Ручная запись рейса" IsExpanded="False">
-                                <StackPanel Margin="0,12,0,0">
-                                <TextBlock Style="{StaticResource Caption}" Text="КОРАБЛЬ" />
-                                <Grid Margin="0,4,0,9">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="3*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                    <ComboBox ItemsSource="{Binding SortedShips}" SelectedItem="{Binding SelectedShip, Mode=TwoWay}" DisplayMemberPath="Name" Margin="0,0,12,0" />
-                                    <TextBlock Grid.Column="1" Text="{Binding CargoScu, StringFormat='Вместимость: {0} SCU'}" Foreground="{DynamicResource Muted}" FontSize="11" VerticalAlignment="Center" />
-                                </Grid>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition />
-                                        <ColumnDefinition />
-                                        <ColumnDefinition />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Margin="0,0,10,0">
-                                        <TextBlock Style="{StaticResource Caption}" Text="ОТКУДА" />
-                                        <TextBox IsReadOnly="{Binding HasActiveFlight}" Text="{Binding FlightOrigin, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0" />
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" Margin="0,0,10,0">
-                                        <TextBlock Style="{StaticResource Caption}" Text="КУДА" />
-                                        <TextBox IsReadOnly="{Binding HasActiveFlight}" Text="{Binding FlightDestination, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0" />
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2">
-                                        <TextBlock Style="{StaticResource Caption}" Text="ТОВАР" />
-                                        <TextBox IsReadOnly="{Binding HasActiveFlight}" Text="{Binding FlightCommodity, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0" />
-                                    </StackPanel>
-                                </Grid>
-                                <Grid Margin="0,9,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition />
-                                        <ColumnDefinition />
-                                        <ColumnDefinition />
-                                        <ColumnDefinition />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Margin="0,0,10,0">
-                                        <TextBlock Style="{StaticResource Caption}" Text="ВЛОЖЕНО" />
-                                        <TextBox Margin="0,6,0,0">
-                                            <TextBox.Text>
-                                                <Binding Path="FlightInvestment" UpdateSourceTrigger="LostFocus" Converter="{StaticResource MoneyConverter}">
-                                                    <Binding.ValidationRules>
-                                                        <ui:MoneyRule />
-                                                    </Binding.ValidationRules>
-                                                </Binding>
-                                            </TextBox.Text>
-                                        </TextBox>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" Margin="0,0,10,0">
-                                        <TextBlock Style="{StaticResource Caption}" Text="ПОЛУЧЕНО" />
-                                        <TextBox Margin="0,6,0,0">
-                                            <TextBox.Text>
-                                                <Binding Path="FlightRevenue" UpdateSourceTrigger="LostFocus" Converter="{StaticResource MoneyConverter}">
-                                                    <Binding.ValidationRules>
-                                                        <ui:MoneyRule />
-                                                    </Binding.ValidationRules>
-                                                </Binding>
-                                            </TextBox.Text>
-                                        </TextBox>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2" Margin="0,0,10,0">
-                                        <TextBlock Style="{StaticResource Caption}" Text="РАСХОДЫ" />
-                                        <TextBox Margin="0,6,0,0">
-                                            <TextBox.Text>
-                                                <Binding Path="FlightExpenses" UpdateSourceTrigger="LostFocus" Converter="{StaticResource MoneyConverter}">
-                                                    <Binding.ValidationRules>
-                                                        <ui:MoneyRule />
-                                                    </Binding.ValidationRules>
-                                                </Binding>
-                                            </TextBox.Text>
-                                        </TextBox>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="3">
-                                        <TextBlock Style="{StaticResource Caption}" Text="ПОТЕРИ" />
-                                        <TextBox Margin="0,6,0,0">
-                                            <TextBox.Text>
-                                                <Binding Path="FlightLosses" UpdateSourceTrigger="LostFocus" Converter="{StaticResource MoneyConverter}">
-                                                    <Binding.ValidationRules>
-                                                        <ui:MoneyRule />
-                                                    </Binding.ValidationRules>
-                                                </Binding>
-                                            </TextBox.Text>
-                                        </TextBox>
-                                    </StackPanel>
-                                </Grid>
-                                <StackPanel Margin="0,11,0,0">
-                                        <WrapPanel>
-                                            <CheckBox Content="Автозаполнение из Game.log" IsChecked="{Binding AutoFillFlightData}" Foreground="{DynamicResource Text}" Margin="0,6,18,6" VerticalAlignment="Center" />
-                                            <Button Content="Обновить из Game.log" Command="{Binding RefreshFlightFromGameLogCommand}" Padding="10,6" />
-                                        </WrapPanel>
-                                        <TextBlock Text="{Binding AutoFillStatus}" Style="{StaticResource Hint}" Margin="0,7,0,0" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,11,0,0">
-                                    <Button Style="{StaticResource PrimaryButton}" Content="Начать рейс" Command="{Binding StartFlightCommand}" IsEnabled="{Binding CanStartFlight}" Margin="0,0,10,0" />
-                                    <Button Content="Завершить рейс" Command="{Binding FinishFlightCommand}" IsEnabled="{Binding HasActiveFlight}" />
-                                </StackPanel>
-
-                                </StackPanel>
-                                </Expander>
-                            </StackPanel>
-                        </Border>
                         <Border Style="{StaticResource WorkspaceSection}" Margin="0,0,0,18">
                             <Expander Header="Торговые запросы из Game.log">
                                 <StackPanel Margin="0,14,0,0">

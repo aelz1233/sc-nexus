@@ -86,6 +86,17 @@ public class WindowRegressionTests
 
                     vm.Language = "en";
                     UiLocalization.Apply(window);
+                    var flightEditor = new FlightEditorWindow(vm) { ShowActivated = false };
+                    flightEditor.Show();
+                    await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                    Assert.Equal("Trip record", flightEditor.Title);
+                    Assert.Contains(VisualDescendants(flightEditor).OfType<Button>(), x => Equals(x.Content, "Start trip"));
+                    Assert.Contains(VisualDescendants(flightEditor).OfType<TextBox>(), x =>
+                        BindingOperations.GetBinding(x, TextBox.TextProperty)?.Path.Path == "FlightOrigin");
+                    vm.Language = "ru";
+                    Assert.Equal("Учёт рейса", flightEditor.Title);
+                    flightEditor.Close();
+                    vm.Language = "en";
                     Assert.Contains(LogicalDescendants(window).OfType<TextBlock>(), x => x.Text == "Dashboard");
                     Assert.Equal("Danger", vm.RouteResults.Single(x => x.Commodity == "Laranite").RiskTitle);
                     Assert.Equal("NEXT ACTION", vm.OverlayActionHeading);

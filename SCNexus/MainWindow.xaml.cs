@@ -106,6 +106,12 @@ public partial class MainWindow : Window
         AddShipPanel.BringIntoView();
     }
 
+    private void OpenFlightEditor_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+            new FlightEditorWindow(vm) { Owner = this }.ShowDialog();
+    }
+
     private void BeginOverlayHotkeyCapture_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not MainViewModel vm) return;
