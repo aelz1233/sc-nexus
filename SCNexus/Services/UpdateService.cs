@@ -16,6 +16,8 @@ public sealed record UpdateRelease(Version Version, string PageUrl, UpdateAsset 
 public sealed class UpdateService
 {
     private const string LatestReleaseUrl = "https://api.github.com/repos/aelz1233/sc-nexus/releases/latest";
+    private const string PublicLatestReleaseUrl = "https://github.com/aelz1233/sc-nexus/releases/latest";
+    private const string PublicReleaseBaseUrl = "https://github.com/aelz1233/sc-nexus/releases/";
     private readonly string _tokenPath;
     private readonly string _latestReleaseUrl;
     private readonly string _stateDirectory;
@@ -95,19 +97,50 @@ public sealed class UpdateService
     public async Task<UpdateRelease> GetLatestAsync(CancellationToken cancellationToken = default)
     {
         var token = ReadToken();
-        using var response = await SendAsync(_latestReleaseUrl, token, false, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        using var json = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-        var root = json.RootElement;
-        var tag = root.GetProperty("tag_name").GetString()?.TrimStart('v', 'V');
-        if (!Version.TryParse(tag, out var version)) throw new InvalidDataException("У релиза GitHub неверный номер версии.");
-        var assets = root.GetProperty("assets").EnumerateArray()
-            .Select(x => new UpdateAsset(x.GetProperty("name").GetString()!, x.GetProperty("url").GetString()!, x.GetProperty("size").GetInt64())).ToArray();
-        var installer = assets.SingleOrDefault(x => x.Name == $"SCNexus-Setup-{version.ToString(3)}-win-x64.exe")
-            ?? throw new InvalidDataException("В релизе нет установщика Windows x64.");
-        var checksums = assets.SingleOrDefault(x => x.Name == "SHA256SUMS.txt")
-            ?? throw new InvalidDataException("В релизе нет контрольных сумм.");
-        return new(version, root.GetProperty("html_url").GetString()!, installer, checksums);
+        HttpResponseMessage response;
+        try
+        {
+            response = await SendAsync(_latestReleaseUrl, token, false, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        }
+        catch (HttpRequestException) when (_latestReleaseUrl == LatestReleaseUrl)
+        {
+            return await GetLatestPublicAsync(cancellationToken);
+        }
+        using (response)
+        {
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var json = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            var root = json.RootElement;
+            var tag = root.GetProperty("tag_name").GetString()?.TrimStart('v', 'V');
+            if (!Version.TryParse(tag, out var version)) throw new InvalidDataException("У релиза GitHub неверный номер версии.");
+            var assets = root.GetProperty("assets").EnumerateArray()
+                .Select(x => new UpdateAsset(x.GetProperty("name").GetString()!, x.GetProperty("url").GetString()!, x.GetProperty("size").GetInt64())).ToArray();
+            var installer = assets.SingleOrDefault(x => x.Name == $"SCNexus-Setup-{version.ToString(3)}-win-x64.exe")
+                ?? throw new InvalidDataException("В релизе нет установщика Windows x64.");
+            var checksums = assets.SingleOrDefault(x => x.Name == "SHA256SUMS.txt")
+                ?? throw new InvalidDataException("В релизе нет контрольных сумм.");
+            return new(version, root.GetProperty("html_url").GetString()!, installer, checksums);
+        }
+    }
+
+    private async Task<UpdateRelease> GetLatestPublicAsync(CancellationToken cancellationToken)
+    {
+        using var response = await SendAsync(PublicLatestReleaseUrl, null, false,
+            HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        var uri = response.RequestMessage?.RequestUri;
+        var prefix = new Uri(PublicReleaseBaseUrl + "tag/v");
+        if (uri is null || uri.Scheme != Uri.UriSchemeHttps ||
+            !uri.Host.Equals(prefix.Host, StringComparison.OrdinalIgnoreCase) ||
+            !uri.AbsolutePath.StartsWith(prefix.AbsolutePath, StringComparison.Ordinal) ||
+            !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment) ||
+            !Version.TryParse(uri.AbsolutePath[prefix.AbsolutePath.Length..], out var version) || version.Build < 0)
+            throw new InvalidDataException("GitHub не вернул адрес опубликованного релиза.");
+        var tag = $"v{version.ToString(3)}";
+        var installerName = $"SCNexus-Setup-{version.ToString(3)}-win-x64.exe";
+        var downloadBase = $"{PublicReleaseBaseUrl}download/{tag}/";
+        return new(version, uri.AbsoluteUri,
+            new UpdateAsset(installerName, downloadBase + installerName, 0),
+            new UpdateAsset("SHA256SUMS.txt", downloadBase + "SHA256SUMS.txt", 0));
     }
 
     public async Task<string> DownloadInstallerAsync(UpdateRelease release, IProgress<int>? progress = null, CancellationToken cancellationToken = default)
@@ -117,8 +150,10 @@ public sealed class UpdateService
         foreach (var asset in new[] { release.Checksums, release.Installer })
         {
             var uri = new Uri(asset.ApiUrl);
-            var trustedHost = uri.Host.Equals(apiHost, StringComparison.OrdinalIgnoreCase);
-            if (uri.Scheme != Uri.UriSchemeHttps || !trustedHost)
+            var trustedApiHost = uri.Host.Equals(apiHost, StringComparison.OrdinalIgnoreCase);
+            var trustedPublicAsset = _latestReleaseUrl == LatestReleaseUrl && asset.ApiUrl ==
+                $"{PublicReleaseBaseUrl}download/v{release.Version.ToString(3)}/{asset.Name}";
+            if (uri.Scheme != Uri.UriSchemeHttps || !(trustedApiHost || trustedPublicAsset))
                 throw new InvalidDataException("Адрес файла обновления не принадлежит доверенному GitHub-хосту.");
         }
         var checksumUri = new Uri(release.Checksums.ApiUrl);

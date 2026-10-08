@@ -152,6 +152,65 @@ public class UpdateServiceTests
     }
 
     [Fact]
+    public async Task PublicReleaseFallbackWorksWhenApiHostIsBlocked()
+    {
+        const string version = "99.88.78";
+        var name = $"SCNexus-Setup-{version}-win-x64.exe";
+        var bytes = Encoding.UTF8.GetBytes("public fallback installer");
+        var hash = Convert.ToHexStringLower(SHA256.HashData(bytes));
+        var root = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        var requests = new List<string>();
+        using var client = new HttpClient(new Handler(request =>
+        {
+            var uri = request.RequestUri!;
+            requests.Add(uri.AbsoluteUri);
+            if (uri.Host == "api.github.com") throw new HttpRequestException("Connection refused");
+            Assert.Equal("github.com", uri.Host);
+            Assert.Null(request.Headers.Authorization);
+            if (uri.AbsolutePath.EndsWith("/releases/latest", StringComparison.Ordinal))
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    RequestMessage = new HttpRequestMessage(HttpMethod.Get,
+                        $"https://github.com/aelz1233/sc-nexus/releases/tag/v{version}"),
+                    Content = new StringContent("release page")
+                };
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = uri.AbsolutePath.EndsWith("/SHA256SUMS.txt", StringComparison.Ordinal)
+                    ? new StringContent($"{hash}  {name}\n")
+                    : new ByteArrayContent(bytes)
+            };
+        }));
+        try
+        {
+            var service = new UpdateService(client, Path.Combine(root, "token.bin"),
+                "https://api.github.com/repos/aelz1233/sc-nexus/releases/latest");
+            var latest = await service.GetLatestAsync();
+            Assert.Equal(new Version(99, 88, 78), latest.Version);
+            Assert.Equal($"https://github.com/aelz1233/sc-nexus/releases/download/v{version}/{name}", latest.Installer.ApiUrl);
+            var path = await service.DownloadInstallerAsync(latest);
+            Assert.Equal(bytes, await File.ReadAllBytesAsync(path));
+            Assert.Equal(4, requests.Count);
+            File.Delete(path);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task PublicReleaseFallbackRejectsUntrustedRedirect()
+    {
+        using var client = new HttpClient(new Handler(request => request.RequestUri!.Host == "api.github.com"
+            ? throw new HttpRequestException("Connection refused")
+            : new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                RequestMessage = new HttpRequestMessage(HttpMethod.Get, "https://example.com/releases/tag/v99.88.78")
+            }));
+        var service = new UpdateService(client, Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")),
+            "https://api.github.com/repos/aelz1233/sc-nexus/releases/latest");
+        await Assert.ThrowsAsync<InvalidDataException>(() => service.GetLatestAsync());
+    }
+
+    [Fact]
     public void PreparedRollbackIsClearedOnlyAfterTargetVersionStartsSuccessfully()
     {
         var root = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
