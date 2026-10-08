@@ -42,6 +42,12 @@ public sealed class DataCollectionService(IEnumerable<IDataProvider> providers, 
     public async Task RefreshAsync(bool ocrEnabled, CancellationToken token = default) =>
         await Task.WhenAll(_providers.Select(x => CollectProviderAsync(x, ocrEnabled, token, true)));
 
+    public Task<string> ScanTradeTerminalAsync(CancellationToken token = default)
+    {
+        var ocr = _providers.OfType<OcrProvider>().FirstOrDefault();
+        return ocr is null ? Task.FromResult("OCR недоступен.") : ocr.ScanTradeTerminalAsync(token);
+    }
+
     public async Task<DataProviderResult?> RefreshOcrAsync(CancellationToken token = default,
         bool scanFleet = false, IProgress<FleetScanSummary>? progress = null)
     {

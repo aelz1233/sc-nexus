@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -16,9 +16,9 @@ public partial class MainViewModel
     [ObservableProperty] private bool isEquipmentOpen;
     partial void OnIsEquipmentOpenChanged(bool value) => OnPropertyChanged(nameof(IsDashboardOpen));
     [RelayCommand]
-    private void OpenEquipment()
+    private void OpenEquipment(ShipSummary? requestedShip)
     {
-        var activeShip = Ships.FirstOrDefault(ship => ship.Name.Equals(CurrentShip, StringComparison.OrdinalIgnoreCase))
+        var activeShip = requestedShip ?? Ships.FirstOrDefault(ship => ship.Name.Equals(CurrentShip, StringComparison.OrdinalIgnoreCase))
             ?? SortedShips.FirstOrDefault(ship => ship.Name.Equals(CurrentShip, StringComparison.OrdinalIgnoreCase))
             ?? SelectedShip
             ?? SortedShips.FirstOrDefault();

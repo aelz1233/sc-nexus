@@ -8,14 +8,15 @@
         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition x:Name="DetailsColumn" Width="360"/></Grid.ColumnDefinitions>
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
         <Grid Grid.ColumnSpan="2" Margin="0,0,0,12">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="Поиск" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <TextBox Text="{Binding RouteSearch, UpdateSourceTrigger=PropertyChanged, Delay=250}" ToolTip="Товар или точка" AutomationProperties.Name="Поиск: товар или точка" Width="240"/>
             </StackPanel>
             <TextBlock Grid.Column="1" Text="{Binding DataStatus}" Style="{StaticResource Hint}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="16,0"/>
             <Button Grid.Column="2" Content="Обновить цены" Command="{Binding RefreshMarketCommand}" VerticalAlignment="Center"/>
-            <CheckBox x:Name="InspectorToggle" Grid.Column="3" Content="Подробности" IsChecked="{Binding ShowRouteInspector}" Checked="OnInspectorChanged" Unchecked="OnInspectorChanged" VerticalAlignment="Center" Margin="14,0,0,0"/>
+            <CheckBox Grid.Column="3" Content="Исключить опасные" IsChecked="{Binding ExcludeDangerousRoutes, Mode=TwoWay}" VerticalAlignment="Center" Margin="14,0,0,0" ToolTip="Скрыть маршруты с пометкой «Опасно»" />
+            <CheckBox x:Name="InspectorToggle" Grid.Column="4" Content="Подробности" IsChecked="{Binding ShowRouteInspector}" Checked="OnInspectorChanged" Unchecked="OnInspectorChanged" VerticalAlignment="Center" Margin="14,0,0,0"/>
         </Grid>
         <Grid Grid.Row="1" Margin="0,0,12,0">
             <Border VerticalAlignment="Top" CornerRadius="8" Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Border}" BorderThickness="1" Padding="1" ClipToBounds="True">

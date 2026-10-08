@@ -21,14 +21,30 @@ public partial class ShipConfiguratorView : System.Windows.Controls.UserControl
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         var main = Window.GetWindow(this)?.DataContext as MainViewModel;
-        if (main is null || ReferenceEquals(_main, main)) return;
-        _main = main;
-        ShipPicker.ItemsSource = main.Ships;
-        ShipPicker.SelectedItem = main.SelectedShip ?? main.Ships.FirstOrDefault();
+        if (main is null) return;
+        if (!ReferenceEquals(_main, main))
+        {
+            _main = main;
+            ShipPicker.ItemsSource = main.Ships;
+        }
+        SyncSelectedShip();
         StatusText.Text = ShipPicker.SelectedItem is ShipSummary
             ? LocalizationService.T("Укажи бюджет и нажми «Подобрать конфигурации».")
             : LocalizationService.T("Добавь корабль во флот, чтобы подобрать оснащение.");
         OnUseBalanceClick(sender, e);
+    }
+
+    private void OnVisibilityChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is true) SyncSelectedShip();
+    }
+
+    private void SyncSelectedShip()
+    {
+        if (_main is null) return;
+        var selected = _main.SelectedShip ?? _main.Ships.FirstOrDefault();
+        if (selected is not null && !ReferenceEquals(ShipPicker.SelectedItem, selected))
+            ShipPicker.SelectedItem = selected;
     }
 
     private void OnShipSelectionChanged(object sender, SelectionChangedEventArgs e)

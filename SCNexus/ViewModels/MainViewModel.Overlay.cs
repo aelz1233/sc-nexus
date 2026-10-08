@@ -23,6 +23,7 @@ public partial class MainViewModel
     [ObservableProperty] private bool isOverlayHotkeyCapturing;
     [ObservableProperty] private bool overlayPreview;
     [ObservableProperty] private bool overlayEditMode;
+    [ObservableProperty] private bool overlayControlsEnabled = true;
     [ObservableProperty] private bool isGameRunning;
     private bool _overlayHotkeyVisible;
     private bool _overlaySuppressed;

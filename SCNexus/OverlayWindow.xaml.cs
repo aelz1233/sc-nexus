@@ -39,7 +39,7 @@ public partial class OverlayWindow : Window
         OverlayChrome.Background = new SolidColorBrush(Color.FromArgb(
             (byte)Math.Round(Math.Clamp(viewModel.OverlayOpacity, .65, 1) * 255), background.R, background.G, background.B));
         OverlayContent.Opacity = Math.Clamp(viewModel.OverlayTextOpacity, .65, 1);
-        ApplyInteractionMode(viewModel.OverlayEditMode);
+        ApplyInteractionMode(viewModel.OverlayEditMode, viewModel.OverlayControlsEnabled);
         PositionAtWorkAreaEdge();
     }
 
@@ -66,21 +66,24 @@ public partial class OverlayWindow : Window
 
     private void MakePassive()
     {
-        ApplyInteractionMode((DataContext as MainViewModel)?.OverlayEditMode == true);
+        var model = DataContext as MainViewModel;
+        ApplyInteractionMode(model?.OverlayEditMode == true, model?.OverlayControlsEnabled == true);
     }
 
-    private void ApplyInteractionMode(bool editable)
+    private void ApplyInteractionMode(bool editable, bool controlsEnabled)
     {
         var handle = new WindowInteropHelper(this).Handle;
         if (handle == IntPtr.Zero) return;
         var style = GetWindowLongPtr(handle, GwlExStyle).ToInt64();
         style |= WsExToolWindow;
         if (editable) style &= ~(WsExTransparent | WsExNoActivate);
-        else
+        else if (controlsEnabled)
         {
-            // HTTRANSPARENT only passes to windows on the same thread. This style also works with the game.
-            style |= WsExTransparent | WsExNoActivate;
+            // Clickable controls without stealing the game's keyboard focus.
+            style &= ~WsExTransparent;
+            style |= WsExNoActivate;
         }
+        else style |= WsExTransparent | WsExNoActivate;
         SetWindowLongPtr(handle, GwlExStyle, new IntPtr(style));
         Focusable = editable;
         Cursor = editable ? Cursors.SizeAll : Cursors.Arrow;

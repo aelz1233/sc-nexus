@@ -25,6 +25,41 @@ public sealed partial class OcrProvider(GameDataService gameDataService) : IData
     public bool ScrollFleetOnRequest { get; set; } = true;
     public TimeSpan RefreshInterval => TimeSpan.FromSeconds(Math.Clamp(IntervalSeconds, 5, 30));
 
+    // Read visible trade-terminal labels only. Never invent a confirmed transaction from OCR.
+    public async Task<string> ScanTradeTerminalAsync(CancellationToken token)
+    {
+        var window = GetForegroundWindow();
+        if (window == IntPtr.Zero || !IsStarCitizen(window))
+            return "Открой торговый терминал в Star Citizen и повтори.";
+        var lines = await CaptureAndRecognizeAsync(window, token);
+        if (GetForegroundWindow() != window)
+            return "Окно игры потеряло фокус. Повтори сканирование.";
+        if (lines.Count == 0) return "OCR не распознал текст. Проверь терминал и разрешение экрана.";
+
+        var useful = lines.Where(x => Regex.IsMatch(x.Text,
+                @"(?i)\b(total|price|quantity|buy|sell|purchase|cargo|cost|unit|trade)\b|итого|стоимост|цена|количеств|купить|продать|покупк|продаж|товар"))
+            .Select(line =>
+            {
+                var caption = line.Text.Trim();
+                // Windows OCR sometimes splits a label and its number into separate boxes.
+                if (!Regex.IsMatch(caption, @"\d"))
+                {
+                    var neighbor = lines.Where(x => !ReferenceEquals(x, line) &&
+                            Regex.IsMatch(x.Text, @"\d") &&
+                            Math.Abs(x.Bounds.Top - line.Bounds.Top) <= Math.Max(12, line.Bounds.Height) &&
+                            x.Bounds.Left >= line.Bounds.Right - 8)
+                        .OrderBy(x => x.Bounds.Left - line.Bounds.Right).FirstOrDefault();
+                    if (neighbor is not null) caption += " " + neighbor.Text.Trim();
+                }
+                return caption.Length > 100 ? caption[..100] + "…" : caption;
+            })
+            .Distinct(StringComparer.OrdinalIgnoreCase).Take(5).ToArray();
+        if (useful.Length == 0)
+            return "Торговые поля не распознаны. Открой экран покупки или продажи и попробуй ещё раз.";
+        var summary = string.Join(" · ", useful);
+        return $"OCR терминала (проверь цифры в игре): {summary}";
+    }
+
     public async Task<DataProviderResult> CollectAsync(DataProviderContext context, CancellationToken token)
     {
         if (!context.OcrEnabled) return new DataProviderResult { Status = "Disabled" };

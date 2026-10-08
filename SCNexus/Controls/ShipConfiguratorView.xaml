@@ -1,7 +1,7 @@
 <UserControl x:Class="SCNexus.Controls.ShipConfiguratorView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Loaded="OnLoaded">
+             Loaded="OnLoaded" IsVisibleChanged="OnVisibilityChanged">
     <UserControl.Resources>
         <DataTemplate x:Key="ComponentLineTemplate">
             <Border Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="8" Padding="11,9" Margin="0,0,0,6">

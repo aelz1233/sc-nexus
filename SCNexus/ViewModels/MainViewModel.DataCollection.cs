@@ -292,6 +292,38 @@ public partial class MainViewModel
         await dataCollectionService.RefreshAsync(OcrEnabled);
     }
 
+    [ObservableProperty] private bool isTerminalScanCapturing;
+    [ObservableProperty] private string terminalScanStatus = "";
+
+    [RelayCommand]
+    private async Task ScanTradeTerminalAsync()
+    {
+        if (IsTerminalScanCapturing) return;
+        if (dataCollectionService is null)
+        {
+            TerminalScanStatus = "OCR недоступен.";
+            return;
+        }
+
+        IsTerminalScanCapturing = true; // Hide the overlay to avoid including it in the captured image.
+        TerminalScanStatus = "Считываю терминал…";
+        try
+        {
+            await Task.Delay(550);
+            TerminalScanStatus = await dataCollectionService.ScanTradeTerminalAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            TerminalScanStatus = "Сканирование отменено.";
+        }
+        catch (Exception ex)
+        {
+            AppLogService.Write("Trade terminal OCR failed", ex);
+            TerminalScanStatus = "Не удалось прочитать терминал. Проверь OCR и окно игры.";
+        }
+        finally { IsTerminalScanCapturing = false; }
+    }
+
     [ObservableProperty] private bool isShipDetectionCapturing;
 
     [RelayCommand]
