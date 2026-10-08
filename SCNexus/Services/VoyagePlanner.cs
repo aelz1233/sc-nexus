@@ -6,7 +6,7 @@ public sealed record VoyageRequest(string Mode, int Capacity, decimal Budget, in
     int DestinationId = 0, string? StartLocation = null, string? StartSystem = null,
     bool AllowRisky = false, bool AvoidPyro = false, bool SameSystemOnly = false,
     int MinimumFill = 0, decimal MinimumProfit = 0, string Category = "Все маршруты",
-    IReadOnlySet<string>? AllowedSystems = null);
+    IReadOnlySet<string>? AllowedSystems = null, bool ExcludeDangerousRoutes = false);
 
 /// <summary>Bounded search over reported quotes. No distance or travel-time assumptions.</summary>
 public sealed class VoyagePlanner
@@ -16,8 +16,9 @@ public sealed class VoyagePlanner
         if (request.Capacity <= 0 || request.Budget <= 0) return [];
         var searchBudget = Math.Max(request.Budget, data.Quotes.Select(x => x.PriceBuy).DefaultIfEmpty().Max() * request.Capacity);
         var edges = new HaulingService().Calculate(data, request.Capacity, searchBudget,
-            request.AllowRisky, request.SameSystemOnly, "За рейс", request.Category,
-            avoidPyro: request.AvoidPyro, allowedSystems: request.AllowedSystems).ToArray();
+            request.AllowRisky && !request.ExcludeDangerousRoutes, request.SameSystemOnly, "За рейс", request.Category,
+            avoidPyro: request.AvoidPyro || request.ExcludeDangerousRoutes, allowedSystems: request.AllowedSystems)
+            .Where(x => !request.ExcludeDangerousRoutes || !x.IsDangerous).ToArray();
         var starts = data.Terminals.Where(x =>
                 (string.IsNullOrWhiteSpace(request.StartLocation) || request.StartLocation == "Не указана" ||
                  x.MatchesLocation(request.StartLocation)) &&

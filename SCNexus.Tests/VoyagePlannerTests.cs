@@ -13,6 +13,21 @@ public class VoyagePlannerTests
         DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, false);
 
     [Fact]
+    public void ExcludingDangerousRoutesFindsLowerProfitSafeCollection()
+    {
+        var data = Data(Quote(1, 1, buy: 10), Quote(2, 1, buy: 11),
+            Quote(3, 1, sell: 20), Quote(5, 1, sell: 1000));
+        var request = new VoyageRequest("Сбор груза", 10, 1000);
+        var all = new VoyagePlanner().Calculate(data, request);
+        Assert.Contains(all, plan => plan.Trades.Any(route => route.IsDangerous));
+
+        var safe = new VoyagePlanner().Calculate(data, request with { ExcludeDangerousRoutes = true });
+        Assert.NotEmpty(safe);
+        Assert.All(safe, plan => Assert.All(plan.Trades, route => Assert.False(route.IsDangerous)));
+        Assert.True(safe.Max(plan => plan.Profit) < all.Max(plan => plan.Profit));
+    }
+
+    [Fact]
     public void ChainReinvestsSalesAndConnectsExactTerminals()
     {
         var data = Data(Quote(1, 1, buy: 100), Quote(2, 1, sell: 200), Quote(2, 2, buy: 1500), Quote(3, 2, sell: 2000));

@@ -15,6 +15,9 @@ public static class LocalizationService
     private static readonly Dictionary<string, string> English = new(StringComparer.Ordinal)
     {
         ["Подробности"] = "Details",
+        ["Активный рейс"] = "Active trip",
+        ["Ручная запись рейса"] = "Record trip manually",
+        ["Подробности рейса"] = "Trip details",
         ["Поиск"] = "Search",
         ["ОПЕРАЦИИ ПОЛЁТА"] = "FLIGHT OPERATIONS",
         ["ЛОКАЛЬНОЕ РАБОЧЕЕ ПРОСТРАНСТВО"] = "LOCAL WORKSPACE",

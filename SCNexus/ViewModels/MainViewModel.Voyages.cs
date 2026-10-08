@@ -164,7 +164,7 @@ public partial class MainViewModel
         VoyageStatus = "Подбираю остановки, товары и объёмы…";
         var request = new VoyageRequest(VoyageMode, SelectedShip.Ship.CargoScu, Math.Max(0, Balance - Reserve),
             VoyageMaxPurchases, VoyageDestination?.Id ?? 0, CurrentLocation, CurrentSystem,
-            AllowRisky, AvoidPyro, HaulingSameSystemOnly, MinimumFillPercent, MinimumProfit, HaulingCategory, AllowedRouteSystems);
+            AllowRisky, AvoidPyro, HaulingSameSystemOnly, MinimumFillPercent, MinimumProfit, HaulingCategory, AllowedRouteSystems, ExcludeDangerousRoutes);
         var data = _haulingData;
         try
         {
@@ -172,7 +172,9 @@ public partial class MainViewModel
             cancellation.Token.ThrowIfCancellationRequested();
             foreach (var plan in plans) VoyagePlans.Add(plan);
             RefreshRouteResults();
-            VoyageStatus = plans.Count == 0 ? "Нет подходящих планов. Попробуй другую конечную точку, больше остановок или мягче фильтры."
+            VoyageStatus = plans.Count == 0 ? (ExcludeDangerousRoutes
+                ? "Безопасных маршрутов с текущим бюджетом и условиями нет. Измени фильтры или начальную систему."
+                : "Нет подходящих планов. Попробуй другую конечную точку, больше остановок или мягче фильтры.")
                 : $"Подобрано планов: {plans.Count}. Сортировка по суммарной прибыли; время и топливо не учтены.";
             if (data.UsedOldCache || DateTimeOffset.UtcNow - data.PricesFetchedAt >= TimeSpan.FromMinutes(30))
                 VoyageStatus += " Котировки устарели.";

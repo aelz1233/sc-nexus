@@ -21,7 +21,14 @@ public partial class MainViewModel
     partial void OnShowRouteInspectorChanged(bool value) => OnPropertyChanged(nameof(HasRouteSelection));
     public bool NoRouteResults => RouteResults.Count == 0;
     partial void OnRouteSearchChanged(string value) => RefreshRouteResults();
-    partial void OnExcludeDangerousRoutesChanged(bool value) => RefreshRouteResults();
+    partial void OnExcludeDangerousRoutesChanged(bool value)
+    {
+        RefreshRouteResults();
+        // Plans were capped to the top 12; changing risk must run the planner again,
+        // not merely hide those 12 rows (which may all be in Pyro).
+        if (IsMultiVoyage && SelectedShip is not null && _haulingData is not null)
+            _ = BuildVoyagesAsync();
+    }
     partial void OnSelectedRouteResultChanged(RouteResult? value) => OnPropertyChanged(nameof(HasRouteSelection));
     private void RefreshRouteResults()
     {

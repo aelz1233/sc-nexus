@@ -260,34 +260,94 @@
                         <ui:ShipConfiguratorView />
                     </StackPanel>
                     <StackPanel Visibility="{Binding IsHistoryOpen, Converter={StaticResource BoolVisibility}}">
-                        <Border Style="{StaticResource WorkspaceSection}" Margin="0,0,0,16">
-                            <Expander Header="Автоматический журнал игры">
-                                <StackPanel Margin="0,14,0,0">
-                                    <TextBlock Text="События появляются из Game.log автоматически; неподтверждённые данные Nexus не придумывает." Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,0,0,10" />
-                                    <WrapPanel>
-                                        <TextBlock Text="Миссии" Foreground="{DynamicResource Muted}" />
-                                        <TextBlock Text="{Binding DetectedMissions.Count, StringFormat=: {0}}" Margin="0,0,18,0" />
-                                        <TextBlock Text="Смерти" Foreground="{DynamicResource Muted}" />
-                                        <TextBlock Text="{Binding DetectedDeaths, StringFormat=: {0}}" Margin="0,0,18,0" />
-                                        <TextBlock Text="Перемещения" Foreground="{DynamicResource Muted}" />
-                                        <TextBlock Text="{Binding DetectedMovements, StringFormat=: {0}}" />
+                        <Border Style="{StaticResource WorkspaceSection}" Padding="16" Margin="0,0,0,12">
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,14,0">
+                                        <TextBlock Text="Активный рейс" Style="{StaticResource FieldLabel}" />
+                                        <TextBlock Text="{Binding ActiveFlightDisplay}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding ActiveFlightDisplay}" Margin="0,5,0,0" />
+                                    </StackPanel>
+                                    <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <Button Content="Начать рейс" Command="{Binding StartFlightCommand}" IsEnabled="{Binding CanStartFlight}" Margin="0,0,8,0" />
+                                        <Button Content="Завершить рейс" Command="{Binding FinishFlightCommand}" IsEnabled="{Binding HasActiveFlight}" Style="{StaticResource PrimaryButton}"/>
                                     </WrapPanel>
-                                    <ItemsControl ItemsSource="{Binding DetectedMissions}" Margin="0,12,0,0">
-                                        <ItemsControl.ItemTemplate><DataTemplate>
-                                            <Grid Margin="0,0,0,6">
-                                                <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding DisplayName}" ToolTip="{Binding Name.Value}" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="1" Text="{Binding StatusDisplay}" Foreground="{DynamicResource Muted}" Margin="12,0,0,0" />
-                                            </Grid>
-                                        </DataTemplate></ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </Expander>
+                                </Grid>
+                                <TextBlock Text="{Binding FlightStatus}" Foreground="{DynamicResource Accent}" TextWrapping="Wrap" Margin="0,7,0,0" />
+                            </StackPanel>
                         </Border>
-                        <TextBlock Text="{Binding ActiveFlightDisplay}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding ActiveFlightDisplay}" Margin="0,0,0,12" />
+                        <Border Style="{StaticResource WorkspaceSection}" Padding="16" Margin="0,0,0,14">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="180"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,14,0">
+                                    <TextBlock Text="Период статистики" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox ItemsSource="{Binding FlightStatisticsPeriods}" SelectedItem="{Binding FlightStatisticsPeriod}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{Binding TotalIncomeLabel}" Style="{StaticResource FieldLabel}" />
+                                    <TextBlock Text="{Binding FlightStatisticsDisplay}" FontSize="16" FontWeight="SemiBold" />
+
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <DockPanel Margin="0,0,0,14">
+                            <Button DockPanel.Dock="Right" Content="Экспорт CSV" Command="{Binding ExportFlightsCommand}" />
+                            <TextBlock Text="История рейсов" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding FilteredFlights}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource WorkspaceSection}" Margin="0,0,0,10">
+                                        <StackPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="2*" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding DateDisplay}" Foreground="{DynamicResource Muted}" />
+                                                    <TextBlock Text="{Binding ShipName}" Margin="0,6,0,0" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1">
+                                                    <TextBlock Text="{Binding CommodityDisplay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding CommodityDisplay}" />
+                                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                        <TextBlock Text="{Binding Origin}" />
+                                                        <TextBlock Text=" → " />
+                                                        <TextBlock Text="{Binding Destination}" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="2">
+                                                    <TextBlock Text="{Binding ResultDisplay}" FontWeight="Bold" />
+                                                    <TextBlock Text="{Binding DurationDisplay}" Foreground="{DynamicResource Muted}" Margin="0,6,0,0" />
+
+                                                </StackPanel>
+                                            </Grid>
+                                            <Expander Header="Подробности рейса" Margin="0,7,0,0">
+                                                <StackPanel>
+                                            <WrapPanel Margin="0,12,0,0">
+                                                <TextBlock Text="Вложено: " Foreground="{DynamicResource Muted}" />
+                                                <TextBlock Text="{Binding Investment, StringFormat={}{0:N0} aUEC}" />
+                                                <TextBlock Text="    Получено: " Foreground="{DynamicResource Muted}" />
+                                                <TextBlock Text="{Binding Revenue, StringFormat={}{0:N0} aUEC}" />
+                                                <TextBlock Text="    Расходы и потери: " Foreground="{DynamicResource Muted}" />
+                                                <TextBlock Text="{Binding Expenses, StringFormat={}{0:N0}}" />
+                                                <TextBlock Text=" + " />
+                                                <TextBlock Text="{Binding Losses, StringFormat={}{0:N0} aUEC}" />
+                                            </WrapPanel>
+                                                    <Button Content="Удалить из статистики" Command="{Binding DataContext.DeleteFlightFromStatisticsCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding CanDeleteFromStatistics}" Padding="8,5" Margin="0,10,0,0" HorizontalAlignment="Left" Background="{DynamicResource Hover}" />
+                                                </StackPanel>
+                                            </Expander>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Expander Header="Дополнительно" Margin="0,12,0,0" IsExpanded="False">
+                            <StackPanel Margin="0,12,0,0">
                         <Border Style="{StaticResource WorkspaceSection}" MaxWidth="1060" HorizontalAlignment="Left" Margin="0,0,0,12" Padding="14">
                             <StackPanel>
-                                <Expander Header="{Binding RecordTripLabel}" IsExpanded="False">
+                                <Expander Header="Ручная запись рейса" IsExpanded="False">
                                 <StackPanel Margin="0,12,0,0">
                                 <TextBlock Style="{StaticResource Caption}" Text="КОРАБЛЬ" />
                                 <Grid Margin="0,4,0,9">
@@ -381,7 +441,7 @@
                                     <Button Style="{StaticResource PrimaryButton}" Content="Начать рейс" Command="{Binding StartFlightCommand}" IsEnabled="{Binding CanStartFlight}" Margin="0,0,10,0" />
                                     <Button Content="Завершить рейс" Command="{Binding FinishFlightCommand}" IsEnabled="{Binding HasActiveFlight}" />
                                 </StackPanel>
-                                <TextBlock Text="{Binding FlightStatus}" Foreground="{DynamicResource Accent}" TextWrapping="Wrap" Margin="0,7,0,0" />
+
                                 </StackPanel>
                                 </Expander>
                             </StackPanel>
@@ -415,20 +475,6 @@
                                 </StackPanel>
                             </Expander>
                         </Border>
-                        <Border Style="{StaticResource WorkspaceSection}" Padding="16" Margin="0,0,0,14">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="180"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                <StackPanel Margin="0,0,14,0">
-                                    <TextBlock Text="Период статистики" Style="{StaticResource FieldLabel}" />
-                                    <ComboBox ItemsSource="{Binding FlightStatisticsPeriods}" SelectedItem="{Binding FlightStatisticsPeriod}" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="1">
-                                    <TextBlock Text="{Binding TotalIncomeLabel}" Style="{StaticResource FieldLabel}" />
-                                    <TextBlock Text="{Binding FlightStatisticsDisplay}" FontSize="16" FontWeight="SemiBold" />
-                                    <TextBlock Text="История ниже отфильтрована по времени завершения. Активный рейс всегда виден." Style="{StaticResource Hint}" Margin="0,5,0,0" />
-                                </StackPanel>
-                            </Grid>
-                        </Border>
                         <Border Style="{StaticResource WorkspaceSection}">
                             <StackPanel>
                                 <TextBlock Text="{Binding ContractEarningsTitle}" Style="{StaticResource SectionTitle}" />
@@ -445,54 +491,32 @@
                                 <ItemsControl ItemsSource="{Binding VisibleContractEarnings}"><ItemsControl.ItemTemplate><DataTemplate><DockPanel Margin="0,8,0,0"><Button DockPanel.Dock="Right" Content="{Binding DataContext.DeleteContractLabel, RelativeSource={RelativeSource AncestorType=Window}}" Command="{Binding DataContext.DeleteContractEarningCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" /><TextBlock Text="{Binding Display}" TextWrapping="Wrap" VerticalAlignment="Center" /></DockPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
                             </StackPanel>
                         </Border>
-                        <DockPanel Margin="0,0,0,14">
-                            <Button DockPanel.Dock="Right" Content="Экспорт CSV" Command="{Binding ExportFlightsCommand}" />
-                            <TextBlock Text="История рейсов" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
-                        </DockPanel>
-                        <ItemsControl ItemsSource="{Binding FilteredFlights}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Style="{StaticResource WorkspaceSection}" Margin="0,0,0,10">
-                                        <StackPanel>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="2*" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding DateDisplay}" Foreground="{DynamicResource Muted}" />
-                                                    <TextBlock Text="{Binding ShipName}" Margin="0,6,0,0" />
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="1">
-                                                    <TextBlock Text="{Binding CommodityDisplay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding CommodityDisplay}" />
-                                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                                        <TextBlock Text="{Binding Origin}" />
-                                                        <TextBlock Text=" → " />
-                                                        <TextBlock Text="{Binding Destination}" />
-                                                    </StackPanel>
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="2">
-                                                    <TextBlock Text="{Binding ResultDisplay}" FontWeight="Bold" />
-                                                    <TextBlock Text="{Binding DurationDisplay}" Foreground="{DynamicResource Muted}" Margin="0,6,0,0" />
-                                                    <Button Content="Удалить из статистики" Command="{Binding DataContext.DeleteFlightFromStatisticsCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" IsEnabled="{Binding CanDeleteFromStatistics}" Padding="8,5" Margin="0,10,0,0" HorizontalAlignment="Left" Background="{DynamicResource Hover}" />
-                                                </StackPanel>
+                        <Border Style="{StaticResource WorkspaceSection}" Margin="0,0,0,16">
+                            <Expander Header="Автоматический журнал игры">
+                                <StackPanel Margin="0,14,0,0">
+                                    <TextBlock Text="События появляются из Game.log автоматически; неподтверждённые данные Nexus не придумывает." Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,0,0,10" />
+                                    <WrapPanel>
+                                        <TextBlock Text="Миссии" Foreground="{DynamicResource Muted}" />
+                                        <TextBlock Text="{Binding DetectedMissions.Count, StringFormat=: {0}}" Margin="0,0,18,0" />
+                                        <TextBlock Text="Смерти" Foreground="{DynamicResource Muted}" />
+                                        <TextBlock Text="{Binding DetectedDeaths, StringFormat=: {0}}" Margin="0,0,18,0" />
+                                        <TextBlock Text="Перемещения" Foreground="{DynamicResource Muted}" />
+                                        <TextBlock Text="{Binding DetectedMovements, StringFormat=: {0}}" />
+                                    </WrapPanel>
+                                    <ItemsControl ItemsSource="{Binding DetectedMissions}" Margin="0,12,0,0">
+                                        <ItemsControl.ItemTemplate><DataTemplate>
+                                            <Grid Margin="0,0,0,6">
+                                                <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding DisplayName}" ToolTip="{Binding Name.Value}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Text="{Binding StatusDisplay}" Foreground="{DynamicResource Muted}" Margin="12,0,0,0" />
                                             </Grid>
-                                            <WrapPanel Margin="0,12,0,0">
-                                                <TextBlock Text="Вложено: " Foreground="{DynamicResource Muted}" />
-                                                <TextBlock Text="{Binding Investment, StringFormat={}{0:N0} aUEC}" />
-                                                <TextBlock Text="    Получено: " Foreground="{DynamicResource Muted}" />
-                                                <TextBlock Text="{Binding Revenue, StringFormat={}{0:N0} aUEC}" />
-                                                <TextBlock Text="    Расходы и потери: " Foreground="{DynamicResource Muted}" />
-                                                <TextBlock Text="{Binding Expenses, StringFormat={}{0:N0}}" />
-                                                <TextBlock Text=" + " />
-                                                <TextBlock Text="{Binding Losses, StringFormat={}{0:N0} aUEC}" />
-                                            </WrapPanel>
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                                        </DataTemplate></ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Expander>
+                        </Border>
+                            </StackPanel>
+                        </Expander>
                     </StackPanel>
                     <StackPanel Visibility="{Binding IsToolsOpen, Converter={StaticResource BoolVisibility}}">
                         <Border Style="{StaticResource WorkspaceSection}" Background="{DynamicResource BalanceBrush}" BorderBrush="{DynamicResource Border}" Margin="0,0,0,18">
