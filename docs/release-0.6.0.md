@@ -1,4 +1,4 @@
-# SC NEXUS 0.5.21
+# SC NEXUS 0.6.0
 
 ## English
 - Refined the minimal workspace: the dashboard now shows recent trips and live game status without empty placeholder cards.
