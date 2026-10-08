@@ -71,20 +71,20 @@
                         <ItemsControl ItemsSource="{Binding OverlayChecklist}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <CheckBox IsChecked="{Binding IsDone, Mode=TwoWay}" Margin="0,3,4,3">
+                                    <CheckBox IsChecked="{Binding IsDone, Mode=TwoWay}" IsEnabled="{Binding DataContext.OverlayControlsEnabled, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,3,4,3">
                                         <TextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="11" />
                                     </CheckBox>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
-                    <WrapPanel Margin="0,8,0,0">
+                    <WrapPanel Margin="0,8,0,0" Visibility="{Binding OverlayControlsEnabled, Converter={StaticResource BoolVisibility}}">
                         <Button Content="← Назад" Command="{Binding PreviousChecklistStopCommand}" Padding="9,5" Margin="0,0,6,0" />
                         <Button Content="Шаг выполнен →" Command="{Binding CompleteChecklistStopCommand}" Padding="9,5" Style="{StaticResource PrimaryButton}" Margin="0,0,6,0" />
                         <Button Content="{Binding OverlayChecklistSwitchText}" Command="{Binding SwitchOverlayChecklistCommand}" Visibility="{Binding CanSwitchOverlayChecklist, Converter={StaticResource BoolVisibility}}" Padding="9,5" />
                     </WrapPanel>
                 </StackPanel>
-                <Button Content="Сканировать терминал" Command="{Binding ScanTradeTerminalCommand}" HorizontalAlignment="Left" Padding="10,6" Margin="0,10,0,0" />
+                <Button Content="Сканировать терминал" Command="{Binding ScanTradeTerminalCommand}" Visibility="{Binding OverlayControlsEnabled, Converter={StaticResource BoolVisibility}}" HorizontalAlignment="Left" Padding="10,6" Margin="0,10,0,0" />
                 <TextBlock Text="{Binding TerminalScanStatus}" FontSize="10" Foreground="{DynamicResource Muted}" TextWrapping="Wrap" Margin="0,5,0,0" />
 
                 <TextBlock Text="{Binding OverlayControlHint}" Visibility="{Binding OverlayEditMode, Converter={StaticResource BoolVisibility}}"

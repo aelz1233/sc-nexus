@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using SCNexus.ViewModels;
+using SCNexus.Services;
 
 namespace SCNexus;
 
@@ -23,7 +24,11 @@ public partial class OverlayWindow : Window
         {
             MakePassive();
         };
-        Loaded += (_, _) => PositionAtWorkAreaEdge();
+        Loaded += (_, _) =>
+        {
+            PositionAtWorkAreaEdge();
+            UiLocalization.Apply(this);
+        };
         SizeChanged += (_, _) => PositionAtWorkAreaEdge();
         MouseLeftButtonDown += OnMouseLeftButtonDown;
     }
@@ -40,6 +45,7 @@ public partial class OverlayWindow : Window
             (byte)Math.Round(Math.Clamp(viewModel.OverlayOpacity, .65, 1) * 255), background.R, background.G, background.B));
         OverlayContent.Opacity = Math.Clamp(viewModel.OverlayTextOpacity, .65, 1);
         ApplyInteractionMode(viewModel.OverlayEditMode, viewModel.OverlayControlsEnabled);
+        if (IsLoaded) UiLocalization.Apply(this);
         PositionAtWorkAreaEdge();
     }
 

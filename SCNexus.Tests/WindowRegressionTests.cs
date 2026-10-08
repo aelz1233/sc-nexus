@@ -296,7 +296,18 @@ public class WindowRegressionTests
                     overlay.Show();
                     overlay.UpdateLayout();
                     await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                    // The overlay now has opt-in interactive controls; verify both modes.
+                    Assert.Contains(VisualDescendants(overlay).OfType<Button>(),
+                        x => x.IsVisible && Equals(x.Content, "Scan terminal"));
+                    Assert.Contains(VisualDescendants(overlay).OfType<Button>(),
+                        x => x.IsVisible && Equals(x.Content, "Step complete →"));
+                    vm.OverlayControlsEnabled = false;
+                    overlay.ApplySettings(vm);
+                    overlay.UpdateLayout();
                     Assert.DoesNotContain(VisualDescendants(overlay).OfType<Button>(), x => x.IsVisible);
+                    vm.OverlayControlsEnabled = true;
+                    overlay.ApplySettings(vm);
+                    overlay.UpdateLayout();
                     Assert.DoesNotContain(VisualDescendants(overlay).OfType<TextBlock>(), x => x.IsVisible && x.Text == vm.BalanceDisplay);
                     Assert.DoesNotContain(VisualDescendants(overlay).OfType<TextBlock>(), x => x.IsVisible && x.Text == vm.OverlayShipSourceDisplay);
                     Assert.DoesNotContain(VisualDescendants(overlay).OfType<TextBlock>(), x =>
