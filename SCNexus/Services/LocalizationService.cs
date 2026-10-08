@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 
@@ -18,6 +19,11 @@ public static class LocalizationService
         ["Фильтры"] = "Filters",
         ["Начальная локация"] = "Starting location",
         ["Все системы или конкретная система отправления"] = "All systems or a specific departure system",
+        ["Токен GitHub с доступом Contents: Read только к этому репозиторию"] = "GitHub token with Contents: Read access to this repository only",
+        ["Системы появятся после загрузки котировок."] = "Systems will appear after market prices load.",
+        ["Ни одна система не выбрана — выбери хотя бы одну."] = "No systems selected — choose at least one.",
+        ["Все остановки только в выбранных системах: "] = "All stops only in selected systems: ",
+        [" и UEX Corp."] = " and UEX Corp.",
         ["Безопасность"] = "Safety",
         ["Категория маршрута"] = "Route category",
         ["Очистить выбор"] = "Clear selection",
@@ -382,6 +388,11 @@ public static class UiLocalization
                     x => text.SetCurrentValue(TextBlock.TextProperty, x),
                     () => text.GetBindingExpression(TextBlock.TextProperty)?.UpdateTarget());
                 break;
+            case Run run:
+                Translate(item, Run.TextProperty, run.Text, BindingOperations.IsDataBound(run, Run.TextProperty),
+                    x => run.SetCurrentValue(Run.TextProperty, x),
+                    () => run.GetBindingExpression(Run.TextProperty)?.UpdateTarget());
+                break;
             case HeaderedContentControl header when header.Header is string value:
                 Translate(item, HeaderedContentControl.HeaderProperty, value, BindingOperations.IsDataBound(header, HeaderedContentControl.HeaderProperty),
                     x => header.SetCurrentValue(HeaderedContentControl.HeaderProperty, x),
@@ -402,11 +413,17 @@ public static class UiLocalization
             Translate(item, AutomationProperties.NameProperty, automationName, BindingOperations.IsDataBound(item, AutomationProperties.NameProperty),
                 x => item.SetCurrentValue(AutomationProperties.NameProperty, x),
                 () => BindingOperations.GetBindingExpression(item, AutomationProperties.NameProperty)?.UpdateTarget());
+        if (item is DataGrid grid)
+            foreach (var column in grid.Columns)
+                if (column.Header is string header)
+                    Translate(column, DataGridColumn.HeaderProperty, header, BindingOperations.IsDataBound(column, DataGridColumn.HeaderProperty),
+                        x => column.SetCurrentValue(DataGridColumn.HeaderProperty, x),
+                        () => BindingOperations.GetBindingExpression(column, DataGridColumn.HeaderProperty)?.UpdateTarget());
         var count = item is Visual or Visual3D ? VisualTreeHelper.GetChildrenCount(item) : 0;
         for (var i = 0; i < count; i++) Visit(VisualTreeHelper.GetChild(item, i));
         if (count == 0 && item is FrameworkElement element)
         {
-            foreach (var child in LogicalTreeHelper.GetChildren(element).OfType<DependencyObject>()) Visit(child);
+            foreach (var child in LogicalTreeHelper.GetChildren(element).OfType<DependencyObject>().ToArray()) Visit(child);
         }
     }
 

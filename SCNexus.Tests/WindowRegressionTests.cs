@@ -94,14 +94,21 @@ public class WindowRegressionTests
                     UiLocalization.Apply(localizedHint);
                     Assert.Equal("Commodity or location", localizedHint.ToolTip);
                     Assert.Equal("Search: commodity or location", AutomationProperties.GetName(localizedHint));
+                    var sources = new TextBlock();
+                    var sourcesLabel = new System.Windows.Documents.Run("Источники: ");
+                    sources.Inlines.Add(sourcesLabel);
+                    UiLocalization.Apply(sources);
+                    Assert.Equal("Sources: ", sourcesLabel.Text);
                     var pageTitle = LogicalDescendants(window).OfType<TextBlock>().Single(x =>
                         BindingOperations.GetBinding(x, TextBlock.TextProperty)?.Path.Path == "PageTitle");
                     Assert.NotNull(BindingOperations.GetBinding(pageTitle, TextBlock.TextProperty));
                     vm.Language = "ru";
                     UiLocalization.Apply(window);
                     UiLocalization.Apply(localizedHint);
+                    UiLocalization.Apply(sources);
                     Assert.Equal("Товар или точка", localizedHint.ToolTip);
                     Assert.Equal("Поиск: товар или точка", AutomationProperties.GetName(localizedHint));
+                    Assert.Equal("Источники: ", sourcesLabel.Text);
 
                     // Exercise real templates at the supported minimum and normal window sizes.
                     window.ShowActivated = false;
@@ -110,10 +117,31 @@ public class WindowRegressionTests
                         .Invoke(vm, ["Маршруты"]);
                     window.UpdateLayout();
                     await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-                    var routeTabs = (TabControl)window.FindName("RouteTabs");
-                    Assert.Equal(2, routeTabs.Items.Count);
-                    Assert.Equal("Маршруты", ((TabItem)routeTabs.Items[0]).Header);
-                    Assert.Equal("Фильтры", ((TabItem)routeTabs.Items[1]).Header);
+                    var routeFilters = (Expander)window.FindName("RouteFilters");
+                    Assert.False(routeFilters.IsExpanded);
+                    routeFilters.IsExpanded = true;
+                    window.UpdateLayout();
+                    var dangerousFilter = LogicalDescendants(routeFilters).OfType<CheckBox>().Single(x =>
+                        Equals(x.Content, "Исключить опасные"));
+                    dangerousFilter.IsChecked = true;
+                    Assert.True(vm.ExcludeDangerousRoutes);
+                    Assert.Equal(2, vm.RouteResults.Count);
+                    dangerousFilter.IsChecked = false;
+                    Assert.Equal(3, vm.RouteResults.Count);
+                    Assert.Contains(LogicalDescendants(routeFilters).OfType<Button>(), x =>
+                        Equals(x.Content, "Сбросить фильтры"));
+                    vm.Language = "en";
+                    await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                    UiLocalization.Apply(window);
+                    Assert.Equal("Filters", routeFilters.Header);
+                    Assert.Contains(LogicalDescendants(routeFilters).OfType<CheckBox>(), x =>
+                        Equals(x.Content, "Exclude dangerous routes"));
+                    Assert.Equal("Systems will appear after market prices load.", LocalizationService.T(vm.RouteSystemsSummary));
+                    Assert.DoesNotContain(VisualDescendants(routeFilters).OfType<TextBlock>(), x =>
+                        x.IsVisible && System.Text.RegularExpressions.Regex.IsMatch(x.Text ?? "", "[А-Яа-яЁё]"));
+                    vm.Language = "ru";
+                    UiLocalization.Apply(window);
+                    routeFilters.IsExpanded = false;
                     Assert.Equal("Все системы", ((ComboBox)window.FindName("RouteStartSelector")).SelectedItem);
                     var resultsGrid = LogicalDescendants(window).OfType<SCNexus.Controls.RouteResultsView>().Single().FindName("Results") as DataGrid;
                     Assert.NotNull(resultsGrid);
@@ -175,9 +203,17 @@ public class WindowRegressionTests
                         if (page == "Маршруты")
                             Assert.Contains(VisualDescendants(window).OfType<TextBlock>(), x => x.IsVisible && x.Text == "Laranite");
                         if (language == "en")
+                        {
                             untranslatedEnglish.UnionWith(VisualDescendants(window).OfType<TextBlock>()
                                 .Where(x => x.IsVisible && System.Text.RegularExpressions.Regex.IsMatch(x.Text ?? "", "[А-Яа-яЁё]"))
                                 .Select(x => x.Text));
+                            untranslatedEnglish.UnionWith(VisualDescendants(window).OfType<ContentControl>()
+                                .Where(x => x.IsVisible && x.Content is string text && System.Text.RegularExpressions.Regex.IsMatch(text, "[А-Яа-яЁё]"))
+                                .Select(x => (string)x.Content));
+                            untranslatedEnglish.UnionWith(VisualDescendants(window).OfType<HeaderedContentControl>()
+                                .Where(x => x.IsVisible && x.Header is string text && System.Text.RegularExpressions.Regex.IsMatch(text, "[А-Яа-яЁё]"))
+                                .Select(x => (string)x.Header));
+                        }
                         Assert.All(VisualDescendants(window).OfType<System.Windows.Controls.Primitives.RangeBase>(), control =>
                             Assert.False(double.IsNaN(control.Value)));
                         if (!light && language == "ru" && size.Width == 1440 && page == "Маршруты")
