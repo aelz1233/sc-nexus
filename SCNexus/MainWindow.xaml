@@ -161,7 +161,8 @@
                                     <TextBlock Text="{Binding ActiveVoyageProfitDisplay}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource Accent}" HorizontalAlignment="Right" />
                                     <WrapPanel Margin="0,12,0,0">
                                         <Button Content="Назад" Command="{Binding PreviousVoyageStopCommand}" Margin="0,0,8,0" />
-                                        <Button Content="Далее" Command="{Binding NextVoyageStopCommand}" />
+                                        <Button Content="Далее" Command="{Binding NextVoyageStopCommand}" Visibility="{Binding CanAdvanceVoyage, Converter={StaticResource BoolVisibility}}" Margin="0,0,8,0" />
+                                        <Button Content="Убрать" Command="{Binding CancelVoyageGuidanceCommand}" ToolTip="Скрыть подсказку маршрута. Запись рейса сохранится в журнале." />
                                     </WrapPanel>
                                 </StackPanel>
                             </Grid>
@@ -283,7 +284,7 @@
                                 </StackPanel>
                             </Expander>
                         </Border>
-                        <TextBlock Text="{Binding ActiveFlightDisplay}" Foreground="{DynamicResource Accent}" FontSize="17" Margin="0,0,0,18" />
+                        <TextBlock Text="{Binding ActiveFlightDisplay}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding ActiveFlightDisplay}" Margin="0,0,0,18" />
                         <Border Style="{StaticResource WorkspaceSection}" Margin="0,0,0,16">
                             <StackPanel>
                                 <Expander Header="{Binding RecordTripLabel}" IsExpanded="False">
@@ -472,7 +473,7 @@
                                                     <TextBlock Text="{Binding ShipName}" Margin="0,6,0,0" />
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="1">
-                                                    <TextBlock Text="{Binding Commodity}" Foreground="{DynamicResource Accent}" FontWeight="Bold" />
+                                                    <TextBlock Text="{Binding CommodityDisplay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding CommodityDisplay}" />
                                                     <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                                                         <TextBlock Text="{Binding Origin}" />
                                                         <TextBlock Text=" → " />

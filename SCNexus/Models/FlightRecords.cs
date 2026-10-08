@@ -17,6 +17,9 @@ public sealed class FlightRecord
     public string Origin { get; set; } = "";
     public string Destination { get; set; } = "";
     public string Commodity { get; set; } = "";
+    public string CommodityDisplay => Commodity.Contains('\n')
+        ? Services.LocalizationService.T("Составной маршрут")
+        : Commodity;
     public DateTime StartedAtUtc { get; set; }
     public DateTime? EndedAtUtc { get; set; }
     public decimal Investment { get; set; }

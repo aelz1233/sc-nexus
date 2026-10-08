@@ -8,6 +8,47 @@ namespace SCNexus.Tests;
 public class VoyageGuidanceTests
 {
     [Fact]
+    public void CompletedGuidanceCanBeDismissedAndDoesNotReappearAfterRestore()
+    {
+        var route = new HaulingRoute("Bexalite", "Start", "Finish", "Stanton", "Stanton",
+            1, 10, 100, 200, 10, 10, 100, 200, false, "Trade", DateTimeOffset.UtcNow);
+        var plan = new VoyagePlan("Цепочка", [route],
+            [new VoyageStop(1, "Start", "Stanton", "Купить Bexalite", 1, 10, 0),
+             new VoyageStop(2, "Finish", "Stanton", "Продать Bexalite", 0, 10, 200)], 100, 10);
+        var vm = CreateViewModel();
+        vm.PrepareVoyageCommand.Execute(plan);
+
+        Assert.Equal("Bexalite", vm.FlightCommodity);
+        Assert.DoesNotContain('\n', vm.FlightCommodity);
+        vm.NextVoyageStopCommand.Execute(null);
+        vm.NextVoyageStopCommand.Execute(null);
+        Assert.True(vm.ActiveVoyageCompleted);
+        Assert.False(vm.CanAdvanceVoyage);
+
+        vm.CancelVoyageGuidanceCommand.Execute(null);
+
+        Assert.False(vm.HasActiveVoyage);
+        Assert.Equal("", typeof(MainViewModel).GetMethod("SerializeActiveVoyage",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(vm, null));
+        Assert.Equal("Bexalite", vm.FlightCommodity);
+    }
+
+    [Fact]
+    public void LegacyManifestDoesNotExpandFlightHeadingOrHistory()
+    {
+        var flight = new FlightRecord
+        {
+            ShipName = "Vulture", Origin = "HDMS-Thedus", Destination = "Admin - ARC-L1",
+            Commodity = "1. HDMS-Thedus\nКупить Bexalite\nТрюм: 315 SCU"
+        };
+        var vm = CreateViewModel();
+        vm.ActiveFlight = flight;
+
+        Assert.Equal("Vulture · HDMS-Thedus → Admin - ARC-L1", vm.ActiveFlightDisplay);
+        Assert.Equal("Составной маршрут", flight.CommodityDisplay);
+    }
+
+    [Fact]
     public void AdvancesByDetectedLocationAndRequiresEveryActionAtIntermediateStop()
     {
         var route = new HaulingRoute("Laranite", "Area 045", "Everus Harbor", "Stanton", "Stanton",

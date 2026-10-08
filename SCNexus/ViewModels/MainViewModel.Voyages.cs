@@ -33,6 +33,7 @@ public partial class MainViewModel
     public bool IsDirectVoyage => VoyageMode == "Прямой рейс";
     public bool IsMultiVoyage => !IsDirectVoyage;
     public bool HasActiveVoyage => ActiveVoyagePlan is not null;
+    public bool CanAdvanceVoyage => HasActiveVoyage && !ActiveVoyageCompleted;
     public VoyageStop? ActiveVoyageStop => ActiveVoyagePlan is { Stops.Count: > 0 } plan
         ? plan.Stops[Math.Clamp(ActiveVoyageStopIndex, 0, plan.Stops.Count - 1)] : null;
     public string ActiveVoyageStopDisplay => ActiveVoyagePlan is not { Stops.Count: > 0 } plan
@@ -188,7 +189,7 @@ public partial class MainViewModel
         if (HasActiveFlight) { OpenHistory(); FlightStatus = "Сначала заверши текущий рейс."; return; }
         FlightOrigin = plan.Stops[0].Terminal;
         FlightDestination = plan.Stops[^1].Terminal;
-        FlightCommodity = plan.Manifest;
+        FlightCommodity = string.Join(", ", plan.Trades.Select(x => x.Commodity).Distinct(StringComparer.OrdinalIgnoreCase));
         FlightInvestment = plan.Investment;
         FlightRevenue = 0; FlightExpenses = 0; FlightLosses = 0;
         ActivateVoyageGuidance(plan);
@@ -371,6 +372,7 @@ public partial class MainViewModel
     {
         RefreshOverlayChecklist();
         OnPropertyChanged(nameof(HasActiveVoyage));
+        OnPropertyChanged(nameof(CanAdvanceVoyage));
         OnPropertyChanged(nameof(HasNoDashboardAction));
         OnPropertyChanged(nameof(DashboardActionTitle));
         OnPropertyChanged(nameof(DashboardActionDetails));

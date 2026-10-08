@@ -222,6 +222,22 @@ public class WindowRegressionTests
                     }
                     Assert.Empty(untranslatedEnglish);
 
+                    vm.Language = "ru";
+                    vm.PrepareVoyageCommand.Execute(overlayPlan);
+                    vm.NextVoyageStopCommand.Execute(null);
+                    vm.NextVoyageStopCommand.Execute(null);
+                    typeof(MainViewModel).GetMethod("Navigate", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                        .Invoke(vm, ["Маршруты"]);
+                    window.UpdateLayout();
+                    UiLocalization.Apply(window);
+                    var dismissRoute = VisualDescendants(window).OfType<Button>()
+                        .Single(x => x.IsVisible && Equals(x.Content, "Убрать"));
+                    Assert.False(vm.CanAdvanceVoyage);
+                    typeof(Button).GetMethod("OnClick", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                        .Invoke(dismissRoute, null);
+                    Assert.False(vm.HasActiveVoyage);
+
+                    vm.Language = "en";
                     vm.OpenSettingsCommand.Execute(null);
                     var settingsTabs = LogicalDescendants(window).OfType<TabControl>().Single(x => x.Items.Count == 4);
                     settingsTabs.SelectedIndex = 2;

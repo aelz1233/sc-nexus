@@ -119,7 +119,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     public string RecommendedCountDisplay => _recommendedRoutes.Count == 0 ? "" :
         $"Показано {_visibleRouteCount} из {_recommendedRoutes.Count} маршрутов";
     public string ActiveFlightDisplay => ActiveFlight is null ? "Нет активного рейса" :
-        $"{ActiveFlight.ShipName} · {ActiveFlight.Commodity} · {ActiveFlight.Origin} → {ActiveFlight.Destination}";
+        $"{ActiveFlight.ShipName} · {ActiveFlight.Origin} → {ActiveFlight.Destination}";
     public string PersonalProfitHourDisplay
     {
         get
@@ -836,6 +836,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
                 FlightInvestment, FlightRevenue, FlightExpenses, FlightLosses, updateBalance: true);
             Balance += flight.Profit;
             await ReloadFlightLogAsync();
+            if (HasActiveVoyage) CancelVoyageGuidance();
             FlightStatus = $"Рейс завершён. Фактическая прибыль: {flight.ProfitDisplay}. Баланс обновлён.";
         }
         catch (Exception ex) { FlightStatus = ex.Message; }
