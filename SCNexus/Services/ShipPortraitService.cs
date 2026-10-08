@@ -17,29 +17,51 @@ public sealed class ShipPortraitService
 
         try
         {
-            var title = Uri.EscapeDataString(shipName);
-            var url = "https://starcitizen.tools/api.php?action=query&format=json&redirects=1&prop=pageimages&pithumbsize=640&titles=" + title;
-            using var response = await Client.GetAsync(url, token);
-            response.EnsureSuccessStatusCode();
-            using var document = JsonDocument.Parse(await response.Content.ReadAsStreamAsync(token));
-            if (!document.RootElement.TryGetProperty("query", out var query) ||
-                !query.TryGetProperty("pages", out var pages)) return Cache(shipName, null);
-
-            foreach (var page in pages.EnumerateObject())
+            var candidates = ShipComponentCatalogService.BuildVehicleSearchTerms(shipName);
+            foreach (var candidate in candidates)
             {
-                if (page.Value.TryGetProperty("thumbnail", out var thumbnail) &&
-                    thumbnail.TryGetProperty("source", out var source) &&
-                    Uri.TryCreate(source.GetString(), UriKind.Absolute, out var portrait))
-                    return Cache(shipName, portrait);
+                var portrait = await FindPortraitAsync(
+                    "titles=" + Uri.EscapeDataString(candidate), token);
+                if (portrait is not null) return Cache(shipName, portrait);
+            }
+
+            // Some ASOP display names do not have a matching wiki page title.
+            // Search makes those models recoverable without hard-coded image URLs.
+            foreach (var candidate in candidates.Take(3))
+            {
+                var portrait = await FindPortraitAsync(
+                    "generator=search&gsrnamespace=0&gsrlimit=3&gsrsearch=" + Uri.EscapeDataString(candidate), token);
+                if (portrait is not null) return Cache(shipName, portrait);
             }
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException) { }
         return Cache(shipName, null);
     }
 
+    private static async Task<Uri?> FindPortraitAsync(string queryParameters, CancellationToken token)
+    {
+        var url = "https://starcitizen.tools/api.php?action=query&format=json&redirects=1&prop=pageimages&pithumbsize=640&" + queryParameters;
+        using var response = await Client.GetAsync(url, token);
+        response.EnsureSuccessStatusCode();
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStreamAsync(token));
+        if (!document.RootElement.TryGetProperty("query", out var query) ||
+            !query.TryGetProperty("pages", out var pages)) return null;
+
+        foreach (var page in pages.EnumerateObject())
+        {
+            if (page.Value.TryGetProperty("thumbnail", out var thumbnail) &&
+                thumbnail.TryGetProperty("source", out var source) &&
+                Uri.TryCreate(source.GetString(), UriKind.Absolute, out var portrait))
+                return portrait;
+        }
+        return null;
+    }
+
     private Uri? Cache(string name, Uri? portrait)
     {
-        _cache[name] = portrait;
+        // Do not keep a failed lookup: the Wiki can become reachable later in the same session.
+        if (portrait is not null) _cache[name] = portrait;
+        else _cache.TryRemove(name, out _);
         return portrait;
     }
 

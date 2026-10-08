@@ -210,7 +210,7 @@ public sealed class ShipComponentCatalogService
         return best.Candidate;
     }
 
-    private static IReadOnlyList<string> BuildVehicleSearchTerms(string shipName)
+    internal static IReadOnlyList<string> BuildVehicleSearchTerms(string shipName)
     {
         var result = new List<string>();
         Add(shipName);
