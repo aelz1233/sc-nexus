@@ -173,6 +173,7 @@ public partial class MainViewModel
 
     [RelayCommand] private void ResetRouteFilters()
     {
+        ExcludeDangerousRoutes = false;
         AvoidPyro = false; AllowRisky = false;
         MinimumFillPercent = 0; MinimumProfit = 0;
         HaulingSameSystemOnly = false; HaulingCategory = "Все маршруты";

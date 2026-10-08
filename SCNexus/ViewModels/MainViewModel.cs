@@ -205,7 +205,10 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
             Systems.Clear();
             Systems.Add("Все системы");
             foreach (var system in _allLocations.Select(x => x.System).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
                 Systems.Add(system);
+                if (!RouteStartSystems.Contains(system, StringComparer.OrdinalIgnoreCase)) RouteStartSystems.Add(system);
+            }
             _selectingLocation = true;
             try
             {
@@ -664,7 +667,7 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
         var budget = Math.Max(0, Balance - Reserve);
         var calculatedRoutes = haulingService.Calculate(_haulingData, SelectedShip.Ship.CargoScu,
             budget, AllowRisky, HaulingSameSystemOnly, HaulingSortMode, HaulingCategory,
-            CurrentLocation, CurrentSystem, AvoidPyro, MinimumFillPercent, MinimumProfit, allowedSystems: AllowedRouteSystems);
+            null, RouteStartSystemFilter, AvoidPyro, MinimumFillPercent, MinimumProfit, allowedSystems: AllowedRouteSystems);
         _allHaulingRoutes = calculatedRoutes.Select(route =>
         {
             var matching = Flights.Where(x => x.EndedAtUtc is not null &&

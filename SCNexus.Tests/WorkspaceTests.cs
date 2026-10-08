@@ -46,6 +46,61 @@ public class WorkspaceTests
     }
 
     [Theory]
+    [InlineData("Stanton")]
+    [InlineData("Pyro")]
+    public void RouteStartSystemFiltersOriginsWithoutChangingDetectedLocation(string startSystem)
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "SCNexusTests", Guid.NewGuid().ToString("N"));
+        using var client = new HttpClient(new MarketHandler()) { BaseAddress = new Uri("https://example.test/2.0/") };
+        try
+        {
+            var dataService = new GameDataService(client, Path.Combine(dir, "cache"));
+            var settings = new SettingsService(Path.Combine(dir, "nexus.db"));
+            var vm = new MainViewModel(settings, new TradingService(dataService, new RouteService()),
+                new FlightLogService(settings), dataService, new GameLogService(dir), new HaulingService(), new UpdateService());
+            vm.Balance = 10_000;
+            var ship = new ShipSummary(new PersonalShip { Id = 1, Name = "C2", CargoScu = 10 }, 0);
+            vm.Ships.Add(ship);
+            vm.SelectedShip = ship;
+            vm.CurrentLocation = "Area18";
+            vm.CurrentSystem = "Stanton";
+
+            var now = DateTimeOffset.UtcNow;
+            var timestamp = now.ToUnixTimeSeconds();
+            var snapshot = new DataSnapshot(
+                [
+                    new CommodityQuote { IdTerminal = 1, IdCommodity = 1, CommodityName = "Gold", PriceBuy = 100, ScuBuy = 10, DateModified = timestamp },
+                    new CommodityQuote { IdTerminal = 2, IdCommodity = 1, CommodityName = "Gold", PriceBuy = 110, ScuBuy = 10, DateModified = timestamp },
+                    new CommodityQuote { IdTerminal = 3, IdCommodity = 1, CommodityName = "Gold", PriceSell = 200, ScuSell = 20, DateModified = timestamp }
+                ],
+                [
+                    new TradeTerminal { Id = 1, Name = "Area18", CityName = "Area18", StarSystemName = "Stanton", Type = "commodity", IsAvailableLive = 1 },
+                    new TradeTerminal { Id = 2, Name = "Ruin", CityName = "Ruin", StarSystemName = "Pyro", Type = "commodity", IsAvailableLive = 1 },
+                    new TradeTerminal { Id = 3, Name = "New Babbage", CityName = "New Babbage", StarSystemName = "Stanton", Type = "commodity", IsAvailableLive = 1 }
+                ], now, now, false);
+            typeof(MainViewModel).GetField("_haulingData", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(vm, snapshot);
+            var recalculate = typeof(MainViewModel).GetMethod("RecalculateHauling", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            recalculate.Invoke(vm, null);
+
+            Assert.Equal("Все системы", vm.RouteStartSystem);
+            Assert.Contains(vm.RouteResults, result => result.Direct?.BuySystem == "Pyro");
+            Assert.Contains(vm.RouteResults, result => result.Direct?.BuySystem == "Stanton");
+
+            vm.RouteStartSystems.Add(startSystem);
+            vm.RouteStartSystem = startSystem;
+            Assert.NotEmpty(vm.RouteResults);
+            Assert.All(vm.RouteResults, route => Assert.Equal(startSystem, route.Direct!.BuySystem));
+            Assert.Equal("Stanton", vm.CurrentSystem);
+            Assert.Equal("Area18", vm.CurrentLocation);
+
+            vm.RouteStartSystem = "Все системы";
+            Assert.Contains(vm.RouteResults, result => result.Direct?.BuySystem == "Pyro");
+        }
+        finally { SqliteConnection.ClearAllPools(); if (Directory.Exists(dir)) Directory.Delete(dir, true); }
+    }
+
+    [Theory]
     [InlineData("25 000 000", "25000000")]
     [InlineData("25\u00a0000\u202f000,50", "25000000.50")]
     [InlineData("150.75", "150.75")]

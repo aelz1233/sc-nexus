@@ -12,6 +12,10 @@ namespace SCNexus.ViewModels;
 public partial class MainViewModel
 {
     [ObservableProperty] private string voyageMode = "Прямой рейс";
+    [ObservableProperty] private string routeStartSystem = "Все системы";
+    public string? RouteStartSystemFilter => string.IsNullOrWhiteSpace(RouteStartSystem) || RouteStartSystem == "Все системы"
+        ? null : RouteStartSystem;
+    partial void OnRouteStartSystemChanged(string value) => RecalculateHauling();
     [ObservableProperty] private int voyageMaxPurchases = 3;
     [ObservableProperty] private TerminalOption? voyageDestination;
     [ObservableProperty] private string voyageDestinationQuery = "";
@@ -29,6 +33,7 @@ public partial class MainViewModel
     public ObservableCollection<TerminalOption> VoyageDestinations { get; } = [];
     public ObservableCollection<VoyagePlan> VoyagePlans { get; } = [];
     public ObservableCollection<RouteSystemChoice> RouteSystems { get; } = [];
+    public ObservableCollection<string> RouteStartSystems { get; } = ["Все системы"];
     private bool _updatingRouteSystems;
     public bool IsDirectVoyage => VoyageMode == "Прямой рейс";
     public bool IsMultiVoyage => !IsDirectVoyage;
@@ -88,6 +93,7 @@ public partial class MainViewModel
                         ApplyRouteSystemSelection();
                 };
                 RouteSystems.Add(choice);
+                if (!RouteStartSystems.Contains(name, StringComparer.OrdinalIgnoreCase)) RouteStartSystems.Add(name);
             }
         OnPropertyChanged(nameof(RouteSystemsSummary));
     }
@@ -163,7 +169,7 @@ public partial class MainViewModel
         RefreshRouteResults();
         VoyageStatus = "Подбираю остановки, товары и объёмы…";
         var request = new VoyageRequest(VoyageMode, SelectedShip.Ship.CargoScu, Math.Max(0, Balance - Reserve),
-            VoyageMaxPurchases, VoyageDestination?.Id ?? 0, CurrentLocation, CurrentSystem,
+            VoyageMaxPurchases, VoyageDestination?.Id ?? 0, null, RouteStartSystemFilter,
             AllowRisky, AvoidPyro, HaulingSameSystemOnly, MinimumFillPercent, MinimumProfit, HaulingCategory, AllowedRouteSystems, ExcludeDangerousRoutes);
         var data = _haulingData;
         try

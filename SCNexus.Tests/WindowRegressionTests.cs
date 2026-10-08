@@ -110,6 +110,11 @@ public class WindowRegressionTests
                         .Invoke(vm, ["Маршруты"]);
                     window.UpdateLayout();
                     await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                    var routeTabs = (TabControl)window.FindName("RouteTabs");
+                    Assert.Equal(2, routeTabs.Items.Count);
+                    Assert.Equal("Маршруты", ((TabItem)routeTabs.Items[0]).Header);
+                    Assert.Equal("Фильтры", ((TabItem)routeTabs.Items[1]).Header);
+                    Assert.Equal("Все системы", ((ComboBox)window.FindName("RouteStartSelector")).SelectedItem);
                     var resultsGrid = LogicalDescendants(window).OfType<SCNexus.Controls.RouteResultsView>().Single().FindName("Results") as DataGrid;
                     Assert.NotNull(resultsGrid);
                     Assert.NotNull(resultsGrid.SelectedItem);
