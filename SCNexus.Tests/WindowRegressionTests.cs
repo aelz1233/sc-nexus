@@ -150,20 +150,21 @@ public class WindowRegressionTests
                             var routeView = LogicalDescendants(window).OfType<SCNexus.Controls.RouteResultsView>().Single();
                             var detailsColumn = (ColumnDefinition)routeView.FindName("DetailsColumn");
                             var detailsToggle = (CheckBox)routeView.FindName("InspectorToggle");
+                            var wideLayout = routeView.ActualWidth >= 1030;
                             Assert.True(resultsGrid.ActualHeight < 350);
-                            Assert.True(detailsColumn.Width.Value > 0);
+                            Assert.Equal(wideLayout, detailsColumn.Width.Value > 0);
                             detailsToggle.IsChecked = false;
                             await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
                             Assert.Equal(0, detailsColumn.Width.Value);
                             detailsToggle.IsChecked = true;
                             await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-                            Assert.True(detailsColumn.Width.Value > 0);
+                            Assert.Equal(wideLayout, detailsColumn.Width.Value > 0);
                             vm.RouteSearch = "not-a-route";
                             await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
                             Assert.Equal(0, detailsColumn.Width.Value);
                             vm.RouteSearch = "";
                             await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-                            Assert.True(detailsColumn.Width.Value > 0);
+                            Assert.Equal(wideLayout, detailsColumn.Width.Value > 0);
                         }
                         if (size.Width == 1440 || page is "Обзор" or "Маршруты" or "Настройки")
                         {
