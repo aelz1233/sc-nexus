@@ -86,7 +86,9 @@ public partial class MainViewModel
             foreach (var name in _haulingData.Terminals.Where(x => x.Type == "commodity" && x.IsAvailableLive == 1)
                 .Select(x => x.StarSystemName ?? "Неизвестно").Distinct(StringComparer.OrdinalIgnoreCase).Order())
             {
-                var choice = new RouteSystemChoice(name, previous.GetValueOrDefault(name, true));
+                var selected = previous.TryGetValue(name, out var wasSelected) ? wasSelected :
+                    !name.Equals("Pyro", StringComparison.OrdinalIgnoreCase) || !AvoidPyro;
+                var choice = new RouteSystemChoice(name, selected);
                 choice.PropertyChanged += (_, _) =>
                 {
                     if (!_updatingRouteSystems)
@@ -101,7 +103,11 @@ public partial class MainViewModel
     {
         OnPropertyChanged(nameof(RouteSystemsSummary));
         RefreshVoyageDestinations();
-        RecalculateHauling();
+        var pyro = RouteSystems.FirstOrDefault(x => x.Name.Equals("Pyro", StringComparison.OrdinalIgnoreCase));
+        if (pyro is not null && AvoidPyro == pyro.IsSelected)
+            AvoidPyro = !pyro.IsSelected;
+        else
+            RecalculateHauling();
     }
 
     [RelayCommand]
@@ -170,7 +176,7 @@ public partial class MainViewModel
         VoyageStatus = "Подбираю остановки, товары и объёмы…";
         var request = new VoyageRequest(VoyageMode, SelectedShip.Ship.CargoScu, Math.Max(0, Balance - Reserve),
             VoyageMaxPurchases, VoyageDestination?.Id ?? 0, null, RouteStartSystemFilter,
-            AllowRisky, AvoidPyro, HaulingSameSystemOnly, MinimumFillPercent, MinimumProfit, HaulingCategory, AllowedRouteSystems, ExcludeDangerousRoutes);
+            AllowRisky, AvoidPyro, HaulingSameSystemOnly, MinimumFillPercent, MinimumProfit, HaulingCategory, AllowedRouteSystems);
         var data = _haulingData;
         try
         {
@@ -178,9 +184,7 @@ public partial class MainViewModel
             cancellation.Token.ThrowIfCancellationRequested();
             foreach (var plan in plans) VoyagePlans.Add(plan);
             RefreshRouteResults();
-            VoyageStatus = plans.Count == 0 ? (ExcludeDangerousRoutes
-                ? "Безопасных маршрутов с текущим бюджетом и условиями нет. Измени фильтры или начальную систему."
-                : "Нет подходящих планов. Попробуй другую конечную точку, больше остановок или мягче фильтры.")
+            VoyageStatus = plans.Count == 0 ? "Нет подходящих планов. Попробуй другую конечную точку, больше остановок или мягче фильтры."
                 : $"Подобрано планов: {plans.Count}. Сортировка по суммарной прибыли; время и топливо не учтены.";
             if (data.UsedOldCache || DateTimeOffset.UtcNow - data.PricesFetchedAt >= TimeSpan.FromMinutes(30))
                 VoyageStatus += " Котировки устарели.";

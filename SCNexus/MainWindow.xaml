@@ -202,15 +202,13 @@
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                     <StackPanel>
-                                        <TextBlock Text="Безопасность" Style="{StaticResource FieldLabel}" Margin="0,0,0,10"/>
-                                        <CheckBox Content="Исключить опасные" IsChecked="{Binding ExcludeDangerousRoutes, Mode=TwoWay}" Margin="0,0,0,8"/>
-                                        <CheckBox Content="Исключить Pyro" IsChecked="{Binding AvoidPyro, Mode=TwoWay}" Margin="0,0,0,8"/>
+                                        <TextBlock Text="Маршрут" Style="{StaticResource FieldLabel}" Margin="0,0,0,10"/>
                                         <CheckBox Content="Включить терминалы NQA" IsChecked="{Binding AllowRisky, Mode=TwoWay}" Margin="0,0,0,8"/>
                                         <CheckBox Content="Только рейсы внутри одной системы" IsChecked="{Binding HaulingSameSystemOnly, Mode=TwoWay}"/>
                                         <TextBlock Text="Системы маршрута" Style="{StaticResource FieldLabel}" Margin="0,14,0,8"/>
                                         <ItemsControl ItemsSource="{Binding RouteSystems}">
                                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate><DataTemplate><CheckBox Content="{Binding Display}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,0,18,8"/></DataTemplate></ItemsControl.ItemTemplate>
+                                            <ItemsControl.ItemTemplate><DataTemplate><CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,0,18,8"/></DataTemplate></ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                         <Button Content="Сбросить фильтры" Command="{Binding ResetRouteFiltersCommand}" HorizontalAlignment="Left" Margin="0,4,0,0"/>
                                     </StackPanel>

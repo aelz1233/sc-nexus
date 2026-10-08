@@ -85,6 +85,7 @@ public static class LocalizationService
         ["Закупка"] = "Purchase",
         ["Выручка"] = "Revenue",
         ["Прибыль"] = "Profit",
+        ["Маржа, %"] = "Margin, %",
         ["Загрузка"] = "Cargo",
         ["Выбрать рейс"] = "Select route",
         ["ВЫБРАННЫЙ РЕЙС"] = "SELECTED ROUTE",

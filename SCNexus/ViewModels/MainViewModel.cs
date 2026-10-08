@@ -338,7 +338,20 @@ public partial class MainViewModel(SettingsService settingsService, TradingServi
     partial void OnCargoScuChanged(int value) { OnPropertyChanged(nameof(DashboardShipCapacityDisplay)); QueueSave(); }
     partial void OnReserveChanged(decimal value) { OnPropertyChanged(nameof(HaulingBudgetDisplay)); OnPropertyChanged(nameof(TradeBudgetHint)); QueueSave(); RecalculateHauling(); }
     partial void OnAllowRiskyChanged(bool value) { QueueSave(); RecalculateHauling(); }
-    partial void OnAvoidPyroChanged(bool value) { QueueSave(); RecalculateHauling(); }
+    partial void OnAvoidPyroChanged(bool value)
+    {
+        var pyro = RouteSystems.FirstOrDefault(x => x.Name.Equals("Pyro", StringComparison.OrdinalIgnoreCase));
+        if (pyro is not null && pyro.IsSelected == value)
+        {
+            _updatingRouteSystems = true;
+            try { pyro.IsSelected = !value; }
+            finally { _updatingRouteSystems = false; }
+            OnPropertyChanged(nameof(RouteSystemsSummary));
+            RefreshVoyageDestinations();
+        }
+        QueueSave();
+        RecalculateHauling();
+    }
     partial void OnMinimumFillPercentChanged(int value) { QueueSave(); RecalculateHauling(); }
     partial void OnMinimumProfitChanged(decimal value) { QueueSave(); RecalculateHauling(); }
     partial void OnGameDirectoryPathChanged(string value) { gameLogService.GameDirectoryOverride = value; QueueSave(); }

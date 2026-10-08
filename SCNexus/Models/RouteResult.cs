@@ -14,6 +14,7 @@ public sealed record RouteResult(HaulingRoute? Direct, VoyagePlan? Plan)
     public decimal Profit => Plan?.Profit ?? Direct?.Profit ?? 0;
     public decimal Investment => Plan?.Investment ?? Direct?.Investment ?? 0;
     public decimal Revenue => Plan?.Revenue ?? Direct?.Revenue ?? 0;
+    public decimal MarginPercent => Investment > 0 ? Profit / Investment * 100 : 0;
     public int Cargo => Plan?.PeakCargo ?? Direct?.Scu ?? 0;
     public int Capacity => Plan?.CapacityScu ?? Direct?.CargoScu ?? 0;
     public decimal FillPercent => Capacity > 0 ? Cargo * 100m / Capacity : 0;

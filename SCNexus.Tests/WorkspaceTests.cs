@@ -96,6 +96,22 @@ public class WorkspaceTests
 
             vm.RouteStartSystem = "Все системы";
             Assert.Contains(vm.RouteResults, result => result.Direct?.BuySystem == "Pyro");
+
+            vm.AvoidPyro = true;
+            typeof(MainViewModel).GetMethod("RefreshRouteSystems", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(vm, null);
+            var pyro = vm.RouteSystems.Single(x => x.Name == "Pyro");
+            Assert.False(pyro.IsSelected);
+            Assert.DoesNotContain(vm.RouteResults, result => result.Direct?.BuySystem == "Pyro");
+            vm.AvoidPyro = false;
+            Assert.True(pyro.IsSelected);
+            pyro.IsSelected = false;
+            Assert.True(vm.AvoidPyro);
+            Assert.DoesNotContain(vm.RouteResults, result => result.Direct?.BuySystem == "Pyro");
+            vm.ResetRouteFiltersCommand.Execute(null);
+            Assert.True(pyro.IsSelected);
+            Assert.False(vm.AvoidPyro);
+            Assert.Contains(vm.RouteResults, result => result.Direct?.BuySystem == "Pyro");
         }
         finally { SqliteConnection.ClearAllPools(); if (Directory.Exists(dir)) Directory.Delete(dir, true); }
     }

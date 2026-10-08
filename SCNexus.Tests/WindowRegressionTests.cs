@@ -132,12 +132,8 @@ public class WindowRegressionTests
                     Assert.False(routeFilters.IsExpanded);
                     routeFilters.IsExpanded = true;
                     window.UpdateLayout();
-                    var dangerousFilter = LogicalDescendants(routeFilters).OfType<CheckBox>().Single(x =>
-                        Equals(x.Content, "Исключить опасные"));
-                    dangerousFilter.IsChecked = true;
-                    Assert.True(vm.ExcludeDangerousRoutes);
-                    Assert.Equal(2, vm.RouteResults.Count);
-                    dangerousFilter.IsChecked = false;
+                    Assert.DoesNotContain(LogicalDescendants(routeFilters).OfType<CheckBox>(), x =>
+                        Equals(x.Content, "Исключить опасные") || Equals(x.Content, "Исключить Pyro"));
                     Assert.Equal(3, vm.RouteResults.Count);
                     Assert.Contains(LogicalDescendants(routeFilters).OfType<Button>(), x =>
                         Equals(x.Content, "Сбросить фильтры"));
@@ -146,7 +142,9 @@ public class WindowRegressionTests
                     UiLocalization.Apply(window);
                     Assert.Equal("Filters", routeFilters.Header);
                     Assert.Contains(LogicalDescendants(routeFilters).OfType<CheckBox>(), x =>
-                        Equals(x.Content, "Exclude dangerous routes"));
+                        Equals(x.Content, "Include NQA terminals"));
+                    Assert.DoesNotContain(LogicalDescendants(routeFilters).OfType<CheckBox>(), x =>
+                        Equals(x.Content, "Exclude dangerous routes") || Equals(x.Content, "Exclude Pyro"));
                     Assert.Equal("Systems will appear after market prices load.", LocalizationService.T(vm.RouteSystemsSummary));
                     Assert.DoesNotContain(VisualDescendants(routeFilters).OfType<TextBlock>(), x =>
                         x.IsVisible && System.Text.RegularExpressions.Regex.IsMatch(x.Text ?? "", "[А-Яа-яЁё]"));
@@ -159,6 +157,7 @@ public class WindowRegressionTests
                     Assert.NotNull(resultsGrid.SelectedItem);
                     Assert.Equal(vm.SelectedRouteResult, resultsGrid.SelectedItem);
                     Assert.Equal(900000, ((RouteResult)resultsGrid.Items[0]).Profit);
+                    Assert.Equal(12.5m, ((RouteResult)resultsGrid.Items[0]).MarginPercent);
                     resultsGrid.SelectedIndex = 0;
                     Assert.True(vm.SelectedRouteResult!.IsDangerous);
                     Assert.False(resultsGrid.CanUserReorderColumns);
@@ -175,7 +174,8 @@ public class WindowRegressionTests
                     {
                         ("Рейс", "Gold", "Laranite"),
                         ("Инвестиции", "Gold", "Laranite"),
-                        ("Прибыль", "Gold", "Laranite")
+                        ("Прибыль", "Gold", "Laranite"),
+                        ("Маржа, %", "Gold", "Laranite")
                     })
                     {
                         ClickSortHeader(headerText);
