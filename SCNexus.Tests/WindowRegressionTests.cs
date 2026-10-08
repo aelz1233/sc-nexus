@@ -2,6 +2,7 @@
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -105,6 +106,9 @@ public class WindowRegressionTests
                     // Exercise real templates at the supported minimum and normal window sizes.
                     window.ShowActivated = false;
                     window.Show();
+                    typeof(MainViewModel).GetMethod("Navigate", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                        .Invoke(vm, ["Маршруты"]);
+                    window.UpdateLayout();
                     await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
                     var resultsGrid = LogicalDescendants(window).OfType<SCNexus.Controls.RouteResultsView>().Single().FindName("Results") as DataGrid;
                     Assert.NotNull(resultsGrid);
@@ -114,8 +118,34 @@ public class WindowRegressionTests
                     resultsGrid.SelectedIndex = 0;
                     Assert.True(vm.SelectedRouteResult!.IsDangerous);
                     Assert.False(resultsGrid.CanUserReorderColumns);
-                    Assert.False(resultsGrid.CanUserSortColumns);
+                    Assert.True(resultsGrid.CanUserSortColumns);
                     Assert.Equal(900000, ((RouteResult)resultsGrid.Items[0]).Profit);
+                    void ClickSortHeader(string headerText)
+                    {
+                        var header = VisualDescendants(resultsGrid).OfType<DataGridColumnHeader>()
+                            .Single(x => Equals(x.Content, headerText));
+                        typeof(DataGridColumnHeader).GetMethod("OnClick", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                            .Invoke(header, null);
+                    }
+                    foreach (var (headerText, ascending, descending) in new[]
+                    {
+                        ("Рейс", "Gold", "Laranite"),
+                        ("Инвестиции", "Gold", "Laranite"),
+                        ("Прибыль", "Gold", "Laranite")
+                    })
+                    {
+                        ClickSortHeader(headerText);
+                        Assert.Equal(ascending, ((RouteResult)resultsGrid.Items[0]).Commodity);
+                        ClickSortHeader(headerText);
+                        Assert.Equal(descending, ((RouteResult)resultsGrid.Items[0]).Commodity);
+                    }
+                    ClickSortHeader("Риск");
+                    Assert.Equal(0, ((RouteResult)resultsGrid.Items[0]).RiskRank);
+                    ClickSortHeader("Риск");
+                    Assert.Equal(2, ((RouteResult)resultsGrid.Items[0]).RiskRank);
+                    vm.RouteSearch = "Iodine";
+                    vm.RouteSearch = "";
+                    Assert.Equal(2, ((RouteResult)resultsGrid.Items[0]).RiskRank);
                     var untranslatedEnglish = new HashSet<string>();
                     foreach (var light in new[] { false, true })
                     foreach (var language in new[] { "ru", "en" })

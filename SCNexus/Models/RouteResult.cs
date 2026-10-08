@@ -20,6 +20,7 @@ public sealed record RouteResult(HaulingRoute? Direct, VoyagePlan? Plan)
     public string Load => $"{Cargo:N0} / {Capacity:N0}";
     public bool IsDangerous => Trades.Any(x => x.IsDangerous);
     public bool IsNqaRisk => !Trades.Any(x => x.IsPyroRoute) && Trades.Any(x => x.Risky);
+    public int RiskRank => Trades.Any(x => x.IsPyroRoute) ? 2 : IsNqaRisk ? 1 : 0;
     public string RiskTitle => Trades.Any(x => x.IsPyroRoute)
         ? LocalizationService.T("Опасно")
         : IsNqaRisk

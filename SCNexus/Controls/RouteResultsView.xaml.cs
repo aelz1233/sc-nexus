@@ -9,21 +9,34 @@ namespace SCNexus.Controls;
 
 public partial class RouteResultsView : UserControl
 {
+    private string _sortProperty = nameof(SCNexus.Models.RouteResult.Profit);
+    private ListSortDirection _sortDirection = ListSortDirection.Descending;
+
     public RouteResultsView()
     {
         InitializeComponent();
-        Results.TargetUpdated += (_, e) => { if (e.Property == ItemsControl.ItemsSourceProperty) ApplyDefaultOrder(); };
-        Loaded += (_, _) => ApplyDefaultOrder();
+        Results.TargetUpdated += (_, e) => { if (e.Property == ItemsControl.ItemsSourceProperty) ApplySort(); };
+        Loaded += (_, _) => ApplySort();
     }
-    private void ApplyDefaultOrder()
+    private void OnSorting(object sender, DataGridSortingEventArgs e)
+    {
+        e.Handled = true;
+        _sortDirection = e.Column.SortDirection == ListSortDirection.Ascending
+            ? ListSortDirection.Descending : ListSortDirection.Ascending;
+        _sortProperty = e.Column.SortMemberPath;
+        ApplySort();
+    }
+    private void ApplySort()
     {
         if (Results.ItemsSource is null) return;
         var view = CollectionViewSource.GetDefaultView(Results.ItemsSource);
         using (view.DeferRefresh())
         {
             view.SortDescriptions.Clear();
-            view.SortDescriptions.Add(new SortDescription("Profit", ListSortDirection.Descending));
+            view.SortDescriptions.Add(new SortDescription(_sortProperty, _sortDirection));
         }
+        foreach (var column in Results.Columns)
+            column.SortDirection = column.SortMemberPath == _sortProperty ? _sortDirection : null;
     }
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
         => ArrangeInspector(e.NewSize.Width);
